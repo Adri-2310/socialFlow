@@ -2,6 +2,12 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+minimumReleaseAge: 0
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
 catalogs:
   default:
     react: '^19.0.0'
