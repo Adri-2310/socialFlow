@@ -6,6 +6,7 @@ import {
   Lock,
   MessagesSquare,
 } from 'lucide-react';
+import { FadeIn } from '@/components/motion/fade-in';
 
 export function Features() {
   const features = [
@@ -60,35 +61,22 @@ export function Features() {
   ];
 
   return (
-    <section id="features" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <span className="text-sm font-semibold uppercase tracking-wider text-primary">
-          Fonctionnalités
-        </span>
-        <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Tout le cycle de paie, sans friction
-        </h2>
-        <p className="mt-4 text-muted-foreground">
-          De la fiche de paie à la déclaration DIMONA, chaque étape est automatisée et conforme à la
-          législation sociale belge.
-        </p>
-      </div>
-      <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature) => {
+    <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {features.map((feature, i) => {
           const Icon = feature.icon;
           return (
-            <div
-              key={feature.title}
-              className="group rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:shadow-md"
-            >
-              <span className={`grid h-11 w-11 place-items-center rounded-xl ${feature.bgColor} ${feature.textColor}`}>
-                <Icon className="h-5 w-5" />
-              </span>
-              <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {feature.description}
-              </p>
-            </div>
+            <FadeIn key={feature.title} delay={(i % 3) * 0.1}>
+              <div className="group h-full rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-card/40 p-6 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-lg">
+                <span className={`grid h-11 w-11 place-items-center rounded-xl ${feature.bgColor} ${feature.textColor}`}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
+              </div>
+            </FadeIn>
           );
         })}
       </div>

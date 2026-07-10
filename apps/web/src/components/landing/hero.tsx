@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, PlayCircle, Check, ShieldCheck, FileCheck, TrendingUp } from 'lucide-react';
+import { ArrowRight, Check, ShieldCheck, FileCheck, TrendingUp } from 'lucide-react';
 
 export function Hero() {
   return (
@@ -35,18 +35,12 @@ export function Hero() {
             salariés sur une seule plateforme. Générez des fiches de paie conformes, suivez vos
             échéances ONSS et automatisez vos déclarations DIMONA.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8">
             <Link
               href="/register"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"
             >
               Démarrer l&apos;essai 30 jours <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/fonctionnalites"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card/50 px-6 py-3 text-sm font-semibold text-foreground backdrop-blur-sm transition hover:bg-muted"
-            >
-              <PlayCircle className="h-4 w-4" /> Voir la démo
             </Link>
           </div>
           <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
@@ -60,12 +54,12 @@ export function Hero() {
         </motion.div>
 
         {/* Cluster de cartes flottantes en verre */}
-        <div className="relative hidden h-[420px] lg:block">
+        <div className="relative hidden h-[460px] lg:block">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="absolute left-1/2 top-1/2 w-72 -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border/60 bg-card/60 p-6 shadow-2xl backdrop-blur-xl"
+            className="absolute left-1/2 top-1/2 w-80 -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border/60 bg-card/60 p-7 shadow-2xl backdrop-blur-xl"
           >
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-md">
               <FileCheck className="h-6 w-6" />
@@ -78,12 +72,13 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35 }}
-            className="absolute -top-2 right-0 w-52 rounded-2xl border border-border/60 bg-card/70 p-4 shadow-xl backdrop-blur-xl"
+            transition={{ duration: 0.7, delay: 0.3 }}
+            className="absolute -top-4 -right-4 w-56"
           >
             <motion.div
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+              className="rounded-2xl border border-border/60 bg-card/70 p-4 shadow-xl backdrop-blur-xl"
             >
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-secondary/15 text-secondary">
                 <ShieldCheck className="h-4 w-4" />
@@ -97,11 +92,12 @@ export function Hero() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.45 }}
-            className="absolute bottom-2 left-0 w-56 rounded-2xl border border-border/60 bg-card/70 p-4 shadow-xl backdrop-blur-xl"
+            className="absolute -bottom-4 -left-4 w-60"
           >
             <motion.div
               animate={{ y: [0, 10, 0] }}
               transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+              className="rounded-2xl border border-border/60 bg-card/70 p-4 shadow-xl backdrop-blur-xl"
             >
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary">
                 <TrendingUp className="h-4 w-4" />

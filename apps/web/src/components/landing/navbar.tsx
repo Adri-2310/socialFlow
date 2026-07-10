@@ -83,6 +83,15 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <div className="mt-2 border-t border-border pt-2">
+            <Link
+              href="/login"
+              className="block rounded-lg px-3 py-2 text-sm font-semibold hover:bg-muted"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Se connecter
+            </Link>
+          </div>
         </div>
       )}
     </header>

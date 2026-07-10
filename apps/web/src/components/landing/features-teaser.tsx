@@ -22,7 +22,7 @@ const items = [
 
 export function FeaturesTeaser() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <FadeIn>
         <div className="mx-auto max-w-2xl text-center">
           <span className="text-sm font-semibold uppercase tracking-wider text-primary">

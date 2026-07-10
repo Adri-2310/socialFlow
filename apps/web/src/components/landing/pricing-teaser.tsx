@@ -4,7 +4,7 @@ import { FadeIn } from '@/components/motion/fade-in';
 
 export function PricingTeaser() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <FadeIn>
         <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card p-10 shadow-2xl sm:p-14">
           <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
