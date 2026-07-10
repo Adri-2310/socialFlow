@@ -1,6 +1,6 @@
 {
   "buildCommand": "turbo run build --filter=@socialflow/web",
-  "installCommand": "pnpm install",
+  "installCommand": "npm install",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
   "git": {
