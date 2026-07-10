@@ -1,0 +1,9 @@
+{
+  "buildCommand": "turbo run build --filter=@socialflow/web",
+  "installCommand": "pnpm install",
+  "outputDirectory": "apps/web/.next",
+  "env": {
+    "TURBO_TOKEN": "@TURBO_TOKEN",
+    "TURBO_TEAM": "@TURBO_TEAM"
+  }
+}
