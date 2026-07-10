@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "SocialFlow — Plateforme SaaS de gestion de paie belge",
-  "packageManager": "pnpm@11.11.0",
+  "packageManager": "pnpm@8.15.0",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
