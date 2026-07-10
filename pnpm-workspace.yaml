@@ -1,0 +1,14 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+catalogs:
+  default:
+    react: '^19.0.0'
+    react-dom: '^19.0.0'
+    next: '^16.0.0'
+    typescript: '^5.0.0'
+    tailwindcss: '^4.0.0'
+    '@shadcn/ui': '*'
+    zustand: '^5.0.0'
+    '@tanstack/react-query': '^5.0.0'
