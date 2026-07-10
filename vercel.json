@@ -3,7 +3,6 @@
   "installCommand": "pnpm install",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
-  "nodejs": "20.x",
   "env": {
     "TURBO_TOKEN": "@TURBO_TOKEN",
     "TURBO_TEAM": "@TURBO_TEAM"
