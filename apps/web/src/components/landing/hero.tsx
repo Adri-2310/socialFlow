@@ -1,36 +1,53 @@
+'use client';
+
 import Link from 'next/link';
-import { ArrowRight, PlayCircle, Check, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, PlayCircle, Check, ShieldCheck, FileCheck, TrendingUp } from 'lucide-react';
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-96 w-[52rem] -translate-x-1/2 rounded-full bg-primary/5 blur-3xl"></div>
-      <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-24">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+      {/* Gradient mesh background */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute top-10 right-0 h-80 w-80 rounded-full bg-secondary/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+      </div>
+
+      <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-28">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary backdrop-blur-sm">
             <ShieldCheck className="h-3.5 w-3.5" />
             Conforme ONSS &amp; DIMONA — Belgique
           </span>
-          <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             La paie belge,<br />
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">enfin fluide.</span>
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              enfin fluide.
+            </span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-            SocialFlow réunit vos secrétariats sociaux, gestionnaires, entreprises clientes et salariés sur une seule plateforme. Générez des fiches de paie conformes, suivez vos échéances ONSS et automatisez vos déclarations DIMONA.
+            SocialFlow réunit vos secrétariats sociaux, gestionnaires, entreprises clientes et
+            salariés sur une seule plateforme. Générez des fiches de paie conformes, suivez vos
+            échéances ONSS et automatisez vos déclarations DIMONA.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/register"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md transition hover:opacity-90"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"
             >
               Démarrer l&apos;essai 30 jours <ArrowRight className="h-4 w-4" />
             </Link>
-            <a
-              href="#features"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
+            <Link
+              href="/fonctionnalites"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card/50 px-6 py-3 text-sm font-semibold text-foreground backdrop-blur-sm transition hover:bg-muted"
             >
               <PlayCircle className="h-4 w-4" /> Voir la démo
-            </a>
+            </Link>
           </div>
           <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
@@ -40,65 +57,61 @@ export function Hero() {
               <Check className="h-4 w-4 text-secondary" /> Support en FR &amp; NL
             </span>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Mock dashboard */}
-        <div className="relative">
-          <div className="rounded-2xl border border-border bg-card p-2 shadow-xl">
-            <div className="rounded-xl bg-muted p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-red-400"></span>
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
-                  <span className="h-2.5 w-2.5 rounded-full bg-green-400"></span>
-                </div>
-                <span className="text-xs text-muted-foreground">app.socialflow.be</span>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Fiches ce mois', value: '1 284', change: '+12,4%' },
-                  { label: 'Échéance ONSS', value: 'J-3', change: '2 en attente' },
-                  { label: 'Clients actifs', value: '47', change: '+3' },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-lg border border-border bg-card p-3">
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
-                    <p className="mt-1 text-xl font-bold text-foreground">{item.value}</p>
-                    <p className="text-xs font-medium text-secondary">
-                      {item.change}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-semibold text-foreground">Volume de paie — 6 mois</p>
-                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                    EUR
-                  </span>
-                </div>
-                <div className="flex h-24 items-end gap-2">
-                  {[40, 55, 48, 70, 82, 95].map((height, i) => (
-                    <div
-                      key={i}
-                      className="w-full rounded-t bg-primary"
-                      style={{ height: `${height}%`, opacity: 0.4 + (i * 0.12) }}
-                    ></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -bottom-4 -left-4 hidden rounded-xl border border-border bg-card p-3 shadow-md sm:block">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary/20 text-secondary">
-                ✓
+        {/* Cluster de cartes flottantes en verre */}
+        <div className="relative hidden h-[420px] lg:block">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            className="absolute left-1/2 top-1/2 w-72 -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border/60 bg-card/60 p-6 shadow-2xl backdrop-blur-xl"
+          >
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-md">
+              <FileCheck className="h-6 w-6" />
+            </span>
+            <p className="mt-4 text-sm text-muted-foreground">Fiches générées ce mois</p>
+            <p className="text-3xl font-bold text-foreground">1 284</p>
+            <p className="mt-1 text-xs font-semibold text-secondary">+12,4% vs mois dernier</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.35 }}
+            className="absolute -top-2 right-0 w-52 rounded-2xl border border-border/60 bg-card/70 p-4 shadow-xl backdrop-blur-xl"
+          >
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-secondary/15 text-secondary">
+                <ShieldCheck className="h-4 w-4" />
               </span>
-              <div>
-                <p className="text-xs font-semibold text-foreground">DIMONA envoyée</p>
-                <p className="text-[10px] text-muted-foreground">il y a 2 min</p>
-              </div>
-            </div>
-          </div>
+              <p className="mt-3 text-xs font-semibold text-foreground">DIMONA envoyée</p>
+              <p className="text-[11px] text-muted-foreground">il y a 2 min</p>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.45 }}
+            className="absolute bottom-2 left-0 w-56 rounded-2xl border border-border/60 bg-card/70 p-4 shadow-xl backdrop-blur-xl"
+          >
+            <motion.div
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary">
+                <TrendingUp className="h-4 w-4" />
+              </span>
+              <p className="mt-3 text-xs font-semibold text-foreground">Clients actifs</p>
+              <p className="text-lg font-bold text-foreground">
+                47 <span className="text-xs font-medium text-secondary">+3</span>
+              </p>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </section>

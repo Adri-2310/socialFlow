@@ -1,19 +1,17 @@
 import Link from 'next/link';
-import { Waves } from 'lucide-react';
+import Image from 'next/image';
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-card">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
         <div>
-          <a href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <Waves className="h-4 w-4" />
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo-simple.png" alt="SocialFlow" width={32} height={32} className="rounded-lg" />
             <span className="font-bold">
               Social<span className="text-primary">Flow</span>
             </span>
-          </a>
+          </Link>
           <p className="mt-3 text-sm text-muted-foreground">
             La paie belge, enfin fluide.
           </p>
@@ -22,19 +20,19 @@ export function Footer() {
           <p className="text-sm font-semibold">Produit</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>
-              <a href="#features" className="hover:text-primary">
+              <Link href="/fonctionnalites" className="hover:text-primary">
                 Fonctionnalités
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#pricing" className="hover:text-primary">
+              <Link href="/tarifs" className="hover:text-primary">
                 Tarifs
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#roles" className="hover:text-primary">
+              <Link href="/pour-qui" className="hover:text-primary">
                 Rôles
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

@@ -17,6 +17,7 @@
     "better-auth": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.0.0",
+    "framer-motion": "^12.42.2",
     "lucide-react": "latest",
     "next": "^16.0.0",
     "react": "^19.0.0",
