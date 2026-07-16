@@ -14,12 +14,14 @@ export default function TarifsPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Tarifs"
-        title="Un prix simple, par cabinet"
-        description="Sans engagement, sans carte bancaire pour l'essai. Choisissez la formule adaptée à la taille de votre cabinet."
-      />
-      <Pricing />
+      <main>
+        <PageHero
+          eyebrow="Tarifs"
+          title="Un prix simple, par cabinet"
+          description="Sans engagement, sans carte bancaire pour l'essai. Choisissez la formule adaptée à la taille de votre cabinet."
+        />
+        <Pricing />
+      </main>
       <Footer />
     </>
   );

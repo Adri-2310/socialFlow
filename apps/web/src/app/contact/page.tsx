@@ -14,12 +14,14 @@ export default function ContactPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Contact"
-        title="Parlons de vos besoins"
-        description="Une question commerciale ou besoin d'aide ? Notre équipe vous répond rapidement."
-      />
-      <Contact />
+      <main>
+        <PageHero
+          eyebrow="Contact"
+          title="Parlons de vos besoins"
+          description="Une question commerciale ou besoin d'aide ? Notre équipe vous répond rapidement."
+        />
+        <Contact />
+      </main>
       <Footer />
     </>
   );

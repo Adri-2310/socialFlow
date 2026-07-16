@@ -15,7 +15,7 @@ export function Footer() {
               className="rounded-lg"
             />
             <span className="text-lg font-bold tracking-tight">
-              Social<span className="text-primary">Flow</span>
+              Social<span className="text-primary dark:text-indigo-400">Flow</span>
             </span>
           </Link>
           <p className="mt-3 text-sm text-muted-foreground">La paie belge, simplifiée.</p>

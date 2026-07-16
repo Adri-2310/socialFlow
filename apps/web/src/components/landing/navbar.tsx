@@ -39,7 +39,7 @@ export function Navbar() {
             priority
           />
           <span className="text-lg font-bold tracking-tight">
-            Social<span className="text-primary">Flow</span>
+            Social<span className="text-primary dark:text-indigo-400">Flow</span>
           </span>
         </Link>
 

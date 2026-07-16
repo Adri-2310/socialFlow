@@ -10,11 +10,13 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-      <Hero />
-      <TrustBadges />
-      <Stats />
-      <FeaturesTeaser />
-      <PricingTeaser />
+      <main>
+        <Hero />
+        <TrustBadges />
+        <Stats />
+        <FeaturesTeaser />
+        <PricingTeaser />
+      </main>
       <Footer />
     </>
   );

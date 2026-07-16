@@ -14,12 +14,14 @@ export default function FonctionnalitesPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Fonctionnalités"
-        title="Tout le cycle de paie, sans friction"
-        description="De la fiche de paie à la déclaration DIMONA, chaque étape est automatisée et conforme à la législation sociale belge."
-      />
-      <Features />
+      <main>
+        <PageHero
+          eyebrow="Fonctionnalités"
+          title="Tout le cycle de paie, sans friction"
+          description="De la fiche de paie à la déclaration DIMONA, chaque étape est automatisée et conforme à la législation sociale belge."
+        />
+        <Features />
+      </main>
       <Footer />
     </>
   );

@@ -14,12 +14,14 @@ export default function FAQPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="FAQ"
-        title="Questions fréquentes"
-        description="Toutes les réponses à vos questions sur la conformité, la migration de données et la sécurité."
-      />
-      <FAQ />
+      <main>
+        <PageHero
+          eyebrow="FAQ"
+          title="Questions fréquentes"
+          description="Toutes les réponses à vos questions sur la conformité, la migration de données et la sécurité."
+        />
+        <FAQ />
+      </main>
       <Footer />
     </>
   );

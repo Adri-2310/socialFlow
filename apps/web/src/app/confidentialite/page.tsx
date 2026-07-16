@@ -57,12 +57,14 @@ export default function ConfidentialitePage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Légal"
-        title="Politique de confidentialité"
-        description="Notre approche de la confidentialité, des cookies et de la sécurité des données."
-      />
-      <LegalContent updatedAt="16 juillet 2026" sections={sections} />
+      <main>
+        <PageHero
+          eyebrow="Légal"
+          title="Politique de confidentialité"
+          description="Notre approche de la confidentialité, des cookies et de la sécurité des données."
+        />
+        <LegalContent updatedAt="16 juillet 2026" sections={sections} />
+      </main>
       <Footer />
     </>
   );

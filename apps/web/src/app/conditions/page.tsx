@@ -64,12 +64,14 @@ export default function ConditionsPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Légal"
-        title="Conditions générales d'utilisation"
-        description="Les règles qui encadrent l'accès et l'utilisation de la plateforme SocialFlow."
-      />
-      <LegalContent updatedAt="16 juillet 2026" sections={sections} />
+      <main>
+        <PageHero
+          eyebrow="Légal"
+          title="Conditions générales d'utilisation"
+          description="Les règles qui encadrent l'accès et l'utilisation de la plateforme SocialFlow."
+        />
+        <LegalContent updatedAt="16 juillet 2026" sections={sections} />
+      </main>
       <Footer />
     </>
   );

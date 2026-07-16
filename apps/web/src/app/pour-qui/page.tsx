@@ -14,12 +14,14 @@ export default function PourQuiPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Pour qui ?"
-        title="Une plateforme, quatre expériences"
-        description="Chaque acteur de la chaîne de paie dispose d'un espace pensé pour son rôle, du cabinet RH au suivi de sa propre fiche de paie."
-      />
-      <Roles />
+      <main>
+        <PageHero
+          eyebrow="Pour qui ?"
+          title="Une plateforme, quatre expériences"
+          description="Chaque acteur de la chaîne de paie dispose d'un espace pensé pour son rôle, du cabinet RH au suivi de sa propre fiche de paie."
+        />
+        <Roles />
+      </main>
       <Footer />
     </>
   );

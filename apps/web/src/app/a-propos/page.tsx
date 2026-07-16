@@ -14,12 +14,14 @@ export default function AProposPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="À propos"
-        title="Simplifier la paie belge, pour de vrai"
-        description="Née de la complexité administrative belge, SocialFlow réunit tous les acteurs de la paie sur une seule plateforme conforme et simple à utiliser."
-      />
-      <About />
+      <main>
+        <PageHero
+          eyebrow="À propos"
+          title="Simplifier la paie belge, pour de vrai"
+          description="Née de la complexité administrative belge, SocialFlow réunit tous les acteurs de la paie sur une seule plateforme conforme et simple à utiliser."
+        />
+        <About />
+      </main>
       <Footer />
     </>
   );

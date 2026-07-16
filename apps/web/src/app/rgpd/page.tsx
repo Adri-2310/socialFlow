@@ -64,12 +64,14 @@ export default function RgpdPage() {
   return (
     <>
       <Navbar />
-      <PageHero
-        eyebrow="Légal"
-        title="Protection des données (RGPD)"
-        description="Comment SocialFlow collecte, utilise et protège les données personnelles traitées sur la plateforme."
-      />
-      <LegalContent updatedAt="16 juillet 2026" sections={sections} />
+      <main>
+        <PageHero
+          eyebrow="Légal"
+          title="Protection des données (RGPD)"
+          description="Comment SocialFlow collecte, utilise et protège les données personnelles traitées sur la plateforme."
+        />
+        <LegalContent updatedAt="16 juillet 2026" sections={sections} />
+      </main>
       <Footer />
     </>
   );
