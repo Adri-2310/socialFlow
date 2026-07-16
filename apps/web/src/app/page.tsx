@@ -7,7 +7,6 @@ import { PricingTeaser } from '@/components/landing/pricing-teaser';
 import { Footer } from '@/components/landing/footer';
 
 export default function HomePage() {
-  // Test Preview Deploy
   return (
     <>
       <Navbar />

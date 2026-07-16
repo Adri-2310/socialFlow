@@ -8,6 +8,8 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Necessaire pour eviter un mismatch d'hydratation (icone depend de localStorage/matchMedia, absents en SSR)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const stored = localStorage.getItem('sf-theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

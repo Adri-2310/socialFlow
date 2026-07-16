@@ -13,7 +13,7 @@ export function Footer() {
             </span>
           </Link>
           <p className="mt-3 text-sm text-muted-foreground">
-            La paie belge, enfin fluide.
+            La paie belge, simplifiée.
           </p>
         </div>
         <div>
@@ -45,19 +45,14 @@ export function Footer() {
           <p className="text-sm font-semibold text-foreground">Entreprise</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>
-              <a href="#" className="hover:text-primary">
+              <Link href="/a-propos" className="hover:text-primary">
                 À propos
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-primary">
+              <Link href="/contact" className="hover:text-primary">
                 Contact
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-primary">
-                Support
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
@@ -65,19 +60,19 @@ export function Footer() {
           <p className="text-sm font-semibold text-foreground">Légal</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>
-              <a href="#" className="hover:text-primary">
+              <Link href="/rgpd" className="hover:text-primary">
                 RGPD
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-primary">
+              <Link href="/conditions" className="hover:text-primary">
                 Conditions
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-primary">
+              <Link href="/confidentialite" className="hover:text-primary">
                 Confidentialité
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

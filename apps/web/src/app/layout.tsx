@@ -19,7 +19,7 @@ const fontMono = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: 'SocialFlow — La paie belge, enfin fluide',
+  title: 'SocialFlow — La paie belge, simplifiée',
   description:
     'SocialFlow : plateforme SaaS de gestion de la paie et des déclarations sociales pour secrétariats sociaux et cabinets RH belges. ONSS, DIMONA, fiches de paie automatisées.',
   robots: 'index, follow',

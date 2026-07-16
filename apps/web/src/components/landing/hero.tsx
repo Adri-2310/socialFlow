@@ -27,7 +27,7 @@ export function Hero() {
           <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             La paie belge,<br />
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              enfin fluide.
+              simplifiée.
             </span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-muted-foreground">
