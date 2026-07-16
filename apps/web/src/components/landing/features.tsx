@@ -1,11 +1,4 @@
-import {
-  FileText,
-  CalendarClock,
-  Send,
-  LayoutDashboard,
-  Lock,
-  MessagesSquare,
-} from 'lucide-react';
+import { FileText, CalendarClock, Send, LayoutDashboard, Lock, MessagesSquare } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
 
 export function Features() {
@@ -46,7 +39,7 @@ export function Features() {
       icon: Lock,
       title: 'Sécurité & RGPD',
       description:
-        'Hébergement en Europe, chiffrement, 2FA et journal d\'audit complet pour une traçabilité totale.',
+        "Hébergement en Europe, chiffrement, 2FA et journal d'audit complet pour une traçabilité totale.",
       bgColor: 'bg-primary/10',
       textColor: 'text-primary',
     },
@@ -68,13 +61,13 @@ export function Features() {
           return (
             <FadeIn key={feature.title} delay={(i % 3) * 0.1}>
               <div className="group h-full rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-card/40 p-6 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-lg">
-                <span className={`grid h-11 w-11 place-items-center rounded-xl ${feature.bgColor} ${feature.textColor}`}>
+                <span
+                  className={`grid h-11 w-11 place-items-center rounded-xl ${feature.bgColor} ${feature.textColor}`}
+                >
                   <Icon className="h-5 w-5" />
                 </span>
                 <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {feature.description}
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
               </div>
             </FadeIn>
           );

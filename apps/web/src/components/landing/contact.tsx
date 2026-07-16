@@ -5,7 +5,7 @@ const channels = [
   {
     icon: Mail,
     title: 'Ventes & démo',
-    description: 'Une question sur SocialFlow ou envie d\'une démo personnalisée ?',
+    description: "Une question sur SocialFlow ou envie d'une démo personnalisée ?",
     email: 'contact@socialflow.com',
   },
   {

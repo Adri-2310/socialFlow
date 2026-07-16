@@ -7,7 +7,7 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'Contact — SocialFlow',
   description:
-    'Contactez l\'équipe SocialFlow pour une question commerciale, une démo ou une assistance technique.',
+    "Contactez l'équipe SocialFlow pour une question commerciale, une démo ou une assistance technique.",
 };
 
 export default function ContactPage() {

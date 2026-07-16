@@ -4,7 +4,7 @@ import { FadeIn } from '@/components/motion/fade-in';
 const values = [
   {
     icon: ShieldCheck,
-    title: 'Conformité d\'abord',
+    title: "Conformité d'abord",
     description:
       'ONSS, DIMONA, C4 : chaque fonctionnalité est pensée pour rester alignée avec la réglementation sociale belge, sans effort de votre part.',
   },
@@ -18,7 +18,7 @@ const values = [
     icon: Lock,
     title: 'Confiance & sécurité',
     description:
-      'Les données de paie sont sensibles. Elles sont chiffrées, cloisonnées par rôle et hébergées dans l\'Union européenne.',
+      "Les données de paie sont sensibles. Elles sont chiffrées, cloisonnées par rôle et hébergées dans l'Union européenne.",
   },
 ];
 
@@ -30,8 +30,8 @@ export function About() {
           <p className="text-base leading-relaxed text-muted-foreground">
             La gestion de la paie en Belgique implique de jongler entre secrétariats sociaux,
             gestionnaires, entreprises clientes et salariés, chacun avec ses propres outils et
-            échéances. SocialFlow réunit tous ces acteurs sur une seule plateforme, pour que la
-            paie cesse d&apos;être une source de friction et redevienne un sujet simple.
+            échéances. SocialFlow réunit tous ces acteurs sur une seule plateforme, pour que la paie
+            cesse d&apos;être une source de friction et redevienne un sujet simple.
           </p>
         </div>
       </FadeIn>

@@ -50,9 +50,7 @@ export function TrustBadges() {
                   </p>
                   <div className="flex flex-1 flex-col items-center gap-2 border-t border-border/60 pt-4">
                     <Quote className="h-4 w-4 text-primary/40" />
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {company.quote}
-                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{company.quote}</p>
                   </div>
                 </div>
               </FadeIn>

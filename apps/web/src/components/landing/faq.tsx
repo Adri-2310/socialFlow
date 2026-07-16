@@ -18,7 +18,7 @@ const categories = [
       {
         question: 'Mes données sont-elles hébergées en Europe ?',
         answer:
-          'Oui, l\'ensemble des données est hébergé dans l\'Union européenne, avec chiffrement au repos et en transit, conformément au RGPD.',
+          "Oui, l'ensemble des données est hébergé dans l'Union européenne, avec chiffrement au repos et en transit, conformément au RGPD.",
       },
       {
         question: 'Comment les mises à jour légales sont-elles gérées ?',
@@ -44,7 +44,7 @@ const categories = [
       {
         question: 'Puis-je changer de plan à tout moment ?',
         answer:
-          'Oui, vous pouvez passer d\'un plan à l\'autre en un clic depuis votre espace, avec un ajustement au prorata de la période en cours.',
+          "Oui, vous pouvez passer d'un plan à l'autre en un clic depuis votre espace, avec un ajustement au prorata de la période en cours.",
       },
     ],
   },
@@ -55,7 +55,7 @@ const categories = [
       {
         question: 'Puis-je migrer mes clients existants ?',
         answer:
-          'Absolument. L\'import CSV/Excel de vos entreprises et employés est inclus, et notre équipe vous accompagne pendant l\'onboarding.',
+          "Absolument. L'import CSV/Excel de vos entreprises et employés est inclus, et notre équipe vous accompagne pendant l'onboarding.",
       },
       {
         question: 'Quel support est disponible en cas de problème ?',

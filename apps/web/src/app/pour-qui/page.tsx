@@ -7,7 +7,7 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'Pour qui ? — SocialFlow',
   description:
-    'SocialFlow s\'adapte à chaque rôle : Cabinet RH, Gestionnaire, Entreprise cliente et Salarié. Découvrez une plateforme, quatre expériences.',
+    "SocialFlow s'adapte à chaque rôle : Cabinet RH, Gestionnaire, Entreprise cliente et Salarié. Découvrez une plateforme, quatre expériences.",
 };
 
 export default function PourQuiPage() {

@@ -16,7 +16,7 @@ export function Pricing() {
       yearlyPrice: 39,
       highlighted: false,
       features: [
-        'Jusqu\'à 5 entreprises clientes',
+        "Jusqu'à 5 entreprises clientes",
         '2 gestionnaires',
         'Fiches de paie illimitées',
         'Calendrier ONSS',
@@ -30,7 +30,7 @@ export function Pricing() {
       highlighted: true,
       badge: 'Le plus choisi',
       features: [
-        'Jusqu\'à 50 entreprises clientes',
+        "Jusqu'à 50 entreprises clientes",
         'Gestionnaires illimités',
         'DIMONA & C4 automatisées',
         'Portails clients & salariés',
@@ -46,7 +46,7 @@ export function Pricing() {
       custom: true,
       features: [
         'Entreprises illimitées',
-        'SSO / OAuth d\'entreprise',
+        "SSO / OAuth d'entreprise",
         'SLA & support prioritaire',
         'Accompagnement dédié',
       ],
@@ -60,9 +60,7 @@ export function Pricing() {
           <button
             onClick={() => setBilling('monthly')}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              billing === 'monthly'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground'
+              billing === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
             }`}
           >
             Mensuel
@@ -70,9 +68,7 @@ export function Pricing() {
           <button
             onClick={() => setBilling('yearly')}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              billing === 'yearly'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground'
+              billing === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
             }`}
           >
             Annuel <span className="text-secondary">−20%</span>
@@ -96,9 +92,7 @@ export function Pricing() {
                 </span>
               )}
               <h3 className="font-semibold text-foreground">{plan.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {plan.description}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
               {plan.custom ? (
                 <p className="mt-6 text-4xl font-extrabold text-foreground">Sur devis</p>
               ) : (
@@ -117,7 +111,7 @@ export function Pricing() {
                     : 'border border-border text-foreground hover:bg-muted'
                 }`}
               >
-                {plan.custom ? 'Nous contacter' : 'Démarrer l\'essai'}
+                {plan.custom ? 'Nous contacter' : "Démarrer l'essai"}
               </Link>
               <ul className="mt-6 space-y-3 text-sm text-foreground">
                 {plan.features.map((feature) => (
