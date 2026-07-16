@@ -7,14 +7,18 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-8">
         <div>
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo-simple.png" alt="SocialFlow" width={32} height={32} className="rounded-lg" />
+            <Image
+              src="/logo-simple.png"
+              alt="SocialFlow"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
             <span className="text-lg font-bold tracking-tight">
               Social<span className="text-primary">Flow</span>
             </span>
           </Link>
-          <p className="mt-3 text-sm text-muted-foreground">
-            La paie belge, simplifiée.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">La paie belge, simplifiée.</p>
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground">Produit</p>

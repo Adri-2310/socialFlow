@@ -17,7 +17,7 @@ const sections = [
     ],
   },
   {
-    title: "2. Accès au service",
+    title: '2. Accès au service',
     body: [
       "L'accès à SocialFlow nécessite la création d'un compte et, selon le rôle, une invitation par un cabinet ou une entreprise cliente déjà abonnée. Chaque utilisateur est responsable de la confidentialité de ses identifiants.",
     ],
@@ -37,7 +37,7 @@ const sections = [
   {
     title: '5. Propriété intellectuelle',
     body: [
-      "La plateforme, son code, son design et sa marque restent la propriété exclusive de SocialFlow. Les données saisies par les clients (fiches de paie, informations salariés) restent la propriété du client.",
+      'La plateforme, son code, son design et sa marque restent la propriété exclusive de SocialFlow. Les données saisies par les clients (fiches de paie, informations salariés) restent la propriété du client.',
     ],
   },
   {

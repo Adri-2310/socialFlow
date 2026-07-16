@@ -37,11 +37,7 @@ export function ThemeToggle() {
       aria-label="Basculer le thème clair/sombre"
       className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
     >
-      {isDark ? (
-        <Moon className="h-5 w-5" />
-      ) : (
-        <Sun className="h-5 w-5" />
-      )}
+      {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
     </button>
   );
 }

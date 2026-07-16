@@ -6,7 +6,8 @@ const items = [
   {
     icon: FileText,
     title: 'Fiches de paie automatisées',
-    description: 'Calcul en temps réel du brut, des cotisations ONSS et du précompte professionnel.',
+    description:
+      'Calcul en temps réel du brut, des cotisations ONSS et du précompte professionnel.',
   },
   {
     icon: CalendarClock,

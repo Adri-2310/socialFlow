@@ -1,9 +1,4 @@
-import {
-  Building2,
-  UserCog,
-  BriefcaseIcon,
-  User,
-} from 'lucide-react';
+import { Building2, UserCog, BriefcaseIcon, User } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
 
 const roles = [
@@ -61,7 +56,10 @@ export function Roles() {
                     <p className="mt-3 text-sm text-muted-foreground">{role.description}</p>
                     <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
                       {role.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <li
+                          key={feature}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
                           <span className="h-1 w-1 shrink-0 rounded-full bg-secondary" />
                           {feature}
                         </li>

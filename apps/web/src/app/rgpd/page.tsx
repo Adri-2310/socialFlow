@@ -25,7 +25,7 @@ const sections = [
   {
     title: '3. Finalités du traitement',
     body: [
-      "Ces données sont utilisées pour générer les fiches de paie, effectuer les déclarations ONSS et DIMONA, assurer la facturation et la gestion des comptes, et améliorer la sécurité et la qualité du service.",
+      'Ces données sont utilisées pour générer les fiches de paie, effectuer les déclarations ONSS et DIMONA, assurer la facturation et la gestion des comptes, et améliorer la sécurité et la qualité du service.',
     ],
   },
   {

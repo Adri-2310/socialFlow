@@ -3,7 +3,7 @@
 **Projet:** SocialFlow - Plateforme SaaS de gestion de paie belge  
 **Durée totale:** ~12 mois (Juillet 2026 - Juin 2027)  
 **Effort:** 6h/jour, 30h/semaine, du lundi au vendredi  
-**Dernière mise à jour:** 09 Juillet 2026  
+**Dernière mise à jour:** 16 Juillet 2026  
 
 ---
 
@@ -12,7 +12,7 @@
 | Sprint | Dates | Phase | Statut |
 |--------|-------|-------|--------|
 | **0** | 09-20 Juil | Setup & Infrastructure | 🟢 COMPLÉTÉ |
-| **1** | 21 Juil - 3 Août | Landing Page | 🟡 EN COURS |
+| **1** | 21 Juil - 3 Août | Landing Page | 🟢 COMPLÉTÉ (en avance) |
 | **2** | 4-17 Août | Auth & Login | ⏳ À faire |
 | **3-6** | 18 Août - 2 Nov | Dashboards & Portails | ⏳ À faire |
 | **7** | 3 Nov - 14 Déc | Backend & API | ⏳ À faire |
@@ -31,22 +31,22 @@
 ### ✅ Tâches Complétées
 
 - ✅ **Init Turborepo + Next.js 16**
-  - ✅ Structure monorepo créée (apps/, packages/)
+  - ✅ Structure monorepo créée (apps/)
   - ✅ apps/web package.json
   - ✅ Turbo.json config
-  - ✅ pnpm-workspace.yaml
+  - ✅ npm workspaces (migré depuis pnpm en cours de route — voir Sprint 1)
 
 - ✅ **Configuration Next.js**
   - ✅ next.config.ts
   - ✅ tsconfig.json
   - ✅ tailwind.config.ts
-  - ✅ .eslintrc.json
+  - ✅ eslint.config.mjs (flat config, migré depuis .eslintrc.json)
 
 - ✅ **Design System & Styling**
   - ✅ Tailwind 4 setup
-  - ✅ Shadcn/UI structure (prêt pour tweakcn)
-  - ✅ Couleurs de marque (violet + teal)
-  - ✅ Variables CSS globales
+  - ✅ Shadcn/UI + thème Tweakcn appliqué
+  - ✅ Couleurs de marque (indigo `#4f46e5` + teal `#00c49f`)
+  - ✅ Variables CSS globales, dark mode fonctionnel
 
 - ✅ **Documentation & Config**
   - ✅ README.md (racine)
@@ -56,70 +56,63 @@
 
 ### 🎯 Jalon: Infrastructure Ready
 **Statut:** ✅ VALIDÉ  
-**Critère:** Structure complète, prête pour `pnpm install`
+**Critère:** Structure complète, prête pour `npm install`
 
 ---
 
-## 🟡 SPRINT 1 : LANDING PAGE (EN COURS)
+## 🟢 SPRINT 1 : LANDING PAGE (COMPLÉTÉ EN AVANCE)
 
-**Dates:** 21 Juillet 2026 - 3 Août 2026  
-**Statut:** 🟡 **EN COURS** (jour 0 — 09 Juil)  
+**Dates:** 21 Juillet 2026 - 3 Août 2026 (terminé le 16 Juillet, en avance sur planning)  
+**Statut:** 🟢 **COMPLÉTÉ**  
 **Effort estimé:** 60h
 
 ### ✅ Tâches Complétées
 
-- ✅ **Structure Composants Landing** (09 Juil)
-  - ✅ `components/landing/navbar.tsx`
+- ✅ **Structure Composants Landing**
+  - ✅ `components/landing/navbar.tsx` (lien actif, dropdown Entreprise, menu mobile)
   - ✅ `components/landing/hero.tsx`
-  - ✅ `components/landing/trust-badges.tsx`
+  - ✅ `components/landing/trust-badges.tsx` (logos + citations clients)
   - ✅ `components/landing/features.tsx`
   - ✅ `components/landing/roles.tsx`
   - ✅ `components/landing/pricing.tsx`
   - ✅ `components/landing/faq.tsx`
-  - ✅ `components/landing/cta.tsx`
   - ✅ `components/landing/footer.tsx`
+  - (`cta.tsx` supprimé — jugé redondant avec les CTA déjà présents par section)
 
-- ✅ **Composants Utilitaires** (09 Juil)
+- ✅ **Composants Utilitaires**
   - ✅ `components/providers/theme-provider.tsx`
   - ✅ `components/theme-toggle.tsx`
+  - ✅ `components/motion/fade-in.tsx`, `components/motion/counter.tsx`
 
-- ✅ **Pages** (09 Juil)
-  - ✅ `app/layout.tsx` (Root)
-  - ✅ `app/page.tsx` (Landing)
-  - ✅ `app/globals.css`
+- ✅ **Pages** — au-delà du scope initial, la landing a été étendue en plusieurs routes dédiées :
+  - ✅ `/` (accueil), `/fonctionnalites`, `/pour-qui`, `/tarifs`, `/faq`
+  - ✅ `/a-propos`, `/contact`
+  - ✅ `/rgpd`, `/conditions`, `/confidentialite` (pages légales)
 
-### 🟡 Tâches En Attente
+- ✅ **Qualité & outillage** (au-delà du scope initial du sprint)
+  - ✅ Dark/light mode testé et fonctionnel
+  - ✅ Responsive mobile/tablet/desktop vérifié
+  - ✅ Tests unitaires (Vitest + RTL) sur les composants avec logique — 17 tests, 4 fichiers
+  - ✅ Couverture de code configurée (`npm run test:coverage`)
+  - ✅ ESLint (flat config) + Prettier + TypeScript strict, tous propres
+  - ✅ Déployé sur Vercel (`main`, `dev`, `prod`)
+  - ✅ Assets (logos, favicon) optimisés (compression ~98%)
 
-- [ ] Tester dark/light mode
-- [ ] Ajuster responsive design si nécessaire (mobile + tablet + desktop)
-- [ ] Optimiser images et performance
-- [ ] Tester smooth scroll sur ancres
-- [ ] Vérifier Lighthouse score > 90
-- [ ] Tests unitaires des composants
-- [ ] Déployer sur Vercel
+### 🟡 Reste à faire (reporté, non-bloquant)
 
-### ⏱️ Timeline Détaillée
-
-| Date | Tâche | Statut |
-|------|-------|--------|
-| 09 Juil | Structure complète créée | ✅ FAIT |
-| 10-12 Juil | Tester & ajuster responsive | ⏳ À faire |
-| 13-15 Juil | Performance & SEO | ⏳ À faire |
-| 16-17 Juil | Déployer Vercel | ⏳ À faire |
-| 18-20 Juil | Buffer & polish | ⏳ À faire |
-| 3 Août | **Landing page live** | 🎯 Cible |
+- [ ] Audit Lighthouse formel (score cible > 90)
+- [ ] SEO avancé (sitemap.xml, robots.txt, structured data)
 
 ### 🎯 Jalon: Landing Page Live
-**Date cible:** 3 Août 2026  
+**Statut:** ✅ **VALIDÉ** (16 Juillet 2026, en avance sur la cible du 3 Août)  
 **Critères de validation:**
-- [ ] Landing page en ligne sur Vercel
-- [ ] Dark/Light mode fonctionnel
-- [ ] Mobile responsive ✓
-- [ ] Smooth scroll sur sections ✓
-- [ ] FAQ accordéon ✓
-- [ ] Pricing switch mensuel/annuel ✓
-- [ ] SEO de base ✓
-- [ ] Lighthouse > 90
+- [x] Landing page en ligne sur Vercel
+- [x] Dark/Light mode fonctionnel
+- [x] Mobile responsive
+- [x] FAQ accordéon
+- [x] Pricing switch mensuel/annuel
+- [x] SEO de base (metadata par page)
+- [ ] Lighthouse > 90 (non vérifié formellement)
 
 ---
 
@@ -222,10 +215,10 @@
 
 | Métrique | Cible | Statut |
 |----------|-------|--------|
-| Landing page Lighthouse | >90 | 🟡 En cours |
-| Test coverage | >80% | ⏳ À faire |
+| Landing page Lighthouse | >90 | ⏳ Non mesuré |
+| Test coverage | >80% | 🟡 ~49% (baseline landing page, composants avec logique à 90-100%) |
 | Uptime | >99.9% | ⏳ À faire |
-| Responsive design | Mobile/Tablet/Desktop | 🟡 En cours |
+| Responsive design | Mobile/Tablet/Desktop | ✅ Oui |
 | Dark mode | Fonctionnel | ✅ Oui |
 
 ---
@@ -235,7 +228,7 @@
 | Jalon | Date Cible | Statut | Validé |
 |-------|-----------|--------|--------|
 | ✅ Infrastructure ready | 20 Juil 2026 | 🟢 COMPLÉTÉ | ✅ |
-| 🚀 **Landing page live** | **3 Août 2026** | 🟡 EN COURS | ⏳ |
+| 🚀 **Landing page live** | ~~3 Août 2026~~ **16 Juil 2026** | 🟢 COMPLÉTÉ (en avance) | ✅ |
 | Auth pages + login | 17 Août 2026 | ⏳ À faire | ⏳ |
 | Cabinet dashboard | 21 Sept 2026 | ⏳ À faire | ⏳ |
 | Backend complet | 14 Déc 2026 | ⏳ À faire | ⏳ |
@@ -248,36 +241,34 @@
 ## 📝 NOTES D'IMPLÉMENTATION
 
 ### Architecture
-- **Monorepo:** Turborepo + pnpm workspaces
+- **Monorepo:** Turborepo + npm workspaces (migré depuis pnpm mi-Sprint 1)
 - **Framework:** Next.js 16 (App Router)
 - **Styling:** Tailwind CSS 4 + Shadcn/UI
-- **Database:** PostgreSQL + Prisma
-- **Cache:** Redis (Upstash)
-- **Auth:** Better Auth (Magic Link + OAuth)
-- **Payments:** Stripe + Webhooks
+- **Database:** PostgreSQL + Prisma *(prévu — pas encore implémenté)*
+- **Cache:** Redis (Upstash) *(prévu — pas encore implémenté)*
+- **Auth:** Better Auth (Magic Link + OAuth) *(prévu — pas encore implémenté)*
+- **Payments:** Stripe + Webhooks *(prévu — pas encore implémenté)*
 
 ### Code Quality
-- ESLint + Prettier configured
-- TypeScript strict mode enabled
-- Pre-commit hooks ready
-- CI/CD pipeline via GitHub Actions
+- ✅ ESLint (flat config) + Prettier configurés et appliqués sur tout le code
+- ✅ TypeScript strict mode activé
+- ✅ Tests unitaires (Vitest + React Testing Library)
+- [ ] Pre-commit hooks (pas encore mis en place)
+- [ ] CI/CD pipeline via GitHub Actions (déploiement actuel : Vercel Git integration, pas de workflow CI dédié)
 
-### Next Immediate Actions (09 Juil)
+### Next Immediate Actions
 
 ```bash
 # 1. Installer dépendances
-pnpm install
+npm install
 
-# 2. Copier assets du dossier maquette
-# cp doc/maquette/assets/* apps/web/public/
-
-# 3. Setup .env.local
+# 2. Setup .env.local
 cp apps/web/.env.local.example apps/web/.env.local
 
-# 4. Démarrer dev
-pnpm dev
+# 3. Démarrer dev
+npm run dev
 
-# 5. Vérifier sur http://localhost:3000
+# 4. Vérifier sur http://localhost:3000
 ```
 
 ---
@@ -287,9 +278,9 @@ pnpm dev
 **Auteur:** Adrien  
 **Email:** adrien231020@gmail.com  
 **Mise à jour:** Hebdomadaire le lundi  
-**Prochaine révision:** 14 Juillet 2026
+**Prochaine révision:** 21 Juillet 2026
 
 ---
 
 **Document vivant — Mis à jour régulièrement selon la progression**  
-**Dernière modif:** 09 Juillet 2026, 15:30
+**Dernière modif:** 16 Juillet 2026

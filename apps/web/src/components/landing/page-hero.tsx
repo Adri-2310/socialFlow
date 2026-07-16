@@ -30,9 +30,7 @@ export function PageHero({
           <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
             {title}
           </h1>
-          {description && (
-            <p className="mt-4 text-lg text-muted-foreground">{description}</p>
-          )}
+          {description && <p className="mt-4 text-lg text-muted-foreground">{description}</p>}
         </motion.div>
       </div>
     </section>

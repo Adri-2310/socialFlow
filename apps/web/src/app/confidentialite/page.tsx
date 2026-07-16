@@ -6,7 +6,8 @@ import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité — SocialFlow',
-  description: 'Comment SocialFlow protège la confidentialité de vos données et utilise les cookies.',
+  description:
+    'Comment SocialFlow protège la confidentialité de vos données et utilise les cookies.',
 };
 
 const sections = [
@@ -19,7 +20,7 @@ const sections = [
   {
     title: 'Comment nous les utilisons',
     body: [
-      "Ces données servent à fournir et améliorer le service, sécuriser les comptes, assurer le support client, et respecter nos obligations légales en matière sociale et fiscale. Nous ne vendons jamais vos données à des tiers.",
+      'Ces données servent à fournir et améliorer le service, sécuriser les comptes, assurer le support client, et respecter nos obligations légales en matière sociale et fiscale. Nous ne vendons jamais vos données à des tiers.',
     ],
   },
   {
@@ -43,14 +44,12 @@ const sections = [
   {
     title: 'Vos droits',
     body: [
-      "Conformément au RGPD, vous pouvez accéder, rectifier, exporter ou demander la suppression de vos données personnelles à tout moment, sous réserve des obligations légales de conservation propres à la paie.",
+      'Conformément au RGPD, vous pouvez accéder, rectifier, exporter ou demander la suppression de vos données personnelles à tout moment, sous réserve des obligations légales de conservation propres à la paie.',
     ],
   },
   {
     title: 'Contact',
-    body: [
-      'Pour toute question sur cette politique, contactez-nous à contact@socialflow.com.',
-    ],
+    body: ['Pour toute question sur cette politique, contactez-nous à contact@socialflow.com.'],
   },
 ];
 

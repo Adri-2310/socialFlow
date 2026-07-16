@@ -1,4 +1,4 @@
-# 🚀 SocialFlow — MVP
+# 🚀 SocialFlow
 
 **Plateforme SaaS de gestion de la paie belge**
 
@@ -6,32 +6,30 @@ Projet développé pour les secrétariats sociaux et cabinets RH en Belgique.
 
 ---
 
-## 📋 Structure du Projet
+## 📋 Structure du projet
 
 ```
 socialflow/
 ├── apps/
-│   └── web/              # Application Next.js 16 (Frontend + API)
-├── packages/
-│   ├── ui/              # Composants Shadcn/UI + design system
-│   ├── database/         # Prisma schema + migrations
-│   ├── utils/            # Utilitaires partagés
-│   └── config/           # Configuration TypeScript
-├── PLANNING.md           # Roadmap avec dates et jalons
-└── README.md            # Ce fichier
+│   └── web/              # Application Next.js 16 — landing page + marketing
+├── doc/
+│   ├── PLANNING.md        # Roadmap avec dates et jalons
+│   └── analysis/          # Cahier des charges, spec technique, architecture
+└── README.md              # Ce fichier
 ```
+
+> Le monorepo est structuré avec Turborepo pour accueillir de futurs packages partagés
+> (`packages/ui`, `packages/database`, ...) au fur et à mesure de l'avancement du produit —
+> voir [Roadmap](#-roadmap) plus bas.
 
 ---
 
-## 🛠️ Stack Technique
+## 🛠️ Stack technique (actuelle)
 
-- **Frontend:** Next.js 16, React 19, Tailwind CSS 4
-- **Backend:** Next.js API Routes, Better Auth
-- **Database:** PostgreSQL + Prisma ORM
-- **Cache:** Redis (Upstash)
-- **Paiements:** Stripe
-- **Email:** Resend
-- **Monorepo:** Turborepo + pnpm
+- **Frontend:** Next.js 16, React 19, Tailwind CSS 4, Framer Motion
+- **Tests:** Vitest + React Testing Library
+- **Monorepo:** Turborepo + npm workspaces
+- **Déploiement:** Vercel (branches `main`, `dev`, `prod`)
 
 ---
 
@@ -39,8 +37,7 @@ socialflow/
 
 ### Prérequis
 - Node.js >= 18
-- pnpm >= 10
-- PostgreSQL local OU Vercel Postgres
+- npm >= 10
 - Git
 
 ### Installation
@@ -51,33 +48,28 @@ git clone <repo-url>
 cd socialflow
 
 # 2. Install dépendances
-pnpm install
+npm install
 
-# 3. Configure environment
+# 3. Configure environment (optionnel pour la landing page seule)
 cp apps/web/.env.local.example apps/web/.env.local
-# Édite .env.local avec tes clés (DB, OAuth, Stripe, etc.)
 
-# 4. Setup database
-cd apps/web
-pnpm prisma migrate dev
-
-# 5. Démarre dev
-pnpm dev
+# 4. Démarre le serveur de dev
+npm run dev
 ```
 
 L'app sera sur **http://localhost:3000**
 
 ---
 
-## 📅 Jalons du Projet
+## 📅 Jalons du projet
 
-Voir [PLANNING.md](./doc/PLANNING.md) pour le roadmap complet avec dates.
+Voir [doc/PLANNING.md](./doc/PLANNING.md) pour le roadmap complet avec dates.
 
-### Phase 1 : Landing Page ✨ (EN COURS)
+### Phase 1 : Landing page ✨ (en cours)
 - [x] Infrastructure (Sprint 0) — 20 Juil
-- [ ] **Landing page (Sprint 1) — 3 Août**
+- [x] Landing page (Sprint 1) — 3 Août
 
-### Phase 2 : Core Features
+### Phase 2 : Core features
 - [ ] Auth pages (Sprint 2) — 17 Août
 - [ ] Dashboards (Sprints 3-6) — Octobre
 - [ ] Backend complet (Sprint 7) — 14 Déc
@@ -91,34 +83,40 @@ Voir [PLANNING.md](./doc/PLANNING.md) pour le roadmap complet avec dates.
 
 ## 📖 Documentation
 
-- **[PLANNING.md](./PLANNING.md)** — Roadmap avec étapes et dates
+- **[doc/PLANNING.md](./doc/PLANNING.md)** — Roadmap avec étapes et dates
 - **[doc/analysis/PRD_CLIENT.md](./doc/analysis/PRD_CLIENT.md)** — Cahier des charges complet
 - **[doc/analysis/SPEC_FINAL.md](./doc/analysis/SPEC_FINAL.md)** — Spécification technique détaillée
-- **[doc/analysis/ARCHITECTURE.md](./doc/analysis/ARCHITECTURE.md)** — Architecture système & API
+- **[doc/analysis/ARCHITECTURE.md](./doc/analysis/ARCHITECTURE.md)** — Architecture système & API cible
 
 ---
 
-## 🎨 Design System
+## 🎨 Design system
 
 Utilise **Shadcn/UI** + **Tweakcn** pour les thèmes personnalisés.
 
-Couleurs de marque:
-- **Primaire:** Violet (`#7c3aed`)
-- **Secondaire:** Teal (`#0d9488`)
+Couleurs de marque :
+- **Primaire:** Indigo (`#4f46e5`)
+- **Secondaire:** Teal (`#00c49f`)
 
 ---
 
-## 🧪 Tests
+## 🧪 Tests & qualité
 
 ```bash
 # Lint
-pnpm lint
+npm run lint
 
 # Type check
-pnpm type-check
+npm run type-check
 
-# Tests (à venir)
-pnpm test
+# Tests unitaires
+npm test
+
+# Tests avec couverture de code
+npm run test:coverage
+
+# Formatage (Prettier)
+npm run format
 ```
 
 ---
@@ -127,19 +125,31 @@ pnpm test
 
 ```bash
 # Build production
-pnpm build
+npm run build
 
 # Deploy sur Vercel
-# (automatic via Git push to main)
+# (automatique via Git push sur main / dev / prod)
 ```
+
+---
+
+## 🗺️ Roadmap
+
+Ce qui existe aujourd'hui est uniquement la **landing page marketing** (`apps/web`). Le reste de
+l'architecture cible — décrite dans `doc/analysis/` — n'est pas encore implémenté :
+
+- `packages/ui`, `packages/database`, `packages/utils`, `packages/config` (packages partagés)
+- Authentification (Better Auth), routes `(auth)/`, `(dashboard)/`, `(portal)/`
+- API Routes, base de données PostgreSQL + Prisma, cache Redis
+- Paiements Stripe, emails transactionnels Resend
 
 ---
 
 ## 👤 Contact
 
-**Auteur:** Adrien  
-**Email:** adrien231020@gmail.com  
-**Projet:** SocialFlow MVP  
+**Auteur:** Adrien
+**Email:** adrien231020@gmail.com
+**Projet:** SocialFlow
 **Année:** 2026-2027
 
 ---

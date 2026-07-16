@@ -30,7 +30,14 @@ export function Navbar() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo-simple.png" alt="SocialFlow" width={36} height={36} className="rounded-xl" priority />
+          <Image
+            src="/logo-simple.png"
+            alt="SocialFlow"
+            width={36}
+            height={36}
+            className="rounded-xl"
+            priority
+          />
           <span className="text-lg font-bold tracking-tight">
             Social<span className="text-primary">Flow</span>
           </span>
@@ -106,11 +113,7 @@ export function Navbar() {
             className="grid h-9 w-9 place-items-center rounded-lg text-foreground md:hidden"
             aria-label="Ouvrir le menu"
           >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </nav>

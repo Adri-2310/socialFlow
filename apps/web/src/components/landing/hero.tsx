@@ -25,7 +25,8 @@ export function Hero() {
             Conforme ONSS &amp; DIMONA — Belgique
           </span>
           <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            La paie belge,<br />
+            La paie belge,
+            <br />
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               simplifiée.
             </span>
