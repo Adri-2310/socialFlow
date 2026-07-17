@@ -50,8 +50,10 @@ cd socialflow
 # 2. Install dépendances
 npm install
 
-# 3. Configure environment (optionnel pour la landing page seule)
-cp apps/web/.env.local.example apps/web/.env.local
+# 3. Configure environment (nécessaire pour l'authentification, optionnel pour la landing page seule)
+cp .env.example apps/web/.env.local
+# Ou, si la base Neon est déjà provisionnée sur Vercel :
+# npx vercel env pull apps/web/.env.local
 
 # 4. Démarre le serveur de dev
 npm run dev

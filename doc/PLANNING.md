@@ -51,7 +51,7 @@
 - ✅ **Documentation & Config**
   - ✅ README.md (racine)
   - ✅ apps/web/README.md
-  - ✅ .env.local.example
+  - ✅ .env.example (racine, source unique)
   - ✅ .gitignore
 
 ### 🎯 Jalon: Infrastructure Ready
@@ -117,20 +117,25 @@
 
 ---
 
-## 🟡 SPRINT 2 : AUTH & PAGES DE CONNEXION (À faire)
+## 🟡 SPRINT 2 : AUTH & PAGES DE CONNEXION (En cours)
 
 **Dates:** 4 Août 2026 - 17 Août 2026  
-**Statut:** ⏳ **À faire**  
+**Statut:** 🟡 **EN COURS** (démarré en avance, le 17 Juillet 2026)  
 **Effort estimé:** 50h
+
+### Tâches Complétées
+
+- [x] Setup Better Auth (email/password, adapter Prisma + Neon Postgres)
+- [x] Base de données provisionnée sur Neon via l'intégration Vercel Marketplace
+- [x] Pages de login/register (testées de bout en bout, messages d'erreur traduits en FR)
 
 ### Tâches Prévues
 
-- [ ] Setup Better Auth
-- [ ] Pages de login/register
+- [ ] **Séparer la base de données preview et production** : actuellement une seule branche Neon partagée entre Development/Preview/Production. Créer 2 branches Neon fixes — une pour `main` (production), une partagée par `dev` + `feature/*` + le dev local (preview). Décidé le 17 Juillet 2026, reporté à plus tard sur demande explicite de l'utilisateur.
 - [ ] Magic link implementation
 - [ ] Google OAuth integration
 - [ ] Microsoft OAuth integration
-- [ ] Session management
+- [ ] Session management (navbar consciente de la session, protection de routes)
 - [ ] Tests auth flows
 
 ---
@@ -264,7 +269,8 @@
 npm install
 
 # 2. Setup .env.local
-cp apps/web/.env.local.example apps/web/.env.local
+cp .env.example apps/web/.env.local
+# Ou : npx vercel env pull apps/web/.env.local (si Neon est deja provisionne sur Vercel)
 
 # 3. Démarrer dev
 npm run dev
