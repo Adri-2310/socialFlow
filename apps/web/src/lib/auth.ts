@@ -19,6 +19,11 @@ export const auth = betterAuth({
         defaultValue: 'collaborateur',
         input: false,
       },
+      plan: {
+        type: 'string',
+        required: false,
+        input: true,
+      },
     },
   },
 });

@@ -21,6 +21,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   role          String?   @default("collaborateur")
+  plan          String?
   sessions      Session[]
   accounts      Account[]
 

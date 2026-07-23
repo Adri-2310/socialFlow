@@ -1,31 +1,37 @@
 import type { Metadata } from 'next';
-import { Navbar } from '@/components/landing/navbar';
-import { Footer } from '@/components/landing/footer';
-import { RegisterForm } from '@/components/auth/register-form';
+import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
+import { RegisterFlow } from '@/components/auth/register-flow';
+import { isPlanId, type PlanId } from '@/lib/plans';
 
 export const metadata: Metadata = {
   title: 'Créer un compte — SocialFlow',
-  description: "Créez votre compte SocialFlow et démarrez l'essai de 30 jours.",
+  description:
+    "Choisissez votre formule et créez votre compte SocialFlow pour démarrer l'essai de 30 jours.",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  const { plan } = await searchParams;
+  const initialPlanId: PlanId | null = isPlanId(plan) ? plan : null;
+
   return (
-    <>
-      <Navbar />
-      <main>
-        <section className="mx-auto max-w-md px-4 py-20 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-border/60 bg-card/60 p-8 shadow-xl backdrop-blur-xl">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Créer un compte</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Essai de 30 jours, sans carte bancaire.
-            </p>
-            <div className="mt-6">
-              <RegisterForm />
-            </div>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </>
+    <div className="flex min-h-screen">
+      <AuthBrandPanel
+        title={
+          <>
+            Simplifiez la paie
+            <br />
+            de vos clients.
+          </>
+        }
+        description="Rejoignez les cabinets qui automatisent leurs fiches de paie, leurs échéances ONSS et leurs déclarations DIMONA."
+        quote="« Nous avons divisé par deux le temps de traitement de nos paies. » — Payroll BXL"
+      />
+
+      <RegisterFlow initialPlanId={initialPlanId} />
+    </div>
   );
 }

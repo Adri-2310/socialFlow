@@ -10,6 +10,7 @@ export function Pricing() {
 
   const plans = [
     {
+      id: 'starter',
       name: 'Starter',
       description: 'Pour les petits cabinets qui démarrent.',
       monthlyPrice: 49,
@@ -23,6 +24,7 @@ export function Pricing() {
       ],
     },
     {
+      id: 'pro',
       name: 'Pro',
       description: 'Pour les cabinets en croissance.',
       monthlyPrice: 129,
@@ -38,6 +40,7 @@ export function Pricing() {
       ],
     },
     {
+      id: null,
       name: 'Enterprise',
       description: 'Pour les grands secrétariats sociaux.',
       monthlyPrice: null,
@@ -104,7 +107,7 @@ export function Pricing() {
                 </p>
               )}
               <Link
-                href={plan.custom ? '#contact' : '/register'}
+                href={plan.custom ? '#contact' : `/register?plan=${plan.id}`}
                 className={`mt-6 block rounded-xl py-2.5 text-center text-sm font-semibold transition ${
                   plan.highlighted
                     ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:opacity-90'
