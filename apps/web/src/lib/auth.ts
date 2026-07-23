@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { twoFactor } from 'better-auth/plugins';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from '@/lib/prisma';
 
@@ -16,7 +17,7 @@ export const auth = betterAuth({
       role: {
         type: 'string',
         required: false,
-        defaultValue: 'collaborateur',
+        defaultValue: 'cabinet',
         input: false,
       },
       plan: {
@@ -24,6 +25,17 @@ export const auth = betterAuth({
         required: false,
         input: true,
       },
+      billingPeriod: {
+        type: 'string',
+        required: false,
+        defaultValue: 'monthly',
+        input: true,
+      },
     },
   },
+  plugins: [
+    twoFactor({
+      issuer: 'SocialFlow',
+    }),
+  ],
 });

@@ -7,6 +7,13 @@ const MESSAGES: Record<string, string> = {
   USER_ALREADY_EXISTS: 'Un compte existe déjà avec cette adresse email.',
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'Un compte existe déjà avec cette adresse email.',
   CREDENTIAL_ACCOUNT_NOT_FOUND: 'Aucun compte ne correspond à ces identifiants.',
+  INVALID_PASSWORD: 'Mot de passe incorrect.',
+  INVALID_CODE: 'Code invalide. Réessayez.',
+  INVALID_BACKUP_CODE: 'Code de secours invalide.',
+  TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Trop de tentatives. Demandez un nouveau code.',
+  ACCOUNT_TEMPORARILY_LOCKED: 'Compte temporairement verrouillé suite à trop de tentatives.',
+  INVALID_TWO_FACTOR_COOKIE: 'Session de vérification expirée. Reconnectez-vous.',
+  TWO_FACTOR_NOT_ENABLED: "L'authentification à deux facteurs n'est pas activée.",
 };
 
 const DEFAULT_MESSAGE = 'Une erreur est survenue. Veuillez réessayer.';

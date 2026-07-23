@@ -7,6 +7,7 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    seed: 'node prisma/seed.mjs',
   },
   datasource: {
     // Connexion directe (sans pgbouncer) : requise par le CLI Prisma pour les migrations.

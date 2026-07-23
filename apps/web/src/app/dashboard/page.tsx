@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { TwoFactorSetup } from '@/components/auth/two-factor-setup';
 import { auth } from '@/lib/auth';
 
 export const metadata: Metadata = {
@@ -44,6 +45,10 @@ export default async function DashboardPage() {
                 <dd className="font-medium text-foreground">{user.role}</dd>
               </div>
             </dl>
+
+            <div className="mt-6">
+              <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
+            </div>
 
             <div className="mt-8">
               <LogoutButton />

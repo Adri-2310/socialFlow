@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { RegisterFlow } from '@/components/auth/register-flow';
 import { isPlanId, type PlanId } from '@/lib/plans';
+import { getPricingPlans } from '@/lib/pricing';
 
 export const metadata: Metadata = {
   title: 'Créer un compte — SocialFlow',
@@ -14,8 +15,11 @@ export default async function RegisterPage({
 }: {
   searchParams: Promise<{ plan?: string }>;
 }) {
-  const { plan } = await searchParams;
-  const initialPlanId: PlanId | null = isPlanId(plan) ? plan : null;
+  const [{ plan }, allPlans] = await Promise.all([searchParams, getPricingPlans()]);
+  const trialPlans = allPlans.filter((p) => !p.custom);
+
+  const initialPlanId: PlanId | null =
+    isPlanId(plan) && trialPlans.some((p) => p.id === plan) ? plan : null;
 
   return (
     <div className="flex min-h-screen">
@@ -31,7 +35,7 @@ export default async function RegisterPage({
         quote="« Nous avons divisé par deux le temps de traitement de nos paies. » — Payroll BXL"
       />
 
-      <RegisterFlow initialPlanId={initialPlanId} />
+      <RegisterFlow plans={trialPlans} initialPlanId={initialPlanId} />
     </div>
   );
 }

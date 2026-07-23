@@ -3,8 +3,8 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
-import { signIn } from '@/lib/auth-client';
+import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { signIn, twoFactor } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -45,13 +45,16 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
 
   async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { error: signInError } = await signIn.email({ email, password });
+    const { data, error: signInError } = await signIn.email({ email, password });
 
     setLoading(false);
 
@@ -60,8 +63,107 @@ export function LoginForm() {
       return;
     }
 
-    router.push('/dashboard');
+    if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+      setNeedsTwoFactor(true);
+      return;
+    }
+
+    router.push('/bienvenue');
     router.refresh();
+  }
+
+  async function handleTwoFactorSubmit(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const { error: verifyError } = useBackupCode
+      ? await twoFactor.verifyBackupCode({ code: twoFactorCode })
+      : await twoFactor.verifyTotp({ code: twoFactorCode });
+
+    setLoading(false);
+
+    if (verifyError) {
+      setError(translateAuthError(verifyError.code));
+      return;
+    }
+
+    router.push('/bienvenue');
+    router.refresh();
+  }
+
+  if (needsTwoFactor) {
+    return (
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => {
+            setNeedsTwoFactor(false);
+            setError(null);
+            setTwoFactorCode('');
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" /> Retour
+        </button>
+
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <ShieldCheck className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Vérification en deux étapes</p>
+            <p className="text-xs text-muted-foreground">
+              {useBackupCode
+                ? 'Saisissez un de vos codes de secours.'
+                : "Saisissez le code de votre application d'authentification."}
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="twoFactorCode" className="mb-1.5 block text-sm font-medium text-foreground">
+              {useBackupCode ? 'Code de secours' : 'Code à 6 chiffres'}
+            </label>
+            <input
+              id="twoFactorCode"
+              type="text"
+              inputMode={useBackupCode ? 'text' : 'numeric'}
+              autoComplete="one-time-code"
+              required
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value)}
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder={useBackupCode ? 'xxxxxxxx' : '123456'}
+            />
+          </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Vérifier
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUseBackupCode((v) => !v);
+            setError(null);
+            setTwoFactorCode('');
+          }}
+          className="w-full text-center text-sm font-medium text-primary hover:underline"
+        >
+          {useBackupCode ? "Utiliser l'application d'authentification" : 'Utiliser un code de secours'}
+        </button>
+      </div>
+    );
   }
 
   return (

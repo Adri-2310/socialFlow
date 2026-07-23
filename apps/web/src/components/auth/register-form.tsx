@@ -6,9 +6,15 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { signUp } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
-import type { PlanId } from '@/lib/plans';
+import type { BillingPeriod, PlanId } from '@/lib/plans';
 
-export function RegisterForm({ planId }: { planId: PlanId }) {
+export function RegisterForm({
+  planId,
+  billingPeriod,
+}: {
+  planId: PlanId;
+  billingPeriod: BillingPeriod;
+}) {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -33,7 +39,13 @@ export function RegisterForm({ planId }: { planId: PlanId }) {
 
     setLoading(true);
 
-    const { error: signUpError } = await signUp.email({ name, email, password, plan: planId });
+    const { error: signUpError } = await signUp.email({
+      name,
+      email,
+      password,
+      plan: planId,
+      billingPeriod,
+    });
 
     setLoading(false);
 
@@ -42,7 +54,7 @@ export function RegisterForm({ planId }: { planId: PlanId }) {
       return;
     }
 
-    router.push('/dashboard');
+    router.push('/bienvenue');
     router.refresh();
   }
 

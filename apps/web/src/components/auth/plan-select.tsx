@@ -1,18 +1,50 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
-import { PLANS, type PlanId } from '@/lib/plans';
+import type { BillingPeriod, Plan, PlanId } from '@/lib/plans';
 
-export function PlanSelect({ onSelect }: { onSelect: (id: PlanId) => void }) {
+export function PlanSelect({
+  plans,
+  onSelect,
+}: {
+  plans: Plan[];
+  onSelect: (id: PlanId, billing: BillingPeriod) => void;
+}) {
+  const [billing, setBilling] = useState<BillingPeriod>('monthly');
+
   return (
     <div>
-      <div className="space-y-4">
-        {PLANS.map((plan) => (
+      <div className="flex justify-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 p-1 shadow-sm backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setBilling('monthly')}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              billing === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            Mensuel
+          </button>
+          <button
+            type="button"
+            onClick={() => setBilling('yearly')}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              billing === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            Annuel <span className="text-secondary">−20%</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {plans.map((plan) => (
           <button
             key={plan.id}
             type="button"
-            onClick={() => onSelect(plan.id)}
+            onClick={() => onSelect(plan.id, billing)}
             className={`relative flex w-full items-start justify-between gap-4 rounded-2xl p-5 text-left transition ${
               plan.highlighted
                 ? 'border-2 border-primary/60 bg-gradient-to-b from-primary/10 via-card to-card shadow-lg shadow-primary/10'
@@ -43,7 +75,7 @@ export function PlanSelect({ onSelect }: { onSelect: (id: PlanId) => void }) {
             </div>
             <div className="shrink-0 text-right">
               <p className="text-2xl font-extrabold text-foreground">
-                {plan.monthlyPrice}
+                {billing === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
                 <span className="text-xs font-medium text-muted-foreground">€/mois</span>
               </p>
             </div>

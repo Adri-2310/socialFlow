@@ -4,57 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
+import type { Plan } from '@/lib/plans';
 
-export function Pricing() {
+export function Pricing({ plans }: { plans: Plan[] }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
-
-  const plans = [
-    {
-      id: 'starter',
-      name: 'Starter',
-      description: 'Pour les petits cabinets qui démarrent.',
-      monthlyPrice: 49,
-      yearlyPrice: 39,
-      highlighted: false,
-      features: [
-        "Jusqu'à 5 entreprises clientes",
-        '2 gestionnaires',
-        'Fiches de paie illimitées',
-        'Calendrier ONSS',
-      ],
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      description: 'Pour les cabinets en croissance.',
-      monthlyPrice: 129,
-      yearlyPrice: 103,
-      highlighted: true,
-      badge: 'Le plus choisi',
-      features: [
-        "Jusqu'à 50 entreprises clientes",
-        'Gestionnaires illimités',
-        'DIMONA & C4 automatisées',
-        'Portails clients & salariés',
-        'Branding personnalisé',
-      ],
-    },
-    {
-      id: null,
-      name: 'Enterprise',
-      description: 'Pour les grands secrétariats sociaux.',
-      monthlyPrice: null,
-      yearlyPrice: null,
-      highlighted: false,
-      custom: true,
-      features: [
-        'Entreprises illimitées',
-        "SSO / OAuth d'entreprise",
-        'SLA & support prioritaire',
-        'Accompagnement dédié',
-      ],
-    },
-  ];
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
@@ -81,7 +34,7 @@ export function Pricing() {
 
       <div className="mt-12 grid gap-6 lg:grid-cols-3">
         {plans.map((plan, i) => (
-          <FadeIn key={plan.name} delay={i * 0.1} className="h-full">
+          <FadeIn key={plan.id} delay={i * 0.1} className="h-full">
             <div
               className={`relative h-full rounded-2xl p-8 backdrop-blur-sm transition ${
                 plan.highlighted
