@@ -88,7 +88,11 @@ export default async function DashboardPage() {
             </dl>
 
             <div className="mt-6 space-y-4">
-              <AccountSettings name={user.name} email={user.email} />
+              <AccountSettings
+                name={user.name}
+                email={user.email}
+                emailVerified={user.emailVerified ?? false}
+              />
               <LinkedAccounts />
               <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
             </div>

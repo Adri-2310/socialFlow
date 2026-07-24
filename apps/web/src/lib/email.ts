@@ -159,6 +159,96 @@ export async function sendChangeEmailConfirmationEmail(
   if (error) throw new Error(error.message);
 }
 
+export async function sendAccountDeletedEmail(email: string, name: string) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Votre compte a été supprimé</h1>
+    <p style="margin:0; color:#475569;">Bonjour ${name}, votre compte SocialFlow et toutes les données associées viennent d'être définitivement supprimés.</p>
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de cette suppression, contactez notre support au plus vite.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: 'Votre compte SocialFlow a été supprimé',
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function sendPasswordChangedEmail(email: string) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Votre mot de passe a été modifié</h1>
+    <p style="margin:0; color:#475569;">Le mot de passe de votre compte SocialFlow vient d'être changé avec succès.</p>
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de ce changement, contactez notre support immédiatement.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: 'Votre mot de passe SocialFlow a été modifié',
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function sendTwoFactorEnabledEmail(email: string) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Double authentification activée</h1>
+    <p style="margin:0; color:#475569;">La double authentification vient d'être activée sur votre compte SocialFlow. Une connexion nécessitera désormais un code de votre application d'authentification.</p>
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de cette action, contactez notre support immédiatement.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: 'Double authentification activée sur SocialFlow',
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function sendTwoFactorDisabledEmail(email: string) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Double authentification désactivée</h1>
+    <p style="margin:0; color:#475569;">La double authentification vient d'être désactivée sur votre compte SocialFlow.</p>
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de cette action, contactez notre support immédiatement et réactivez la double authentification.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: 'Double authentification désactivée sur SocialFlow',
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function sendAccountUnlinkedEmail(email: string, providerLabel: string) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Compte ${providerLabel} délié</h1>
+    <p style="margin:0; color:#475569;">Votre compte ${providerLabel} vient d'être délié de votre compte SocialFlow. Vous ne pourrez plus l'utiliser pour vous connecter.</p>
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de cette action, contactez notre support immédiatement.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: `Compte ${providerLabel} délié de SocialFlow`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 export async function sendResetPasswordEmail(email: string, url: string) {
   const html = emailShell(`
     <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>

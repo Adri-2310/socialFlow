@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { twoFactor, magicLink, emailOTP } from 'better-auth/plugins';
+import { createAuthMiddleware } from 'better-auth/api';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from '@/lib/prisma';
 import {
@@ -8,7 +9,17 @@ import {
   sendResetPasswordEmail,
   sendVerificationEmail,
   sendChangeEmailConfirmationEmail,
+  sendAccountDeletedEmail,
+  sendPasswordChangedEmail,
+  sendTwoFactorEnabledEmail,
+  sendTwoFactorDisabledEmail,
+  sendAccountUnlinkedEmail,
 } from '@/lib/email';
+
+const OAUTH_PROVIDER_LABELS: Record<string, string> = {
+  google: 'Google',
+  microsoft: 'Microsoft',
+};
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
@@ -26,6 +37,11 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await sendVerificationEmail(user.email, url);
     },
+    // Verification "souple" : l'email part a l'inscription et reste
+    // consultable/renvoyable depuis le dashboard, mais ne bloque jamais la
+    // connexion (emailAndPassword.requireEmailVerification reste desactive).
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
   },
   socialProviders: {
     google: {
@@ -55,6 +71,9 @@ export const auth = betterAuth({
   user: {
     deleteUser: {
       enabled: true,
+      beforeDelete: async (user) => {
+        await sendAccountDeletedEmail(user.email, user.name);
+      },
     },
     changeEmail: {
       enabled: true,
@@ -81,6 +100,47 @@ export const auth = betterAuth({
         input: true,
       },
     },
+  },
+  hooks: {
+    // Notifications de securite envoyees apres coup, uniquement si l'action a
+    // reussi (verifie via ctx.context.returned) et dans le cadre d'une
+    // session pleinement authentifiee (evite par exemple de notifier a tort
+    // sur le verify-totp utilise pendant le challenge de connexion 2FA, qui
+    // n'a pas encore de session.session complete).
+    after: createAuthMiddleware(async (ctx) => {
+      const returned = ctx.context.returned;
+      const success = returned
+        ? returned instanceof Response
+          ? returned.status === 200
+          : true
+        : false;
+      if (!success) return;
+
+      const session = ctx.context.session;
+      if (!session?.session) return;
+
+      if (ctx.path === '/change-password') {
+        await sendPasswordChangedEmail(session.user.email);
+        return;
+      }
+
+      if (ctx.path === '/two-factor/verify-totp') {
+        await sendTwoFactorEnabledEmail(session.user.email);
+        return;
+      }
+
+      if (ctx.path === '/two-factor/disable') {
+        await sendTwoFactorDisabledEmail(session.user.email);
+        return;
+      }
+
+      if (ctx.path === '/unlink-account') {
+        const providerId = (ctx.body as { providerId?: string } | undefined)?.providerId;
+        const label = providerId ? (OAUTH_PROVIDER_LABELS[providerId] ?? providerId) : null;
+        if (label) await sendAccountUnlinkedEmail(session.user.email, label);
+        return;
+      }
+    }),
   },
   plugins: [
     twoFactor({

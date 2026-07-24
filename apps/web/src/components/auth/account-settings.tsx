@@ -2,7 +2,18 @@
 
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Eye, EyeOff, KeyRound, Loader2, Mail, Pencil, User, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  Mail,
+  Pencil,
+  User,
+  X,
+} from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
 
@@ -105,11 +116,13 @@ function NameRow({
 
 function EmailRow({
   email,
+  emailVerified,
   editing,
   onEdit,
   onClose,
 }: {
   email: string;
+  emailVerified: boolean;
   editing: boolean;
   onEdit: () => void;
   onClose: () => void;
@@ -118,6 +131,27 @@ function EmailRow({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  async function handleResend() {
+    setError(null);
+    setResending(true);
+
+    const { error: resendError } = await authClient.sendVerificationEmail({
+      email,
+      callbackURL: '/dashboard',
+    });
+
+    setResending(false);
+
+    if (resendError) {
+      setError(translateAuthError(resendError.code));
+      return;
+    }
+
+    setResent(true);
+  }
 
   async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -202,23 +236,46 @@ function EmailRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <div className="flex items-center gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-        </span>
-        <div>
-          <p className="text-xs text-muted-foreground">Email</p>
-          <p className="text-sm font-medium text-foreground">{email}</p>
+    <div className="py-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+          </span>
+          <div>
+            <p className="text-xs text-muted-foreground">Email</p>
+            <p className="text-sm font-medium text-foreground">{email}</p>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
+        >
+          <Pencil className="h-3.5 w-3.5" /> Modifier
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-      >
-        <Pencil className="h-3.5 w-3.5" /> Modifier
-      </button>
+
+      {!emailVerified && (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-amber-500/10 px-3 py-2">
+          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            {resent ? 'Email de vérification renvoyé.' : 'Email non vérifié.'}
+          </p>
+          {!resent && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {resending && <Loader2 className="h-3 w-3 animate-spin" />}
+              Renvoyer
+            </button>
+          )}
+        </div>
+      )}
+      {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
     </div>
   );
 }
@@ -368,7 +425,15 @@ function PasswordRow({
   );
 }
 
-export function AccountSettings({ name, email }: { name: string; email: string }) {
+export function AccountSettings({
+  name,
+  email,
+  emailVerified,
+}: {
+  name: string;
+  email: string;
+  emailVerified: boolean;
+}) {
   const [editing, setEditing] = useState<Field>(null);
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
 
@@ -398,6 +463,7 @@ export function AccountSettings({ name, email }: { name: string; email: string }
         />
         <EmailRow
           email={email}
+          emailVerified={emailVerified}
           editing={editing === 'email'}
           onEdit={() => setEditing('email')}
           onClose={close}
