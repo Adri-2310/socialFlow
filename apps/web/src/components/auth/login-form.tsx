@@ -7,9 +7,11 @@ import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide
 import { signIn, twoFactor } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
 import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
+import { PasswordlessLogin } from '@/components/auth/passwordless-login';
 
 export function LoginForm() {
   const router = useRouter();
+  const [mode, setMode] = useState<'password' | 'passwordless'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -125,7 +127,10 @@ export function LoginForm() {
 
         <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
           <div>
-            <label htmlFor="twoFactorCode" className="mb-1.5 block text-sm font-medium text-foreground">
+            <label
+              htmlFor="twoFactorCode"
+              className="mb-1.5 block text-sm font-medium text-foreground"
+            >
               {useBackupCode ? 'Code de secours' : 'Code à 6 chiffres'}
             </label>
             <input
@@ -162,7 +167,9 @@ export function LoginForm() {
           }}
           className="w-full text-center text-sm font-medium text-primary hover:underline"
         >
-          {useBackupCode ? "Utiliser l'application d'authentification" : 'Utiliser un code de secours'}
+          {useBackupCode
+            ? "Utiliser l'application d'authentification"
+            : 'Utiliser un code de secours'}
         </button>
       </div>
     );
@@ -170,111 +177,137 @@ export function LoginForm() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={googleLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon className="h-4 w-4" />}
-          Google
-        </button>
-        <button
-          type="button"
-          onClick={handleMicrosoftSignIn}
-          disabled={microsoftLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {microsoftLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MicrosoftIcon className="h-4 w-4" />}
-          Microsoft
-        </button>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">ou avec votre e-mail</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
-            Adresse email
-          </label>
-          <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="prenom@cabinet.be"
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label htmlFor="password" className="block text-sm font-medium text-foreground">
-              Mot de passe
-            </label>
-            <span
-              className="text-xs font-medium text-muted-foreground/60"
-              title="Bientôt disponible"
-            >
-              Oublié ?
-            </span>
-          </div>
-          <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="••••••••"
-            />
+      {mode === 'password' && (
+        <>
+          <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {googleLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Google</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleMicrosoftSignIn}
+              disabled={microsoftLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {microsoftLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MicrosoftIcon className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Microsoft</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('passwordless')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
+            >
+              <Mail className="h-4 w-4" />
+              <span className="hidden sm:inline">Email</span>
             </button>
           </div>
-        </div>
 
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <input type="checkbox" className="h-4 w-4 rounded border-input accent-primary" />
-          Rester connecté
-        </label>
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">ou avec votre e-mail</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+      {mode === 'passwordless' ? (
+        <PasswordlessLogin onBack={() => setMode('password')} />
+      ) : (
+        <>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
+                Adresse email
+              </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="prenom@cabinet.be"
+                />
+              </div>
+            </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          Se connecter
-        </button>
-      </form>
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                  Mot de passe
+                </label>
+                <Link
+                  href="/mot-de-passe-oublie"
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Oublié ?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Pas encore de compte ?{' '}
-        <Link href="/register" className="font-semibold text-primary hover:underline">
-          Créer un compte
-        </Link>
-      </p>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input type="checkbox" className="h-4 w-4 rounded border-input accent-primary" />
+              Rester connecté
+            </label>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Se connecter
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Pas encore de compte ?{' '}
+            <Link href="/register" className="font-semibold text-primary hover:underline">
+              Créer un compte
+            </Link>
+          </p>
+        </>
+      )}
     </div>
   );
 }

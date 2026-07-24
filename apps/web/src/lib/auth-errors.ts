@@ -23,7 +23,8 @@ const MESSAGES: Record<string, string> = {
   // distincts des codes d'API ci-dessus.
   account_not_linked:
     "Un compte existe déjà avec cet email mais n'est pas encore vérifié. Connectez-vous avec votre mot de passe, puis liez ce fournisseur depuis le tableau de bord.",
-  "email_doesn't_match": "L'email de ce compte ne correspond pas à celui de votre compte SocialFlow.",
+  "email_doesn't_match":
+    "L'email de ce compte ne correspond pas à celui de votre compte SocialFlow.",
   account_already_linked_to_different_user: 'Ce compte est déjà lié à un autre utilisateur.',
   unable_to_link_account: 'Impossible de lier ce compte. Réessayez.',
   oauth_provider_not_found: 'Ce fournisseur de connexion est introuvable.',
@@ -38,6 +39,25 @@ const MESSAGES: Record<string, string> = {
   unable_to_create_session: 'Impossible de démarrer votre session. Réessayez.',
   invalid_callback_request: 'Requête de connexion invalide.',
   internal_server_error: 'Erreur interne. Réessayez dans quelques instants.',
+
+  // Lien magique (redirection depuis l'email cliqué).
+  INVALID_TOKEN: 'Ce lien de connexion est invalide ou a déjà été utilisé. Demandez-en un nouveau.',
+  new_user_signup_disabled:
+    "Aucun compte SocialFlow n'est associé à cet email. Créez un compte depuis la page d'inscription.",
+  failed_to_create_session: 'Impossible de démarrer votre session. Réessayez.',
+  failed_to_create_user: 'Impossible de créer votre compte. Réessayez.',
+
+  // Code par email (réponses API directes, pas une redirection).
+  OTP_EXPIRED: 'Ce code a expiré. Demandez-en un nouveau.',
+  INVALID_OTP: 'Code invalide. Réessayez.',
+  TOO_MANY_ATTEMPTS: 'Trop de tentatives. Demandez un nouveau code.',
+
+  // Modification du profil (nom, email, mot de passe).
+  TOKEN_EXPIRED: 'Ce lien a expiré. Recommencez la demande.',
+  USER_NOT_FOUND: 'Utilisateur introuvable.',
+  INVALID_USER: 'Cette action ne correspond pas à votre session actuelle.',
+  CHANGE_EMAIL_DISABLED: "Le changement d'email n'est pas disponible.",
+  EMAIL_CAN_NOT_BE_UPDATED: "L'email ne peut pas être modifié de cette façon.",
 };
 
 const DEFAULT_MESSAGE = 'Une erreur est survenue. Veuillez réessayer.';

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { TwoFactorSetup } from '@/components/auth/two-factor-setup';
 import { LinkedAccounts } from '@/components/auth/linked-accounts';
+import { AccountSettings } from '@/components/auth/account-settings';
 import { DeleteAccount } from '@/components/auth/delete-account';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -75,7 +76,9 @@ export default async function DashboardPage() {
               <div className="flex justify-between border-b border-border/60 pb-3">
                 <dt className="text-muted-foreground">Facturation</dt>
                 <dd className="font-medium text-foreground">
-                  {user.billingPeriod ? (BILLING_LABELS[user.billingPeriod] ?? user.billingPeriod) : '—'}
+                  {user.billingPeriod
+                    ? (BILLING_LABELS[user.billingPeriod] ?? user.billingPeriod)
+                    : '—'}
                 </dd>
               </div>
               <div className="flex justify-between pb-3">
@@ -85,6 +88,7 @@ export default async function DashboardPage() {
             </dl>
 
             <div className="mt-6 space-y-4">
+              <AccountSettings name={user.name} email={user.email} />
               <LinkedAccounts />
               <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
             </div>

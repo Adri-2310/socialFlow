@@ -1,7 +1,14 @@
 import { betterAuth } from 'better-auth';
-import { twoFactor } from 'better-auth/plugins';
+import { twoFactor, magicLink, emailOTP } from 'better-auth/plugins';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from '@/lib/prisma';
+import {
+  sendMagicLinkEmail,
+  sendOTPEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+  sendChangeEmailConfirmationEmail,
+} from '@/lib/email';
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
@@ -11,6 +18,14 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendResetPasswordEmail(user.email, url);
+    },
+  },
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendVerificationEmail(user.email, url);
+    },
   },
   socialProviders: {
     google: {
@@ -41,6 +56,12 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
     },
+    changeEmail: {
+      enabled: true,
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+        await sendChangeEmailConfirmationEmail(user.email, newEmail, url);
+      },
+    },
     additionalFields: {
       role: {
         type: 'string',
@@ -64,6 +85,21 @@ export const auth = betterAuth({
   plugins: [
     twoFactor({
       issuer: 'SocialFlow',
+    }),
+    // Lien magique et code par email : methodes de connexion sans mot de passe
+    // uniquement (disableSignUp) - la creation de compte reste reservee au
+    // parcours /register.
+    magicLink({
+      disableSignUp: true,
+      sendMagicLink: async ({ email, url }) => {
+        await sendMagicLinkEmail(email, url);
+      },
+    }),
+    emailOTP({
+      disableSignUp: true,
+      sendVerificationOTP: async ({ email, otp }) => {
+        await sendOTPEmail(email, otp);
+      },
     }),
   ],
 });
