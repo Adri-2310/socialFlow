@@ -3,7 +3,15 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { TwoFactorSetup } from '@/components/auth/two-factor-setup';
+import { LinkedAccounts } from '@/components/auth/linked-accounts';
+import { DeleteAccount } from '@/components/auth/delete-account';
 import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+const BILLING_LABELS: Record<string, string> = {
+  monthly: 'Mensuelle',
+  yearly: 'Annuelle',
+};
 
 export const metadata: Metadata = {
   title: 'Tableau de bord — SocialFlow',
@@ -18,6 +26,16 @@ export default async function DashboardPage() {
   }
 
   const { user } = session;
+
+  const plan = user.plan
+    ? await prisma.pricingPlan.findUnique({ where: { planId: user.plan } })
+    : null;
+
+  const memberSince = new Intl.DateTimeFormat('fr-BE', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(user.createdAt));
 
   return (
     <>
@@ -40,18 +58,43 @@ export default async function DashboardPage() {
                 <dt className="text-muted-foreground">Email</dt>
                 <dd className="font-medium text-foreground">{user.email}</dd>
               </div>
-              <div className="flex justify-between pb-3">
+              <div className="flex justify-between border-b border-border/60 pb-3">
                 <dt className="text-muted-foreground">Rôle</dt>
                 <dd className="font-medium text-foreground">{user.role}</dd>
               </div>
+              <div className="flex justify-between border-b border-border/60 pb-3">
+                <dt className="text-muted-foreground">Email vérifié</dt>
+                <dd className="font-medium text-foreground">
+                  {user.emailVerified ? 'Oui' : 'Non'}
+                </dd>
+              </div>
+              <div className="flex justify-between border-b border-border/60 pb-3">
+                <dt className="text-muted-foreground">Formule</dt>
+                <dd className="font-medium text-foreground">{plan?.name ?? 'Aucune'}</dd>
+              </div>
+              <div className="flex justify-between border-b border-border/60 pb-3">
+                <dt className="text-muted-foreground">Facturation</dt>
+                <dd className="font-medium text-foreground">
+                  {user.billingPeriod ? (BILLING_LABELS[user.billingPeriod] ?? user.billingPeriod) : '—'}
+                </dd>
+              </div>
+              <div className="flex justify-between pb-3">
+                <dt className="text-muted-foreground">Membre depuis</dt>
+                <dd className="font-medium text-foreground">{memberSince}</dd>
+              </div>
             </dl>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
+              <LinkedAccounts />
               <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 flex items-center justify-between">
               <LogoutButton />
+            </div>
+
+            <div className="mt-8 border-t border-border/60 pt-6">
+              <DeleteAccount />
             </div>
           </div>
         </section>

@@ -12,7 +12,7 @@ export function LogoutButton() {
   async function handleLogout() {
     setLoading(true);
     await signOut();
-    router.push('/login');
+    router.push('/au-revoir');
     router.refresh();
   }
 

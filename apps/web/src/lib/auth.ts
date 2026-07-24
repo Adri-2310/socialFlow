@@ -12,7 +12,35 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      disableImplicitSignUp: true,
+    },
+    microsoft: {
+      clientId: process.env.MICROSOFT_CLIENT_ID as string,
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET as string,
+      disableImplicitSignUp: true,
+      // Microsoft n'expose pas toujours le claim `email_verified` dans le ID token
+      // des comptes personnels, mais Microsoft exige déjà une vérification de
+      // l'email (ou du téléphone) à la création du compte - on la considère donc
+      // fiable, comme pour Google.
+      mapProfileToUser: () => ({ emailVerified: true }),
+    },
+  },
+  account: {
+    accountLinking: {
+      allowDifferentEmails: true,
+    },
+  },
+  onAPIError: {
+    errorURL: '/erreur-connexion',
+  },
   user: {
+    deleteUser: {
+      enabled: true,
+    },
     additionalFields: {
       role: {
         type: 'string',

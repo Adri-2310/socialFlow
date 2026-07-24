@@ -14,6 +14,30 @@ const MESSAGES: Record<string, string> = {
   ACCOUNT_TEMPORARILY_LOCKED: 'Compte temporairement verrouillé suite à trop de tentatives.',
   INVALID_TWO_FACTOR_COOKIE: 'Session de vérification expirée. Reconnectez-vous.',
   TWO_FACTOR_NOT_ENABLED: "L'authentification à deux facteurs n'est pas activée.",
+  FAILED_TO_UNLINK_LAST_ACCOUNT: 'Impossible de délier votre dernier moyen de connexion.',
+  ACCOUNT_NOT_FOUND: 'Compte introuvable.',
+  SESSION_NOT_FRESH: 'Reconnectez-vous pour effectuer cette action.',
+  SESSION_EXPIRED: 'Session expirée. Reconnectez-vous.',
+
+  // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
+  // distincts des codes d'API ci-dessus.
+  account_not_linked:
+    "Un compte existe déjà avec cet email mais n'est pas encore vérifié. Connectez-vous avec votre mot de passe, puis liez ce fournisseur depuis le tableau de bord.",
+  "email_doesn't_match": "L'email de ce compte ne correspond pas à celui de votre compte SocialFlow.",
+  account_already_linked_to_different_user: 'Ce compte est déjà lié à un autre utilisateur.',
+  unable_to_link_account: 'Impossible de lier ce compte. Réessayez.',
+  oauth_provider_not_found: 'Ce fournisseur de connexion est introuvable.',
+  no_code: 'La connexion a été interrompue. Réessayez.',
+  invalid_code: 'Code d’autorisation invalide. Réessayez.',
+  unable_to_get_user_info: 'Impossible de récupérer vos informations. Réessayez.',
+  no_callback_url: 'Configuration de redirection manquante.',
+  email_not_found: 'Aucun email associé à ce compte.',
+  signup_disabled:
+    "Aucun compte SocialFlow n'est associé. Créez un compte depuis la page d'inscription.",
+  unable_to_create_user: 'Impossible de créer votre compte. Réessayez.',
+  unable_to_create_session: 'Impossible de démarrer votre session. Réessayez.',
+  invalid_callback_request: 'Requête de connexion invalide.',
+  internal_server_error: 'Erreur interne. Réessayez dans quelques instants.',
 };
 
 const DEFAULT_MESSAGE = 'Une erreur est survenue. Veuillez réessayer.';

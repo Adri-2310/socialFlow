@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
-import { useSession } from '@/lib/auth-client';
+import { authClient, useSession } from '@/lib/auth-client';
+import { isPlanId, type BillingPeriod } from '@/lib/plans';
 
-export default function WelcomePage() {
+function WelcomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const finalized = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -18,6 +21,23 @@ export default function WelcomePage() {
 
     return () => clearTimeout(timer);
   }, [router]);
+
+  useEffect(() => {
+    const plan = searchParams.get('plan');
+    const billing = searchParams.get('billing');
+
+    // Un compte cree via OAuth n'a pas encore de formule : on la finalise ici,
+    // apres coup, car elle ne peut pas transiter par la redirection OAuth elle-meme.
+    if (finalized.current || !session?.user || session.user.plan || !isPlanId(plan) || plan === 'enterprise') {
+      return;
+    }
+
+    finalized.current = true;
+    authClient.updateUser({
+      plan,
+      billingPeriod: (billing === 'yearly' ? 'yearly' : 'monthly') satisfies BillingPeriod,
+    });
+  }, [searchParams, session]);
 
   const firstName = session?.user.name?.split(' ')[0];
 
@@ -41,5 +61,13 @@ export default function WelcomePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WelcomePage() {
+  return (
+    <Suspense>
+      <WelcomeContent />
+    </Suspense>
   );
 }
