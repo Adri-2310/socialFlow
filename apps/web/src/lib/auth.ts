@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { twoFactor, magicLink, emailOTP } from 'better-auth/plugins';
-import { createAuthMiddleware } from 'better-auth/api';
+import { createAuthMiddleware, isAPIError } from 'better-auth/api';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from '@/lib/prisma';
 import {
@@ -107,12 +107,20 @@ export const auth = betterAuth({
     // session pleinement authentifiee (evite par exemple de notifier a tort
     // sur le verify-totp utilise pendant le challenge de connexion 2FA, qui
     // n'a pas encore de session.session complete).
+    //
+    // ctx.context.returned n'est jamais une vraie instance Response ici (ni
+    // en HTTP reel, ni via auth.api.*) : better-auth y place soit la charge
+    // utile brute en cas de succes, soit l'objet APIError en cas d'echec
+    // (voir dispatch.mjs). Il faut donc explicitement exclure les APIError,
+    // sinon un mot de passe errone sur /change-password ou une liaison
+    // refusee sur /unlink-account declenchent quand meme l'email "modifie
+    // avec succes".
     after: createAuthMiddleware(async (ctx) => {
       const returned = ctx.context.returned;
       const success = returned
         ? returned instanceof Response
           ? returned.status === 200
-          : true
+          : !isAPIError(returned)
         : false;
       if (!success) return;
 
