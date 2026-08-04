@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { TwoFactorSetup } from '@/components/auth/two-factor-setup';
 import { LinkedAccounts } from '@/components/auth/linked-accounts';
 import { AccountSettings } from '@/components/auth/account-settings';
 import { DeleteAccount } from '@/components/auth/delete-account';
-import { auth } from '@/lib/auth';
+import { requireSession } from '@/lib/require-session';
 import { prisma } from '@/lib/prisma';
 
 const BILLING_LABELS: Record<string, string> = {
@@ -20,13 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session) {
-    redirect('/login');
-  }
-
-  const { user } = session;
+  const { user } = await requireSession();
 
   const plan = user.plan
     ? await prisma.pricingPlan.findUnique({ where: { planId: user.plan } })

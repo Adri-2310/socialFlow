@@ -221,6 +221,63 @@ describe('2FA : codes TOTP invalides', () => {
   });
 });
 
+describe('2FA : verrouillage du compte apres trop d echecs', () => {
+  it('verrouille apres 10 echecs consecutifs (tous defis confondus) puis rejette meme un bon code pendant le verrou', async () => {
+    // 11 defis + verifications en serie contre la vraie base Neon :
+    // depasse le timeout par defaut (15s) en pratique.
+    // Mecanisme integre a better-auth (assertTwoFactorNotLocked /
+    // recordTwoFactorFailure dans verify-two-factor.mjs), actif par defaut
+    // (accountLockout.enabled: true, 10 tentatives, 15 min) sans config
+    // supplementaire cote app - stocke sur TwoFactor.failedVerificationCount
+    // et TwoFactor.lockedUntil. Le plafond par defi (beginAttempt(5), deja
+    // teste ailleurs) empeche d'atteindre 10 avec un seul defi : le compteur
+    // vit sur la ligne TwoFactor elle-meme et survit donc a l'ouverture d'un
+    // nouveau defi, d'ou la boucle sur plusieurs defis ici.
+    const { mail, secret } = await creerCompteAvec2FA('2fa-verrouillage');
+
+    for (let i = 0; i < 10; i++) {
+      const cj = await ouvrirDefi2FA(mail);
+      const res = await auth.api.verifyTOTP({ body: { code: '000000' }, headers: cj.headers(), asResponse: true });
+      expect(res.status).toBe(401);
+    }
+
+    const cj = await ouvrirDefi2FA(mail);
+    const verrouille = await auth.api.verifyTOTP({
+      body: { code: totpCode(secret) },
+      headers: cj.headers(),
+      asResponse: true,
+    });
+    expect(verrouille.status).toBe(429);
+    expect((await verrouille.json()).code).toBe('ACCOUNT_TEMPORARILY_LOCKED');
+  }, 90000);
+
+  it('debloque automatiquement une fois lockedUntil depasse', async () => {
+    const { mail, secret } = await creerCompteAvec2FA('2fa-deverrouillage');
+
+    for (let i = 0; i < 10; i++) {
+      const cj = await ouvrirDefi2FA(mail);
+      await auth.api.verifyTOTP({ body: { code: '000000' }, headers: cj.headers(), asResponse: true });
+    }
+
+    // Confirme le verrou, puis simule son expiration (comme les tests
+    // d'expiration de jeton ailleurs dans la suite : recul direct en base
+    // plutot que d'attendre 15 minutes reelles).
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    const avant = await prisma.twoFactor.findFirstOrThrow({ where: { userId: user.id } });
+    expect(avant.lockedUntil).not.toBeNull();
+    await prisma.twoFactor.update({
+      where: { id: avant.id },
+      data: { lockedUntil: new Date(Date.now() - 60_000) },
+    });
+
+    const cj = await ouvrirDefi2FA(mail);
+    const res = await auth.api.verifyTOTP({ body: { code: totpCode(secret) }, headers: cj.headers(), asResponse: true });
+    cj.apply(res);
+    expect(res.status).toBe(200);
+    expect((await auth.api.getSession({ headers: cj.headers() }))?.user.email).toBe(mail);
+  }, 90000);
+});
+
 describe('2FA : contournement bloque via connexion sans mot de passe', () => {
   it('bloque la connexion par lien magique quand la 2FA est active', async () => {
     const { mail } = await creerCompteAvec2FA('2fa-bypass-lien');
