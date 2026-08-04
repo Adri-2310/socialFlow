@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
 export default function AccountDeletedPage() {
   const router = useRouter();
@@ -30,7 +31,8 @@ export default function AccountDeletedPage() {
       <div>
         <h1 className="text-xl font-bold tracking-tight text-foreground">Compte supprimé</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Votre compte et vos données ont été définitivement supprimés.
+          Votre compte a été désactivé. Vous disposez de {ACCOUNT_DELETION_RETENTION_DAYS} jours
+          pour contacter le support si vous changez d&apos;avis.
         </p>
         <div className="mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />

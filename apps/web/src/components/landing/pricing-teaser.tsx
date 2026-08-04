@@ -18,7 +18,7 @@ export function PricingTeaser() {
               Un prix simple, par cabinet
             </h2>
             <p className="mt-4 text-muted-foreground">
-              À partir de 49€/mois. Sans engagement, essai 30 jours sans carte bancaire.
+              À partir de 150€/mois. Sans engagement, essai 30 jours sans carte bancaire.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">

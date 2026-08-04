@@ -10,6 +10,7 @@ vi.mock('@/lib/email', () => ({
   sendChangeEmailConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),

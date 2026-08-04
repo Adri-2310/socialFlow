@@ -9,6 +9,7 @@ vi.mock('@/lib/email', () => ({
   sendChangeEmailConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -217,5 +218,90 @@ describe('2FA : codes TOTP invalides', () => {
 
     expect(res.status).toBe(401);
     expect((await res.json()).code).toBe('INVALID_CODE');
+  });
+});
+
+describe('2FA : contournement bloque via connexion sans mot de passe', () => {
+  it('bloque la connexion par lien magique quand la 2FA est active', async () => {
+    const { mail } = await creerCompteAvec2FA('2fa-bypass-lien');
+    await auth.api.signInMagicLink({
+      body: { email: mail, callbackURL: '/bienvenue' },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    const verification = await prisma.verification.findFirstOrThrow({
+      where: { value: { contains: mail } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const res = await auth.api.magicLinkVerify({
+      query: { token: verification.identifier },
+      headers: new Headers(),
+      asResponse: true,
+    });
+
+    expect(res.status).toBe(302);
+    const location = res.headers.get('location') ?? '';
+    expect(location).toContain('/erreur-connexion');
+    expect(location).toContain('error=two_factor_required_password');
+
+    // Aucune session persistante malgre le jeton valide.
+    const cj = cookieJar();
+    cj.apply(res);
+    expect(await auth.api.getSession({ headers: cj.headers() })).toBeFalsy();
+  });
+
+  it('bloque la connexion par code email quand la 2FA est active', async () => {
+    const { mail } = await creerCompteAvec2FA('2fa-bypass-otp');
+    await auth.api.sendVerificationOTP({
+      body: { email: mail, type: 'sign-in' },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    const verification = await prisma.verification.findFirstOrThrow({
+      where: { identifier: `sign-in-otp-${mail}` },
+      orderBy: { createdAt: 'desc' },
+    });
+    const code = verification.value.split(':')[0];
+
+    const res = await auth.api.signInEmailOTP({
+      body: { email: mail, otp: code },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('TWO_FACTOR_REQUIRED_PASSWORD');
+
+    const cj = cookieJar();
+    cj.apply(res);
+    expect(await auth.api.getSession({ headers: cj.headers() })).toBeFalsy();
+  });
+
+  it("n'affecte pas la connexion par lien magique d'un compte sans 2FA (non-regression)", async () => {
+    const mail = testEmail('2fa-absente-lien');
+    await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD } });
+    await auth.api.signInMagicLink({
+      body: { email: mail, callbackURL: '/bienvenue' },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    const verification = await prisma.verification.findFirstOrThrow({
+      where: { value: { contains: mail } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const res = await auth.api.magicLinkVerify({
+      query: { token: verification.identifier, callbackURL: '/bienvenue' },
+      headers: new Headers(),
+      asResponse: true,
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location') ?? '').not.toContain('error=');
+    const cj = cookieJar();
+    cj.apply(res);
+    expect((await auth.api.getSession({ headers: cj.headers() }))?.user.email).toBe(mail);
   });
 });

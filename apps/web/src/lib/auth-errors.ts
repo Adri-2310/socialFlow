@@ -14,10 +14,14 @@ const MESSAGES: Record<string, string> = {
   ACCOUNT_TEMPORARILY_LOCKED: 'Compte temporairement verrouillé suite à trop de tentatives.',
   INVALID_TWO_FACTOR_COOKIE: 'Session de vérification expirée. Reconnectez-vous.',
   TWO_FACTOR_NOT_ENABLED: "L'authentification à deux facteurs n'est pas activée.",
+  TWO_FACTOR_REQUIRED_PASSWORD:
+    'Ce compte a la double authentification activée : connectez-vous avec votre mot de passe puis votre code.',
   FAILED_TO_UNLINK_LAST_ACCOUNT: 'Impossible de délier votre dernier moyen de connexion.',
   ACCOUNT_NOT_FOUND: 'Compte introuvable.',
   SESSION_NOT_FRESH: 'Reconnectez-vous pour effectuer cette action.',
   SESSION_EXPIRED: 'Session expirée. Reconnectez-vous.',
+  ACCOUNT_DELETED:
+    "Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à 30 jours après la suppression).",
 
   // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
   // distincts des codes d'API ci-dessus.
@@ -38,6 +42,10 @@ const MESSAGES: Record<string, string> = {
   unable_to_create_user: 'Impossible de créer votre compte. Réessayez.',
   unable_to_create_session: 'Impossible de démarrer votre session. Réessayez.',
   invalid_callback_request: 'Requête de connexion invalide.',
+  two_factor_required_password:
+    'Ce compte a la double authentification activée : connectez-vous avec votre mot de passe puis votre code.',
+  account_deleted:
+    "Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à 30 jours après la suppression).",
   internal_server_error: 'Erreur interne. Réessayez dans quelques instants.',
 
   // Lien magique (redirection depuis l'email cliqué).

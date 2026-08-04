@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
 export function DeleteAccount() {
-  const router = useRouter();
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,7 @@ export function DeleteAccount() {
 
   function reset() {
     setConfirming(false);
+    setEmailSent(false);
     setPassword('');
     setError(null);
   }
@@ -31,18 +32,47 @@ export function DeleteAccount() {
     setError(null);
     setLoading(true);
 
-    const { error: deleteError } = await authClient.deleteUser(
-      hasPassword ? { password } : {},
-    );
+    // La suppression n'est plus immediate : un email de confirmation part
+    // dans tous les cas (compte avec ou sans mot de passe), et seul le clic
+    // sur le lien qu'il contient supprime reellement le compte.
+    const { error: deleteError } = await authClient.deleteUser({
+      ...(hasPassword ? { password } : {}),
+      callbackURL: '/compte-supprime',
+    });
+
+    setLoading(false);
 
     if (deleteError) {
-      setLoading(false);
       setError(translateAuthError(deleteError.code));
       return;
     }
 
-    router.push('/compte-supprime');
-    router.refresh();
+    setEmailSent(true);
+  }
+
+  if (emailSent) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-5 text-center">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-destructive/15 text-destructive">
+          <MailCheck className="h-6 w-6" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Vérifiez votre boîte mail</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Un email de confirmation vous a été envoyé. Cliquez sur le lien qu&apos;il contient
+            pour désactiver votre compte — cette étape est nécessaire, rien n&apos;a encore été
+            supprimé.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={reset}
+          className="mt-1 text-sm font-medium text-muted-foreground hover:text-primary"
+        >
+          Retour
+        </button>
+      </div>
+    );
   }
 
   if (confirming) {
@@ -52,11 +82,12 @@ export function DeleteAccount() {
         className="rounded-xl border border-destructive/40 bg-destructive/5 p-5"
       >
         <p className="text-sm font-semibold text-destructive">
-          Confirmer la suppression définitive de votre compte
+          Confirmer la suppression de votre compte
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Cette action est irréversible : vos données, votre 2FA et vos comptes liés seront
-          définitivement supprimés.
+          Votre compte sera immédiatement désactivé (données, 2FA et comptes liés inaccessibles).
+          Vous disposez de {ACCOUNT_DELETION_RETENTION_DAYS} jours pour contacter le support si
+          vous changez d&apos;avis, au-delà desquels la suppression devient définitive.
         </p>
 
         {hasPassword ? (
@@ -80,9 +111,8 @@ export function DeleteAccount() {
           </>
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">
-            Votre compte n&apos;a pas de mot de passe (connexion via Google/Microsoft) : la
-            suppression sera immédiate. Si votre session a expiré, reconnectez-vous avant de
-            réessayer.
+            Votre compte n&apos;a pas de mot de passe (connexion via Google/Microsoft) : un email
+            de confirmation vous sera envoyé pour finaliser la suppression.
           </p>
         )}
 
@@ -95,7 +125,7 @@ export function DeleteAccount() {
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-lg shadow-destructive/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Supprimer définitivement
+            Recevoir l&apos;email de confirmation
           </button>
           <button
             type="button"
@@ -118,7 +148,8 @@ export function DeleteAccount() {
         <div>
           <p className="text-sm font-semibold text-foreground">Supprimer mon compte</p>
           <p className="text-xs text-muted-foreground">
-            Suppression définitive de votre compte et de toutes vos données.
+            Désactivation immédiate, suppression définitive après {ACCOUNT_DELETION_RETENTION_DAYS}{' '}
+            jours.
           </p>
         </div>
       </div>

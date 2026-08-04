@@ -11,6 +11,7 @@ vi.mock('@/lib/email', () => ({
   sendChangeEmailConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -154,23 +155,49 @@ describe('profil : champs acceptes et refuses', () => {
     expect(res.status).toBe(401);
   });
 
-  it("accepte `plan` et `billingPeriod` tels quels (champs libres, lacune connue et assumee)", async () => {
-    const mail = testEmail('plan-libre');
+  it("refuse une valeur de `plan` ou `billingPeriod` hors de l'enum autorise", async () => {
+    const mail = testEmail('plan-invalide');
     const cj = cookieJar();
     cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
 
-    // Ces deux champs ont `input: true` et aucun validateur dans auth.ts : le
-    // serveur stocke la valeur brute. Ce test fige le comportement actuel pour
-    // qu'un futur durcissement (enum de plans) soit detecte immediatement.
+    // Empeche un utilisateur connecte de s'auto-attribuer une formule
+    // arbitraire via update-user (voir doc/analysis/AUDIT_SECURITE_AUTH.md,
+    // finding #2).
+    const resPlan = await auth.api.updateUser({
+      body: { plan: 'plan-inexistant' },
+      headers: cj.headers(),
+      asResponse: true,
+    });
+    expect(resPlan.status).toBe(400);
+    expect((await resPlan.json()).code).toBe('VALIDATION_ERROR');
+
+    const resBilling = await auth.api.updateUser({
+      body: { billingPeriod: 'hebdomadaire' },
+      headers: cj.headers(),
+      asResponse: true,
+    });
+    expect(resBilling.status).toBe(400);
+    expect((await resBilling.json()).code).toBe('VALIDATION_ERROR');
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    expect(user.plan).toBeNull();
+    expect(user.billingPeriod).toBe('monthly');
+  });
+
+  it('accepte une valeur de `plan` et `billingPeriod` faisant partie de l enum', async () => {
+    const mail = testEmail('plan-valide');
+    const cj = cookieJar();
+    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
+
     const res = await auth.api.updateUser({
-      body: { plan: 'plan-inexistant', billingPeriod: 'hebdomadaire' },
+      body: { plan: 'enterprise', billingPeriod: 'yearly' },
       headers: cj.headers(),
       asResponse: true,
     });
     expect(res.status).toBe(200);
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBe('plan-inexistant');
-    expect(user.billingPeriod).toBe('hebdomadaire');
+    expect(user.plan).toBe('enterprise');
+    expect(user.billingPeriod).toBe('yearly');
   });
 });

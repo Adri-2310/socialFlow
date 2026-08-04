@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -55,6 +56,20 @@ function emailShell(content: string): string {
     </table>
   </body>
 </html>`;
+}
+
+// `name` vient de updateUser({name}) sans contrainte serveur : contrairement
+// a `url`/`oldEmail`/`newEmail` (generes par better-auth ou valides comme
+// adresses email), c'est du texte libre qu'un utilisateur peut definir a
+// volonte - a echapper avant interpolation dans du HTML (voir audit
+// securite, doc/analysis/AUDIT_SECURITE_AUTH.md, finding #6).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function ctaButton(label: string, url: string): string {
@@ -159,11 +174,31 @@ export async function sendChangeEmailConfirmationEmail(
   if (error) throw new Error(error.message);
 }
 
+export async function sendDeleteAccountVerificationEmail(email: string, name: string, url: string) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Confirmez la suppression de votre compte</h1>
+    <p style="margin:0 0 28px; color:#475569;">Bonjour ${escapeHtml(name)}, une demande de suppression de votre compte SocialFlow a été faite. Cliquez ci-dessous pour la confirmer. Ce lien est valable 24 heures et ne peut être utilisé qu'une seule fois.</p>
+    ${ctaButton('Confirmer la suppression', url)}
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email — votre compte restera intact.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: 'Confirmez la suppression de votre compte SocialFlow',
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 export async function sendAccountDeletedEmail(email: string, name: string) {
   const html = emailShell(`
     <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Sécurité du compte</p>
     <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Votre compte a été supprimé</h1>
-    <p style="margin:0; color:#475569;">Bonjour ${name}, votre compte SocialFlow et toutes les données associées viennent d'être définitivement supprimés.</p>
+    <p style="margin:0 0 12px; color:#475569;">Bonjour ${escapeHtml(name)}, votre compte SocialFlow vient d'être désactivé et n'est plus accessible.</p>
+    <p style="margin:0; color:#475569;">Vous disposez de ${ACCOUNT_DELETION_RETENTION_DAYS} jours pour contacter notre support si vous souhaitez le récupérer. Passé ce délai, votre compte et toutes les données associées seront définitivement et irréversiblement supprimés.</p>
     <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n'êtes pas à l'origine de cette suppression, contactez notre support au plus vite.</p>
   `);
 

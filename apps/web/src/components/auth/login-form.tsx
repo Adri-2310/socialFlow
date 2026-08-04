@@ -14,6 +14,7 @@ export function LoginForm() {
   const [mode, setMode] = useState<'password' | 'passwordless'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,7 +59,7 @@ export function LoginForm() {
     setError(null);
     setLoading(true);
 
-    const { data, error: signInError } = await signIn.email({ email, password });
+    const { data, error: signInError } = await signIn.email({ email, password, rememberMe });
 
     setLoading(false);
 
@@ -284,7 +285,12 @@ export function LoginForm() {
             </div>
 
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input type="checkbox" className="h-4 w-4 rounded border-input accent-primary" />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-input accent-primary"
+              />
               Rester connecté
             </label>
 

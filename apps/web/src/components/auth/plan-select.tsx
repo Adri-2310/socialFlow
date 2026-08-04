@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Check } from 'lucide-react';
 import type { BillingPeriod, Plan, PlanId } from '@/lib/plans';
 
@@ -82,14 +81,6 @@ export function PlanSelect({
           </button>
         ))}
       </div>
-
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        Besoin de plus ?{' '}
-        <Link href="/contact" className="font-semibold text-primary hover:underline">
-          Contactez-nous
-        </Link>{' '}
-        pour une offre Enterprise sur mesure.
-      </p>
     </div>
   );
 }

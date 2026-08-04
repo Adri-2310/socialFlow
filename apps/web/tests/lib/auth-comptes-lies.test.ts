@@ -10,6 +10,7 @@ vi.mock('@/lib/email', () => ({
   sendChangeEmailConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -171,7 +172,7 @@ describe('suppression de compte', () => {
     expect(res.status).toBe(401);
   });
 
-  it('supprime en cascade sessions, comptes lies et secret 2FA', async () => {
+  it('ne supprime rien tant que le lien de confirmation par email n a pas ete clique, puis archive (pas de suppression reelle)', async () => {
     const mail = testEmail('delete-cascade');
     const cj = cookieJar();
     cj.apply(await auth.api.signUpEmail({ body: { name: 'A Supprimer', email: mail, password: PASSWORD }, asResponse: true }));
@@ -189,20 +190,90 @@ describe('suppression de compte', () => {
     expect(await prisma.account.count({ where: { userId: user.id } })).toBe(2);
     expect(await prisma.twoFactor.count({ where: { userId: user.id } })).toBe(1);
 
+    // Etape 1 : un mot de passe correct fait toujours envoyer l'email de
+    // confirmation plutot que de supprimer directement (voir
+    // doc/analysis/AUDIT_SECURITE_AUTH.md, finding #4) - un cookie de session
+    // vole seul ne suffit donc plus jamais a detruire le compte.
     const res = await auth.api.deleteUser({ body: { password: PASSWORD }, headers: cj.headers(), asResponse: true });
     expect(res.status).toBe(200);
+    expect((await res.json()).message).toBe('Verification email sent');
+    expect(await prisma.user.count({ where: { id: user.id } })).toBe(1);
 
-    // Session, Account et TwoFactor ont `onDelete: Cascade` vers User dans
-    // schema.prisma : rien ne survit a la suppression du compte.
-    expect(await prisma.user.count({ where: { id: user.id } })).toBe(0);
+    // Etape 2 : clic sur le lien recu par email (meme session).
+    const verification = await prisma.verification.findFirstOrThrow({
+      where: { value: user.id, identifier: { startsWith: 'delete-account-' } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const token = verification.identifier.replace('delete-account-', '');
+    const callback = await auth.api.deleteUserCallback({ query: { token }, headers: cj.headers(), asResponse: true });
+    expect(callback.status).toBe(200);
+
+    // Archivage (pas de suppression reelle) : la ligne User survit avec
+    // deletedAt renseigne, recuperable via scripts/restore-account.ts
+    // jusqu'a la purge definitive 30 jours plus tard (voir
+    // api/cron/purge-deleted-accounts). Seules les sessions sont revoquees
+    // immediatement pour rendre le compte inaccessible ; Account et
+    // TwoFactor restent intacts pour une restauration complete.
+    const archived = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(archived.deletedAt).not.toBeNull();
     expect(await prisma.session.count({ where: { userId: user.id } })).toBe(0);
-    expect(await prisma.account.count({ where: { userId: user.id } })).toBe(0);
-    expect(await prisma.twoFactor.count({ where: { userId: user.id } })).toBe(0);
-
-    // En revanche la table Verification n'a aucune cle etrangere vers User :
-    // ses lignes restent orphelines jusqu'a leur expiration. Elles ne
-    // contiennent pas de donnee exploitable (le compte cible n'existe plus),
-    // mais ce test documente le comportement reel plutot que de le supposer.
+    expect(await prisma.account.count({ where: { userId: user.id } })).toBe(2);
+    expect(await prisma.twoFactor.count({ where: { userId: user.id } })).toBe(1);
     expect(await prisma.verification.count({ where: { identifier: `sign-in-otp-${mail}` } })).toBe(1);
+  });
+
+  it("necessite aussi une confirmation par email pour un compte OAuth-only (pas de mot de passe a redemander)", async () => {
+    const mail = testEmail('delete-oauth-seul');
+    const cj = cookieJar();
+    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    await prisma.account.create({
+      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `google-${user.id}`, userId: user.id },
+    });
+    // Retire le compte credential : simule un compte cree via OAuth
+    // uniquement (la session deja emise reste valide, comme pour un vrai
+    // compte OAuth-only).
+    await prisma.account.deleteMany({ where: { userId: user.id, providerId: 'credential' } });
+
+    // Avant le correctif, l'absence de mot de passe a fournir signifiait une
+    // suppression immediate des qu'un cookie de session (meme vole) etait
+    // present. Desormais /delete-user sans mot de passe envoie aussi l'email.
+    const res = await auth.api.deleteUser({ body: {}, headers: cj.headers(), asResponse: true });
+    expect(res.status).toBe(200);
+    expect((await res.json()).message).toBe('Verification email sent');
+    expect(await prisma.user.count({ where: { id: user.id } })).toBe(1);
+
+    const verification = await prisma.verification.findFirstOrThrow({
+      where: { value: user.id, identifier: { startsWith: 'delete-account-' } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const token = verification.identifier.replace('delete-account-', '');
+    const callback = await auth.api.deleteUserCallback({ query: { token }, headers: cj.headers(), asResponse: true });
+    expect(callback.status).toBe(200);
+
+    const archived = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(archived.deletedAt).not.toBeNull();
+  });
+
+  it('refuse de finaliser la suppression avec un jeton invente ou sans session', async () => {
+    const mail = testEmail('delete-callback-invalide');
+    const cj = cookieJar();
+    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
+
+    const sansSession = await auth.api.deleteUserCallback({
+      query: { token: 'jeton-invente' },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    expect(sansSession.status).toBe(404);
+
+    const jetonInvente = await auth.api.deleteUserCallback({
+      query: { token: 'jeton-invente' },
+      headers: cj.headers(),
+      asResponse: true,
+    });
+    expect(jetonInvente.status).toBe(404);
+    expect((await jetonInvente.json()).code).toBe('INVALID_TOKEN');
+    expect(await prisma.user.findUnique({ where: { email: mail } })).not.toBeNull();
   });
 });

@@ -29,7 +29,15 @@ model User {
   twoFactorEnabled Boolean?    @default(false)
   twofactors       TwoFactor[]
 
+  // Archivage (au lieu d'une suppression definitive immediate) : la ligne
+  // reste en base, toutes les sessions sont revoquees et toute nouvelle
+  // connexion est bloquee (voir hooks.after dans auth.ts), jusqu'a purge
+  // reelle apres 30 jours (voir route /api/cron/purge-deleted-accounts) ou
+  // restauration manuelle (scripts/restore-account.ts).
+  deletedAt DateTime?
+
   @@unique([email])
+  @@index([deletedAt])
   @@map("user")
 }
 
@@ -112,4 +120,19 @@ model TwoFactor {
   @@index([secret])
   @@index([userId])
   @@map("twoFactor")
+}
+
+// Stockage persistant du rate limiter better-auth (rateLimit.storage:
+// 'database' dans auth.ts). Schema et nom de modele imposes par better-auth
+// (le model "rateLimit" est reference en dur dans
+// dist/api/rate-limiter/index.mjs, non personnalisable) - sans cette table,
+// les compteurs vivaient en memoire et repartaient de zero a chaque cold
+// start Vercel (voir doc/analysis/AUDIT_SECURITE_AUTH.md, finding #3).
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rate_limit")
 }

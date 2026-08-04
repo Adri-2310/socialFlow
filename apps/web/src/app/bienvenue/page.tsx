@@ -28,7 +28,7 @@ function WelcomeContent() {
 
     // Un compte cree via OAuth n'a pas encore de formule : on la finalise ici,
     // apres coup, car elle ne peut pas transiter par la redirection OAuth elle-meme.
-    if (finalized.current || !session?.user || session.user.plan || !isPlanId(plan) || plan === 'enterprise') {
+    if (finalized.current || !session?.user || session.user.plan || !isPlanId(plan)) {
       return;
     }
 

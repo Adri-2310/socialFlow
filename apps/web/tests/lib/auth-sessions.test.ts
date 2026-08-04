@@ -9,6 +9,7 @@ vi.mock('@/lib/email', () => ({
   sendChangeEmailConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -153,5 +154,46 @@ describe('deconnexion', () => {
 
   it('getSession sans cookie ne renvoie aucune session', async () => {
     expect(await auth.api.getSession({ headers: new Headers() })).toBeFalsy();
+  });
+});
+
+describe('rememberMe', () => {
+  /** Cherche le cookie du jeton de session (pas celui du cache) parmi les Set-Cookie de la reponse. */
+  function cookieJetonSession(res: Response): string {
+    const raw = res.headers
+      .getSetCookie()
+      .find((c) => c.includes('session_token') && !c.includes('session_data'));
+    if (!raw) throw new Error('Cookie de session introuvable dans la reponse');
+    return raw;
+  }
+
+  it("pose un cookie de session persistant (Max-Age) par defaut", async () => {
+    const mail = testEmail('remember-defaut');
+    await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD } });
+
+    const res = await auth.api.signInEmail({
+      body: { email: mail, password: PASSWORD },
+      headers: new Headers(),
+      asResponse: true,
+    });
+
+    expect(cookieJetonSession(res).toLowerCase()).toContain('max-age=');
+  });
+
+  it("pose un cookie de session ephemere (sans Max-Age) quand rememberMe vaut false", async () => {
+    const mail = testEmail('remember-false');
+    await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD } });
+
+    // Sur un poste partage (le public cible, cabinets comptables), decocher
+    // "Rester connecte" doit produire un cookie de session pur - supprime a
+    // la fermeture du navigateur - plutot que le cookie de 7 jours par
+    // defaut (voir doc/analysis/AUDIT_SECURITE_AUTH.md, finding #5).
+    const res = await auth.api.signInEmail({
+      body: { email: mail, password: PASSWORD, rememberMe: false },
+      headers: new Headers(),
+      asResponse: true,
+    });
+
+    expect(cookieJetonSession(res).toLowerCase()).not.toContain('max-age=');
   });
 });

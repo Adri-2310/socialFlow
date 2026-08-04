@@ -14,6 +14,7 @@ vi.mock('@/lib/email', () => ({
   sendChangeEmailConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -341,17 +342,49 @@ describe('comptes lies et suppression', () => {
     expect(email.sendAccountUnlinkedEmail).toHaveBeenCalledWith(mail, 'Google');
   });
 
-  it('supprime le compte et notifie par email', async () => {
+  it('envoie un email de confirmation puis archive le compte apres clic sur le lien', async () => {
     const mail = testEmail('delete');
     const cj = cookieJar();
     const signUp = await auth.api.signUpEmail({ body: { name: 'A Supprimer', email: mail, password: PASSWORD }, asResponse: true });
     cj.apply(signUp);
 
+    // Etape 1 : /delete-user n'efface plus rien directement, il envoie un
+    // email de confirmation (voir doc/analysis/AUDIT_SECURITE_AUTH.md,
+    // finding #4).
     const res = await auth.api.deleteUser({ body: { password: PASSWORD }, headers: cj.headers(), asResponse: true });
     expect(res.status).toBe(200);
+    expect((await res.json()).message).toBe('Verification email sent');
+    expect(email.sendDeleteAccountVerificationEmail).toHaveBeenCalledWith(mail, 'A Supprimer', expect.any(String));
+    expect(email.sendAccountDeletedEmail).not.toHaveBeenCalled();
+    expect(await prisma.user.findUnique({ where: { email: mail } })).not.toBeNull();
+
+    // Etape 2 : clic sur le lien recu par email (meme session). Le compte
+    // n'est pas vraiment efface : il est archive (deletedAt), recuperable
+    // 30 jours avant purge reelle (voir scripts/restore-account.ts).
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    const verification = await prisma.verification.findFirstOrThrow({
+      where: { value: user.id, identifier: { startsWith: 'delete-account-' } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const token = verification.identifier.replace('delete-account-', '');
+    const callback = await auth.api.deleteUserCallback({ query: { token }, headers: cj.headers(), asResponse: true });
+    expect(callback.status).toBe(200);
     expect(email.sendAccountDeletedEmail).toHaveBeenCalledWith(mail, 'A Supprimer');
 
-    const stillExists = await prisma.user.findUnique({ where: { email: mail } });
-    expect(stillExists).toBeNull();
+    const archived = await prisma.user.findUnique({ where: { email: mail } });
+    expect(archived).not.toBeNull();
+    expect(archived?.deletedAt).not.toBeNull();
+
+    // La session utilisee pour la suppression est bien revoquee.
+    expect(await auth.api.getSession({ headers: cj.headers() })).toBeFalsy();
+
+    // Et le compte archive ne peut plus se reconnecter (voir hooks.after).
+    const relogin = await auth.api.signInEmail({
+      body: { email: mail, password: PASSWORD },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    expect(relogin.status).toBe(401);
+    expect((await relogin.json()).code).toBe('INVALID_EMAIL_OR_PASSWORD');
   });
 });

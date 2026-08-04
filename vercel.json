@@ -8,5 +8,11 @@
       "main": true,
       "dev": true
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/purge-deleted-accounts",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }
