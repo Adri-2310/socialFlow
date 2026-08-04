@@ -118,8 +118,35 @@ export const auth = betterAuth({
       role: {
         type: 'string',
         required: false,
-        defaultValue: 'cabinet',
+        // L'auto-inscription (/register) ne cree que des Cabinet RH ; les
+        // autres roles (Gestionnaire RH...) sont toujours poses par le
+        // serveur via la route d'acceptation d'invitation, jamais par ce
+        // defaut. Valeurs alignees sur la nomenclature du PRD (voir
+        // doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md section 1) :
+        // SUPER_ADMIN, CABINET_RH, GESTIONNAIRE_RH, ENTREPRISE_CLIENTE,
+        // COLLABORATEUR.
+        defaultValue: 'CABINET_RH',
         input: false,
+      },
+      // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : jamais
+      // pose par le client (input:false), seulement par le hook
+      // d'auto-creation ci-dessous (inscription directe) ou par la route
+      // d'acceptation d'invitation (apps/web/src/app/api/invitations/accept).
+      cabinetId: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
+      // Raison sociale du cabinet, distincte du nom du titulaire (`name`).
+      // Posee par le client uniquement a l'auto-inscription (le hook
+      // ci-dessous s'en sert pour nommer le Cabinet cree) ; sans valeur pour
+      // une inscription via invitation ou OAuth, d'ou le repli sur
+      // `Cabinet de ${name}` dans le hook.
+      cabinetName: {
+        type: 'string',
+        required: false,
+        input: true,
+        validator: { input: z.string().trim().min(1).max(200) },
       },
       plan: {
         type: 'string',
@@ -305,6 +332,27 @@ export const auth = betterAuth({
           : !isAPIError(returned)
         : false;
       if (!success) return;
+
+      // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : l'auto-
+      // inscription cree toujours un Cabinet RH (role par defaut ci-dessus).
+      // On lui cree son Cabinet ici plutot que de le faire poser par le
+      // client, pour la meme raison que role/cabinetId sont input:false.
+      // S'applique aussi a l'inscription faite par la route d'acceptation
+      // d'invitation (qui reutilise ce meme endpoint) : elle nettoie ensuite
+      // ce Cabinet "fantome" en reposant le role/cabinetId de l'invitation
+      // (voir apps/web/src/app/api/invitations/accept/route.ts) - plus
+      // robuste qu'un signal par en-tete, qui ne survit pas de facon fiable
+      // au passage par les before-hooks de better-auth (defuReplaceArrays).
+      if (ctx.path === '/sign-up/email') {
+        const newUser = ctx.context.newSession?.user;
+        if (newUser?.role === 'CABINET_RH' && !newUser.cabinetId) {
+          const cabinet = await prisma.cabinet.create({
+            data: { name: newUser.cabinetName?.trim() || `Cabinet de ${newUser.name}` },
+          });
+          await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId: cabinet.id });
+        }
+        return;
+      }
 
       const session = ctx.context.session;
       if (!session?.session) return;

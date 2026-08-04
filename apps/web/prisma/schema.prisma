@@ -20,7 +20,7 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  role          String?   @default("cabinet")
+  role          String?   @default("CABINET_RH")
   plan          String?
   billingPeriod String?
   sessions      Session[]
@@ -36,9 +36,58 @@ model User {
   // restauration manuelle (scripts/restore-account.ts).
   deletedAt DateTime?
 
+  // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : un Cabinet RH
+  // en cree un a l'inscription (hooks.after dans auth.ts) ; un utilisateur
+  // invite (Gestionnaire RH...) recoit le cabinetId de l'invitation acceptee.
+  // Nullable : SuperAdmin n'appartient a aucun cabinet.
+  cabinetId       String?
+  cabinet         Cabinet?     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  sentInvitations Invitation[]
+
+  // Raison sociale saisie a l'auto-inscription, utilisee une seule fois par
+  // le hook pour nommer le Cabinet cree (voir additionalFields.cabinetName
+  // dans auth.ts). Non reposee ensuite : le nom qui compte apres coup est
+  // Cabinet.name.
+  cabinetName String?
+
   @@unique([email])
   @@index([deletedAt])
+  @@index([cabinetId])
   @@map("user")
+}
+
+model Cabinet {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  users       User[]
+  invitations Invitation[]
+
+  @@map("cabinet")
+}
+
+// Invitation par email (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md
+// section 4). Premiere iteration : uniquement Cabinet RH -> Gestionnaire RH,
+// le modele reste generique pour les invitations Entreprise/Collaborateur a
+// venir.
+model Invitation {
+  id          String    @id @default(cuid())
+  email       String
+  role        String
+  token       String    @unique
+  status      String    @default("pending") // pending | accepted | expired | revoked
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  cabinetId   String
+  cabinet     Cabinet   @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User      @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([token])
+  @@map("invitation")
 }
 
 model Session {

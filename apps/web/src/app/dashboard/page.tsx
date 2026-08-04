@@ -4,6 +4,7 @@ import { TwoFactorSetup } from '@/components/auth/two-factor-setup';
 import { LinkedAccounts } from '@/components/auth/linked-accounts';
 import { AccountSettings } from '@/components/auth/account-settings';
 import { DeleteAccount } from '@/components/auth/delete-account';
+import { InviteGestionnaire } from '@/components/dashboard/invite-gestionnaire';
 import { requireSession } from '@/lib/require-session';
 import { prisma } from '@/lib/prisma';
 
@@ -20,9 +21,10 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const { user } = await requireSession();
 
-  const plan = user.plan
-    ? await prisma.pricingPlan.findUnique({ where: { planId: user.plan } })
-    : null;
+  const [plan, cabinet] = await Promise.all([
+    user.plan ? prisma.pricingPlan.findUnique({ where: { planId: user.plan } }) : null,
+    user.cabinetId ? prisma.cabinet.findUnique({ where: { id: user.cabinetId } }) : null,
+  ]);
 
   const memberSince = new Intl.DateTimeFormat('fr-BE', {
     day: 'numeric',
@@ -55,6 +57,12 @@ export default async function DashboardPage() {
                 <dt className="text-muted-foreground">Rôle</dt>
                 <dd className="font-medium text-foreground">{user.role}</dd>
               </div>
+              {cabinet && (
+                <div className="flex justify-between border-b border-border/60 pb-3">
+                  <dt className="text-muted-foreground">Cabinet</dt>
+                  <dd className="font-medium text-foreground">{cabinet.name}</dd>
+                </div>
+              )}
               <div className="flex justify-between border-b border-border/60 pb-3">
                 <dt className="text-muted-foreground">Email vérifié</dt>
                 <dd className="font-medium text-foreground">
@@ -87,6 +95,7 @@ export default async function DashboardPage() {
               />
               <LinkedAccounts />
               <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
+              {user.role === 'CABINET_RH' && <InviteGestionnaire />}
             </div>
 
             <div className="mt-8 flex items-center justify-between">

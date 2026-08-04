@@ -18,6 +18,7 @@ export function RegisterForm({
 }) {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [cabinetName, setCabinetName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -76,6 +77,7 @@ export function RegisterForm({
 
     const { error: signUpError } = await signUp.email({
       name,
+      cabinetName,
       email,
       password,
       plan: planId,
@@ -136,6 +138,22 @@ export function RegisterForm({
             onChange={(e) => setName(e.target.value)}
             className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Jean Dupont"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="cabinetName" className="block text-sm font-medium text-foreground">
+            Nom du cabinet
+          </label>
+          <input
+            id="cabinetName"
+            type="text"
+            autoComplete="organization"
+            required
+            value={cabinetName}
+            onChange={(e) => setCabinetName(e.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Cabinet Dupont & Associés"
           />
         </div>
 

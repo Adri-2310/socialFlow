@@ -302,3 +302,27 @@ export async function sendResetPasswordEmail(email: string, url: string) {
 
   if (error) throw new Error(error.message);
 }
+
+export async function sendGestionnaireInvitationEmail(
+  email: string,
+  cabinetName: string,
+  inviterName: string,
+  url: string,
+) {
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Invitation</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Vous êtes invité à rejoindre ${escapeHtml(cabinetName)}</h1>
+    <p style="margin:0 0 28px; color:#475569;">${escapeHtml(inviterName)} vous invite à rejoindre SocialFlow en tant que Gestionnaire RH pour ${escapeHtml(cabinetName)}. Cliquez ci-dessous pour créer votre compte. Ce lien est valable 7 jours et ne peut être utilisé qu'une seule fois.</p>
+    ${ctaButton('Accepter l’invitation', url)}
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous ne connaissez pas ${escapeHtml(cabinetName)} ou n'attendiez pas cette invitation, ignorez simplement cet email.</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: `${cabinetName} vous invite à rejoindre SocialFlow`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}

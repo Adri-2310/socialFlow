@@ -11,6 +11,7 @@ vi.mock('@/lib/email', () => ({
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
   sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
+  sendGestionnaireInvitationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -52,7 +53,7 @@ describe('elevation de privileges', () => {
 
     expect(res.status).toBe(400);
     expect(body.code).toBe('FIELD_NOT_ALLOWED');
-    expect((await prisma.user.findUniqueOrThrow({ where: { email: mail } })).role).toBe('cabinet');
+    expect((await prisma.user.findUniqueOrThrow({ where: { email: mail } })).role).toBe('CABINET_RH');
   });
 
   it('refuse un role glisse au milieu de champs legitimes', async () => {
@@ -67,7 +68,7 @@ describe('elevation de privileges', () => {
     // Le rejet est global : le champ legitime n'est pas applique non plus.
     expect(res.status).toBe(400);
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.role).toBe('cabinet');
+    expect(user.role).toBe('CABINET_RH');
     expect(user.name).toBe('X');
   });
 
@@ -86,7 +87,7 @@ describe('elevation de privileges', () => {
     } as never);
 
     expect(res.status).toBe(200);
-    expect((await prisma.user.findUniqueOrThrow({ where: { email: mail } })).role).toBe('cabinet');
+    expect((await prisma.user.findUniqueOrThrow({ where: { email: mail } })).role).toBe('CABINET_RH');
   });
 });
 

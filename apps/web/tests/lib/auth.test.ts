@@ -15,6 +15,7 @@ vi.mock('@/lib/email', () => ({
   sendResetPasswordEmail: vi.fn().mockResolvedValue(undefined),
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
   sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
+  sendGestionnaireInvitationEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -49,7 +50,7 @@ describe('inscription et connexion', () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.user.role).toBe('cabinet');
+    expect(body.user.role).toBe('CABINET_RH');
   });
 
   it("l'email n'est pas verifie a l'inscription (verification souple)", async () => {
