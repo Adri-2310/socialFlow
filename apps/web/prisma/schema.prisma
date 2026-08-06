@@ -50,6 +50,8 @@ model User {
   // Cabinet.name.
   cabinetName String?
 
+  auditLogs AuditLog[]
+
   @@unique([email])
   @@index([deletedAt])
   @@index([cabinetId])
@@ -59,12 +61,37 @@ model User {
 model Cabinet {
   id          String       @id @default(cuid())
   name        String
+  // Suspension par un SuperAdmin (voir apps/web/src/app/api/admin/cabinets/[id]
+  // et le blocage de connexion associe dans hooks.after de auth.ts). Meme
+  // convention que Invitation.status : string libre plutot qu'un enum
+  // Prisma, coherent avec le reste du schema.
+  status      String       @default("actif") // actif | suspendu
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   users       User[]
   invitations Invitation[]
+  auditLogs   AuditLog[]
 
   @@map("cabinet")
+}
+
+// Journal d'audit global consulte par le dashboard SuperAdmin (voir
+// doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md, SPEC_FINAL.md section
+// MONITORING & ADMIN). Alimente uniquement par les actions construites au fil
+// des passes (pas d'historique retroactif). SetNull plutot que Cascade sur
+// les deux relations : un log d'audit doit survivre a la suppression de son
+// acteur ou du cabinet concerne, c'est le principe meme d'un audit trail.
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  cabinetId String?
+  cabinet   Cabinet? @relation(fields: [cabinetId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("audit_log")
 }
 
 // Invitation par email (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md

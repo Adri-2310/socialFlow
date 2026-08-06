@@ -288,6 +288,44 @@ export const auth = betterAuth({
         });
       }
 
+      // Meme mecanisme que le blocage de compte archive ci-dessus, applique
+      // cette fois a TOUS les utilisateurs d'un Cabinet suspendu par un
+      // SuperAdmin (voir apps/web/src/app/api/admin/cabinets/[id]/route.ts).
+      // Filet de securite pour les sessions creees apres coup : la route de
+      // suspension revoque deja les sessions existantes au moment ou elle
+      // s'execute, mais rien n'empeche une nouvelle connexion d'etre tentee
+      // ensuite tant que le cabinet reste suspendu.
+      if (freshSession?.user.cabinetId) {
+        const cabinet = await prisma.cabinet.findUnique({
+          where: { id: freshSession.user.cabinetId },
+          select: { status: true },
+        });
+        if (cabinet?.status === 'suspendu') {
+          await ctx.context.internalAdapter.deleteSession(freshSession.session.token);
+          deleteSessionCookie(ctx, true);
+          ctx.context.setNewSession(null);
+
+          if (ctx.path === '/sign-in/email') {
+            // Non-divulgation, meme raison que pour un compte archive.
+            throw new APIError('UNAUTHORIZED', {
+              code: 'INVALID_EMAIL_OR_PASSWORD',
+              message: 'Invalid email or password',
+            });
+          }
+
+          if (ctx.path === '/magic-link/verify' || ctx.path.startsWith('/callback/')) {
+            const errorURL = ctx.context.options.onAPIError?.errorURL || '/erreur-connexion';
+            const separator = errorURL.includes('?') ? '&' : '?';
+            throw ctx.redirect(`${errorURL}${separator}error=cabinet_suspended`);
+          }
+
+          throw new APIError('FORBIDDEN', {
+            code: 'CABINET_SUSPENDED',
+            message: 'Ce cabinet a ete suspendu.',
+          });
+        }
+      }
+
       // Le plugin twoFactor de better-auth n'intercepte que /sign-in/email,
       // /sign-in/username et /sign-in/phone-number (verifie dans
       // dist/plugins/two-factor/index.mjs) : le lien magique, le code par
@@ -350,6 +388,9 @@ export const auth = betterAuth({
             data: { name: newUser.cabinetName?.trim() || `Cabinet de ${newUser.name}` },
           });
           await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId: cabinet.id });
+          await prisma.auditLog.create({
+            data: { action: 'CABINET_CREATED', actorId: newUser.id, cabinetId: cabinet.id },
+          });
         }
         return;
       }

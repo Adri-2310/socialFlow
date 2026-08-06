@@ -22,6 +22,7 @@ const MESSAGES: Record<string, string> = {
   SESSION_EXPIRED: 'Session expirée. Reconnectez-vous.',
   ACCOUNT_DELETED:
     "Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à 30 jours après la suppression).",
+  CABINET_SUSPENDED: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
 
   // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
   // distincts des codes d'API ci-dessus.
@@ -46,6 +47,7 @@ const MESSAGES: Record<string, string> = {
     'Ce compte a la double authentification activée : connectez-vous avec votre mot de passe puis votre code.',
   account_deleted:
     "Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à 30 jours après la suppression).",
+  cabinet_suspended: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
   internal_server_error: 'Erreur interne. Réessayez dans quelques instants.',
 
   // Lien magique (redirection depuis l'email cliqué).
