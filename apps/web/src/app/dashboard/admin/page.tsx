@@ -71,38 +71,28 @@ export default async function AdminPage() {
         ))}
       </section>
 
-      {/* ===== Monitoring + répartition plans ===== */}
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-5 text-center lg:col-span-2">
-          <Gauge className="h-8 w-8 text-muted-foreground" />
-          <h2 className="mt-3 font-semibold text-foreground">Santé des services</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitoring pas encore branché (latence API, charge base de données, file de génération PDF,
-            passerelle DIMONA/ONSS).
-          </p>
+      {/* ===== Répartition des abonnements ===== */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-4 font-semibold text-foreground">Répartition des abonnements</h2>
+        <div className="space-y-3 text-sm">
+          {(['starter', 'pro', 'enterprise', 'aucun'] as const).map((planKey) => {
+            const count = planCounts.get(planKey) ?? 0;
+            if (count === 0) return null;
+            return (
+              <div key={planKey} className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-foreground">
+                  <span className="h-3 w-3 rounded-sm bg-primary" />
+                  {PLAN_LABELS[planKey] ?? 'Aucun plan'}
+                </span>
+                <span className="font-semibold text-foreground">{count}</span>
+              </div>
+            );
+          })}
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-4 font-semibold text-foreground">Répartition des abonnements</h2>
-          <div className="space-y-3 text-sm">
-            {(['starter', 'pro', 'enterprise', 'aucun'] as const).map((planKey) => {
-              const count = planCounts.get(planKey) ?? 0;
-              if (count === 0) return null;
-              return (
-                <div key={planKey} className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-foreground">
-                    <span className="h-3 w-3 rounded-sm bg-primary" />
-                    {PLAN_LABELS[planKey] ?? 'Aucun plan'}
-                  </span>
-                  <span className="font-semibold text-foreground">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            {totalAvecPlan} cabinet{totalAvecPlan > 1 ? 's' : ''} — {nouveauxCeMois} nouveau
-            {nouveauxCeMois > 1 ? 'x' : ''} ce mois-ci.
-          </p>
-        </div>
+        <p className="mt-4 text-xs text-muted-foreground">
+          {totalAvecPlan} cabinet{totalAvecPlan > 1 ? 's' : ''} — {nouveauxCeMois} nouveau
+          {nouveauxCeMois > 1 ? 'x' : ''} ce mois-ci.
+        </p>
       </section>
 
       {/* ===== Aperçu cabinets (10 premiers, le reste sur /dashboard/admin/cabinets) ===== */}
