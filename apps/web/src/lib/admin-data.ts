@@ -8,13 +8,18 @@ import type { AuditLogEntry } from '@/components/admin/audit-log-list';
 export async function getCabinets() {
   const cabinets = await prisma.cabinet.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { users: { where: { role: 'CABINET_RH' }, select: { plan: true } } },
+    include: {
+      users: { where: { role: 'CABINET_RH' }, select: { plan: true } },
+      _count: { select: { users: { where: { role: 'GESTIONNAIRE_RH' } } } },
+    },
   });
   const rows: CabinetRow[] = cabinets.map((c) => ({
     id: c.id,
     name: c.name,
     status: c.status,
     plan: c.users[0]?.plan ?? null,
+    gestionnaireCount: c._count.users,
+    createdAt: c.createdAt.toISOString(),
   }));
   return { cabinets, rows };
 }
