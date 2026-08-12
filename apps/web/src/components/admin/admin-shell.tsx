@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -12,7 +13,6 @@ import {
   CreditCard,
   Settings,
   Menu,
-  Waves,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserMenu } from '@/components/layout/user-menu';
@@ -44,11 +44,11 @@ export function AdminShell({ userName, children }: { userName: string; children:
         }`}
       >
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <Waves className="h-5 w-5" />
-          </span>
+          <Image src="/logo-simple.png" alt="SocialFlow" width={36} height={36} className="rounded-xl" />
           <div>
-            <p className="text-sm font-bold leading-none text-sidebar-foreground">SocialFlow</p>
+            <p className="text-sm font-bold leading-none text-sidebar-foreground">
+              Social<span className="text-primary dark:text-indigo-400">Flow</span>
+            </p>
             <p className="text-[11px] font-medium text-muted-foreground">Console SuperAdmin</p>
           </div>
         </div>
