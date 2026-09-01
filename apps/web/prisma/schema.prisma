@@ -137,6 +137,10 @@ model Account {
   id                    String    @id
   accountId             String
   providerId            String
+  // Namespace introduit par better-auth 1.7 pour distinguer les methodes
+  // d'authentification sans issuer OIDC reel (ex: "local:credential",
+  // "local:oauth:google") ; backfill des comptes existants dans la migration.
+  issuer                String
   userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
