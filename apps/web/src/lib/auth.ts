@@ -177,13 +177,22 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      // Suspension individuelle par un SuperAdmin (voir
+      // api/admin/users/[id]/route.ts) : input:false, jamais pose par le
+      // client, seulement par cette route via Prisma directement.
+      status: {
+        type: 'string',
+        required: false,
+        defaultValue: 'actif',
+        input: false,
+      },
     },
   },
   hooks: {
     // Remplace la suppression definitive immediate de better-auth par un
     // archivage : le compte redemande par l'utilisateur (RGPD) doit rester
-    // recuperable 30 jours avant purge reelle (voir
-    // /api/cron/purge-deleted-accounts et scripts/restore-account.ts).
+    // recuperable (voir ACCOUNT_DELETION_RETENTION_DAYS) avant purge reelle
+    // (voir /api/cron/purge-deleted-accounts).
     // Impossible d'intercepter ca en hooks.after : au moment ou il s'execute,
     // internalAdapter.deleteUser a deja fait sa suppression en cascade
     // (Session/Account/TwoFactor inclus) et la ligne User n'existe plus. Il
@@ -266,7 +275,7 @@ export const auth = betterAuth({
     // avec succes".
     after: createAuthMiddleware(async (ctx) => {
       // Un compte archive (deletedAt renseigne, voir hooks.before) doit
-      // rester totalement inaccessible pendant les 30 jours avant purge -
+      // rester totalement inaccessible pendant le delai avant purge -
       // sinon la ligne User existant toujours en base, n'importe quel
       // chemin de connexion (mot de passe, lien magique, code email, OAuth,
       // ou meme la confirmation du defi 2FA) reussirait a creer une session
@@ -304,6 +313,35 @@ export const auth = betterAuth({
         });
       }
 
+      // Suspension d'un utilisateur individuel par un SuperAdmin (voir
+      // api/admin/users/[id]/route.ts), distincte de la suspension de
+      // cabinet ci-dessous : ne bloque que ce compte precis. Meme choix
+      // produit que pour un cabinet suspendu : message clair, pas de
+      // non-divulgation (login-form.tsx redirige sur ce code).
+      if (freshSession?.user.status === 'suspendu') {
+        await ctx.context.internalAdapter.deleteSession(freshSession.session.token);
+        deleteSessionCookie(ctx, true);
+        ctx.context.setNewSession(null);
+
+        if (ctx.path === '/sign-in/email') {
+          throw new APIError('FORBIDDEN', {
+            code: 'USER_SUSPENDED',
+            message: 'Ce compte a ete suspendu.',
+          });
+        }
+
+        if (ctx.path === '/magic-link/verify' || ctx.path.startsWith('/callback/')) {
+          const errorURL = ctx.context.options.onAPIError?.errorURL || '/erreur-connexion';
+          const separator = errorURL.includes('?') ? '&' : '?';
+          throw ctx.redirect(`${errorURL}${separator}error=user_suspended`);
+        }
+
+        throw new APIError('FORBIDDEN', {
+          code: 'USER_SUSPENDED',
+          message: 'Ce compte a ete suspendu.',
+        });
+      }
+
       // Meme mecanisme que le blocage de compte archive ci-dessus, applique
       // cette fois a TOUS les utilisateurs d'un Cabinet suspendu par un
       // SuperAdmin (voir apps/web/src/app/api/admin/cabinets/[id]/route.ts).
@@ -314,18 +352,26 @@ export const auth = betterAuth({
       if (freshSession?.user.cabinetId) {
         const cabinet = await prisma.cabinet.findUnique({
           where: { id: freshSession.user.cabinetId },
-          select: { status: true },
+          select: { status: true, deletedAt: true },
         });
-        if (cabinet?.status === 'suspendu') {
+        // Un cabinet archive (voir api/admin/cabinets/[id]) bloque l'acces au
+        // meme titre qu'un cabinet suspendu, avec la meme erreur : du point
+        // de vue de l'utilisateur bloque, la distinction (temporaire vs en
+        // cours de purge) n'a pas a etre divulguee.
+        if (cabinet?.status === 'suspendu' || cabinet?.deletedAt) {
           await ctx.context.internalAdapter.deleteSession(freshSession.session.token);
           deleteSessionCookie(ctx, true);
           ctx.context.setNewSession(null);
 
+          // Contrairement au compte archive ci-dessus, pas de non-divulgation
+          // ici (choix produit) : un cabinet suspendu doit voir un message
+          // clair plutot que "mot de passe incorrect", quitte a faciliter
+          // legerement l'enumeration. login-form.tsx redirige vers
+          // /erreur-connexion sur ce code.
           if (ctx.path === '/sign-in/email') {
-            // Non-divulgation, meme raison que pour un compte archive.
-            throw new APIError('UNAUTHORIZED', {
-              code: 'INVALID_EMAIL_OR_PASSWORD',
-              message: 'Invalid email or password',
+            throw new APIError('FORBIDDEN', {
+              code: 'CABINET_SUSPENDED',
+              message: 'Ce cabinet a ete suspendu.',
             });
           }
 

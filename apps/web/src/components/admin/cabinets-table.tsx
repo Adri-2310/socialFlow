@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Loader2, ChevronUp, ChevronDown, Archive } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
 
 export type CabinetRow = {
   id: string;
@@ -13,6 +14,7 @@ export type CabinetRow = {
   plan: string | null;
   gestionnaireCount: number;
   createdAt: string;
+  deletedAt: string | null;
 };
 
 type SortKey = 'name' | 'plan' | 'gestionnaireCount' | 'createdAt' | 'status';
@@ -27,12 +29,27 @@ const PLAN_LABELS: Record<string, string> = {
 const STATUS_BADGE: Record<string, string> = {
   actif: 'bg-secondary/10 text-secondary',
   suspendu: 'bg-destructive/10 text-destructive',
+  archive: 'bg-muted text-muted-foreground',
 };
 
 const STATUS_LABEL: Record<string, string> = {
   actif: 'Actif',
   suspendu: 'Suspendu',
+  archive: 'Archivé',
 };
+
+// Statut affiche : l'archivage (deletedAt) est un etat terminal qui prime
+// sur le statut actif/suspendu sous-jacent (inchange en base, voir
+// api/admin/cabinets/[id]/route.ts).
+function displayStatus(c: CabinetRow): string {
+  return c.deletedAt ? 'archive' : c.status;
+}
+
+function purgeDate(deletedAt: string): Date {
+  return new Date(
+    new Date(deletedAt).getTime() + CABINET_DELETION_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  );
+}
 
 // Tri : direction par defaut differente selon la colonne (nom/plan/statut ->
 // A-Z en premier ; nombre de gestionnaires/date de creation -> le plus grand
@@ -45,7 +62,11 @@ const DEFAULT_SORT_DIRECTION: Record<SortKey, SortDirection> = {
   createdAt: 'desc',
 };
 
-const DATE_FORMATTER = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'short', year: 'numeric' });
+const DATE_FORMATTER = new Intl.DateTimeFormat('fr-BE', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
 
 const PAGE_SIZE = 25;
 
@@ -69,7 +90,11 @@ function SortableHeader({
       >
         {label}
         {active &&
-          (direction === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />)}
+          (direction === 'asc' ? (
+            <ChevronUp className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ))}
       </button>
     </th>
   );
@@ -98,6 +123,7 @@ export function CabinetsTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [page, setPage] = useState(1);
   const [pendingCabinet, setPendingCabinet] = useState<CabinetRow | null>(null);
+  const [pendingArchiveCabinet, setPendingArchiveCabinet] = useState<CabinetRow | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +132,7 @@ export function CabinetsTable({
     const q = search.trim().toLowerCase();
     return cabinets.filter((c) => {
       const matchesSearch = !q || c.name.toLowerCase().includes(q);
-      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || displayStatus(c) === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [cabinets, search, statusFilter, isPreview]);
@@ -121,7 +147,7 @@ export function CabinetsTable({
         case 'plan':
           return (a.plan ?? '').localeCompare(b.plan ?? '') * dir;
         case 'status':
-          return a.status.localeCompare(b.status) * dir;
+          return displayStatus(a).localeCompare(displayStatus(b)) * dir;
         case 'gestionnaireCount':
           return (a.gestionnaireCount - b.gestionnaireCount) * dir;
         case 'createdAt':
@@ -134,7 +160,9 @@ export function CabinetsTable({
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const paginated = isPreview ? sorted.slice(0, limit) : sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = isPreview
+    ? sorted.slice(0, limit)
+    : sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   function updateSearch(value: string) {
     setSearch(value);
@@ -175,6 +203,35 @@ export function CabinetsTable({
     }
   }
 
+  async function archiveCabinet(id: string) {
+    setLoadingId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/cabinets/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('request_failed');
+      router.refresh();
+    } catch {
+      setError('Une erreur est survenue. Réessayez.');
+    } finally {
+      setLoadingId(null);
+      setPendingArchiveCabinet(null);
+    }
+  }
+
+  async function restoreCabinet(id: string) {
+    setLoadingId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/cabinets/${id}`, { method: 'PUT' });
+      if (!res.ok) throw new Error('request_failed');
+      router.refresh();
+    } catch {
+      setError('Une erreur est survenue. Réessayez.');
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   return (
     <section className="rounded-2xl border border-border bg-card">
       <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -207,6 +264,7 @@ export function CabinetsTable({
               <option value="all">Tous les statuts</option>
               <option value="actif">Actif</option>
               <option value="suspendu">Suspendu</option>
+              <option value="archive">Archivé</option>
             </select>
           </div>
         )}
@@ -258,7 +316,7 @@ export function CabinetsTable({
                   />
                 </>
               )}
-              <th className="px-5 py-3 text-right font-semibold">Actions</th>
+              {!isPreview && <th className="px-5 py-3 text-right font-semibold">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -273,45 +331,91 @@ export function CabinetsTable({
                 {!isPreview && (
                   <>
                     <td className="px-5 py-3 text-foreground">{c.gestionnaireCount}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{DATE_FORMATTER.format(new Date(c.createdAt))}</td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {DATE_FORMATTER.format(new Date(c.createdAt))}
+                    </td>
                   </>
                 )}
                 <td className="px-5 py-3">
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      STATUS_BADGE[c.status] ?? ''
+                      STATUS_BADGE[displayStatus(c)] ?? ''
                     }`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                    {STATUS_LABEL[c.status] ?? c.status}
+                    {STATUS_LABEL[displayStatus(c)] ?? displayStatus(c)}
                   </span>
                 </td>
-                <td className="px-5 py-3 text-right">
-                  {c.status === 'suspendu' ? (
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(c.id, 'actif')}
-                      disabled={loadingId === c.id}
-                      className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loadingId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Réactiver'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setPendingCabinet(c)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      Suspendre
-                    </button>
-                  )}
-                </td>
+                {!isPreview && (
+                  <td className="px-5 py-3 text-right">
+                    {c.deletedAt ? (
+                      <div className="flex items-center justify-end gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          Purge le {DATE_FORMATTER.format(purgeDate(c.deletedAt))}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => restoreCabinet(c.id)}
+                          disabled={loadingId === c.id}
+                          className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {loadingId === c.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            'Restaurer'
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-2">
+                        {c.status === 'suspendu' ? (
+                          <button
+                            type="button"
+                            onClick={() => updateStatus(c.id, 'actif')}
+                            disabled={loadingId === c.id}
+                            className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {loadingId === c.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              'Réactiver'
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setPendingCabinet(c)}
+                            disabled={loadingId === c.id}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Suspendre
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setPendingArchiveCabinet(c)}
+                          disabled={loadingId === c.id}
+                          title="Archiver"
+                          aria-label={`Archiver ${c.name}`}
+                          className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Archive className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={isPreview ? 4 : 6} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                  {isPreview ? 'Aucun cabinet pour le moment.' : 'Aucun cabinet ne correspond à cette recherche.'}
+                <td
+                  colSpan={isPreview ? 3 : 6}
+                  className="px-5 py-8 text-center text-sm text-muted-foreground"
+                >
+                  {isPreview
+                    ? 'Aucun cabinet pour le moment.'
+                    : 'Aucun cabinet ne correspond à cette recherche.'}
                 </td>
               </tr>
             )}
@@ -355,6 +459,17 @@ export function CabinetsTable({
           loading={loadingId === pendingCabinet.id}
           onCancel={() => setPendingCabinet(null)}
           onConfirm={() => updateStatus(pendingCabinet.id, 'suspendu')}
+        />
+      )}
+
+      {pendingArchiveCabinet && (
+        <ConfirmDialog
+          title="Archiver ce cabinet ?"
+          description={`Le cabinet « ${pendingArchiveCabinet.name} » et ses utilisateurs perdront l'accès immédiatement. Les données seront définitivement supprimées dans ${CABINET_DELETION_RETENTION_DAYS} jours (restauration possible avant cette échéance).`}
+          confirmLabel="Archiver"
+          loading={loadingId === pendingArchiveCabinet.id}
+          onCancel={() => setPendingArchiveCabinet(null)}
+          onConfirm={() => archiveCabinet(pendingArchiveCabinet.id)}
         />
       )}
     </section>

@@ -9,6 +9,7 @@ function logsOfLength(count: number): AuditLogEntry[] {
     createdAt: new Date(2026, 0, 1, 0, i).toISOString(),
     actorName: null,
     cabinetName: `Cabinet ${i}`,
+    targetUserName: null,
   }));
 }
 
@@ -66,6 +67,24 @@ describe('AuditLogList - formatage des messages', () => {
       createdAt: new Date().toISOString(),
       actorName,
       cabinetName,
+      targetUserName: null,
+    };
+    render(<AuditLogList logs={[log]} />);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['USER_ARCHIVED', 'Julien Lemaire', 'Adrien', /« Julien Lemaire » a été archivé par Adrien \(purge dans \d+ jours\)\./],
+    ['USER_RESTORED', 'Julien Lemaire', 'Adrien', '« Julien Lemaire » a été restauré par Adrien.'],
+    ['USER_RESTORED', null, 'Adrien', '« un utilisateur supprimé » a été restauré par Adrien.'],
+  ])('formate %s (utilisateur=%s, acteur=%s)', (action, targetUserName, actorName, expected) => {
+    const log: AuditLogEntry = {
+      id: '1',
+      action,
+      createdAt: new Date().toISOString(),
+      actorName,
+      cabinetName: null,
+      targetUserName,
     };
     render(<AuditLogList logs={[log]} />);
     expect(screen.getByText(expected)).toBeInTheDocument();
@@ -78,6 +97,7 @@ describe('AuditLogList - formatage des messages', () => {
       createdAt: new Date().toISOString(),
       actorName: null,
       cabinetName: null,
+      targetUserName: null,
     };
     render(<AuditLogList logs={[log]} />);
     expect(screen.getByText('ACTION_INCONNUE')).toBeInTheDocument();
@@ -102,6 +122,7 @@ describe('AuditLogList - horodatage relatif', () => {
       createdAt: new Date('2026-01-01T11:45:00.000Z').toISOString(),
       actorName: null,
       cabinetName: 'Alpha',
+      targetUserName: null,
     };
     render(<AuditLogList logs={[log]} />);
     expect(screen.getByText(rtf.format(-15, 'minute'))).toBeInTheDocument();

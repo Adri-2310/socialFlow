@@ -64,6 +64,19 @@ export function LoginForm() {
     setLoading(false);
 
     if (signInError) {
+      // Cas particulier : contrairement aux autres erreurs affichees inline,
+      // un cabinet suspendu redirige vers la page d'erreur commune (voir
+      // hooks.after de auth.ts) - message clair plutot que "mot de passe
+      // incorrect", choix produit assume malgre la legere prise
+      // d'enumeration que ca autorise.
+      if (signInError.code === 'CABINET_SUSPENDED') {
+        router.push('/erreur-connexion?error=cabinet_suspended');
+        return;
+      }
+      if (signInError.code === 'USER_SUSPENDED') {
+        router.push('/erreur-connexion?error=user_suspended');
+        return;
+      }
       setError(translateAuthError(signInError.code));
       return;
     }

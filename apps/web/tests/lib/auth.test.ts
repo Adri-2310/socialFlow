@@ -368,7 +368,7 @@ describe('comptes lies et suppression', () => {
 
     // Etape 2 : clic sur le lien recu par email (meme session). Le compte
     // n'est pas vraiment efface : il est archive (deletedAt), recuperable
-    // 30 jours avant purge reelle (voir scripts/restore-account.ts).
+    // avant purge reelle (voir ACCOUNT_DELETION_RETENTION_DAYS).
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     const verification = await prisma.verification.findFirstOrThrow({
       where: { value: user.id, identifier: { startsWith: 'delete-account-' } },

@@ -24,15 +24,16 @@ export default async function AdminPage() {
 
   const [{ cabinets, rows }, auditLogs] = await Promise.all([getCabinets(), getAuditLogEntries(PREVIEW_SIZE)]);
 
-  const cabinetsActifs = cabinets.filter((c) => c.status === 'actif').length;
+  const cabinetsActifs = cabinets.filter((c) => c.status === 'actif' && !c.deletedAt).length;
   const nouveauxCeMois = cabinets.filter((c) => c.createdAt >= startOfMonth).length;
 
   const planCounts = new Map<string, number>();
   for (const row of rows) {
+    if (row.deletedAt) continue;
     const key = row.plan ?? 'aucun';
     planCounts.set(key, (planCounts.get(key) ?? 0) + 1);
   }
-  const totalAvecPlan = rows.length;
+  const totalAvecPlan = rows.filter((row) => !row.deletedAt).length;
 
   return (
     <>

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
 vi.mock('@/lib/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
@@ -110,7 +111,7 @@ describe('archivage : blocage de connexion', () => {
 });
 
 describe('archivage : restauration', () => {
-  it("redonne acces des que deletedAt est efface (ce que fait scripts/restore-account.ts)", async () => {
+  it('redonne acces des que deletedAt est efface', async () => {
     const { mail, user } = await archiverCompte('archive-restaure');
 
     const refuse = await auth.api.signInEmail({
@@ -141,15 +142,15 @@ describe('purge definitive des comptes archives (cron)', () => {
     expect(res.status).toBe(401);
   });
 
-  it('purge les comptes archives depuis plus de 30 jours, laisse les recents intacts', async () => {
+  it('purge les comptes archives depuis plus que le delai de retention, laisse les recents intacts', async () => {
     const { user: userAncien } = await archiverCompte('purge-ancien');
     const { mail: mailRecent } = await archiverCompte('purge-recent');
 
     // Recule artificiellement la date d'archivage du premier compte, plutot
-    // que d'attendre 30 jours dans le test.
+    // que d'attendre ACCOUNT_DELETION_RETENTION_DAYS jours dans le test.
     await prisma.user.update({
       where: { id: userAncien.id },
-      data: { deletedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) },
+      data: { deletedAt: new Date(Date.now() - (ACCOUNT_DELETION_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000) },
     });
 
     const { GET } = await import('@/app/api/cron/purge-deleted-accounts/route');

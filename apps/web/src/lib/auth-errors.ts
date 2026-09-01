@@ -1,3 +1,5 @@
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL_OR_PASSWORD: 'Email ou mot de passe incorrect.',
   INVALID_EMAIL: 'Adresse email invalide.',
@@ -21,8 +23,9 @@ const MESSAGES: Record<string, string> = {
   SESSION_NOT_FRESH: 'Reconnectez-vous pour effectuer cette action.',
   SESSION_EXPIRED: 'Session expirée. Reconnectez-vous.',
   ACCOUNT_DELETED:
-    "Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à 30 jours après la suppression).",
+    `Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à ${ACCOUNT_DELETION_RETENTION_DAYS} jours après la suppression).`,
   CABINET_SUSPENDED: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
+  USER_SUSPENDED: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
 
   // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
   // distincts des codes d'API ci-dessus.
@@ -46,8 +49,9 @@ const MESSAGES: Record<string, string> = {
   two_factor_required_password:
     'Ce compte a la double authentification activée : connectez-vous avec votre mot de passe puis votre code.',
   account_deleted:
-    "Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à 30 jours après la suppression).",
+    `Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à ${ACCOUNT_DELETION_RETENTION_DAYS} jours après la suppression).`,
   cabinet_suspended: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
+  user_suspended: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
   internal_server_error: 'Erreur interne. Réessayez dans quelques instants.',
 
   // Lien magique (redirection depuis l'email cliqué).

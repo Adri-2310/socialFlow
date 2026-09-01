@@ -31,6 +31,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!cabinet) {
     return NextResponse.json({ error: 'CABINET_NOT_FOUND' }, { status: 404 });
   }
+  if (cabinet.deletedAt) {
+    return NextResponse.json({ error: 'CABINET_ARCHIVED' }, { status: 400 });
+  }
 
   if (status === 'suspendu') {
     // Coupe l'acces immediatement (pas seulement a la prochaine connexion) :
@@ -47,6 +50,71 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: { action: 'CABINET_REACTIVATED', actorId: session.user.id, cabinetId },
     });
   }
+
+  return NextResponse.json({ success: true });
+}
+
+// Archive le cabinet (pas de vraie suppression : User.cabinetId a
+// onDelete: Cascade, supprimer reellement un Cabinet supprimerait tous ses
+// utilisateurs - voir CABINET_DELETION_RETENTION_DAYS et
+// api/cron/purge-deleted-cabinets pour la purge reelle et differee).
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) {
+    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  }
+  if (session.user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { id: cabinetId } = await params;
+
+  const cabinet = await prisma.cabinet.findUnique({ where: { id: cabinetId } });
+  if (!cabinet) {
+    return NextResponse.json({ error: 'CABINET_NOT_FOUND' }, { status: 404 });
+  }
+  if (cabinet.deletedAt) {
+    return NextResponse.json({ error: 'CABINET_ALREADY_ARCHIVED' }, { status: 400 });
+  }
+
+  // Coupe l'acces immediatement, meme mecanisme que la suspension.
+  await prisma.session.deleteMany({ where: { user: { cabinetId } } });
+  await prisma.cabinet.update({ where: { id: cabinetId }, data: { deletedAt: new Date() } });
+  await prisma.auditLog.create({
+    data: { action: 'CABINET_ARCHIVED', actorId: session.user.id, cabinetId },
+  });
+
+  return NextResponse.json({ success: true });
+}
+
+// Restaure un cabinet archive, tant que la purge reelle (voir
+// api/cron/purge-deleted-cabinets) n'a pas eu lieu. Ne restaure pas l'acces
+// automatiquement si le cabinet etait suspendu avant son archivage : status
+// n'est pas touche par l'archivage (voir DELETE ci-dessus), donc reste
+// coherent tel quel.
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) {
+    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  }
+  if (session.user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { id: cabinetId } = await params;
+
+  const cabinet = await prisma.cabinet.findUnique({ where: { id: cabinetId } });
+  if (!cabinet) {
+    return NextResponse.json({ error: 'CABINET_NOT_FOUND' }, { status: 404 });
+  }
+  if (!cabinet.deletedAt) {
+    return NextResponse.json({ error: 'CABINET_NOT_ARCHIVED' }, { status: 400 });
+  }
+
+  await prisma.cabinet.update({ where: { id: cabinetId }, data: { deletedAt: null } });
+  await prisma.auditLog.create({
+    data: { action: 'CABINET_RESTORED', actorId: session.user.id, cabinetId },
+  });
 
   return NextResponse.json({ success: true });
 }

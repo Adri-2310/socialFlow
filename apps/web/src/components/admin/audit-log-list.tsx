@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { UserPlus, PauseCircle, PlayCircle } from 'lucide-react';
+import { UserPlus, PauseCircle, PlayCircle, Archive, ArchiveRestore } from 'lucide-react';
+import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
 export type AuditLogEntry = {
   id: string;
@@ -10,6 +12,7 @@ export type AuditLogEntry = {
   createdAt: string;
   actorName: string | null;
   cabinetName: string | null;
+  targetUserName: string | null;
 };
 
 const PAGE_SIZE = 25;
@@ -18,10 +21,17 @@ const AUDIT_ICONS: Record<string, { icon: typeof UserPlus; tone: string }> = {
   CABINET_CREATED: { icon: UserPlus, tone: 'bg-secondary/10 text-secondary' },
   CABINET_SUSPENDED: { icon: PauseCircle, tone: 'bg-destructive/10 text-destructive' },
   CABINET_REACTIVATED: { icon: PlayCircle, tone: 'bg-secondary/10 text-secondary' },
+  CABINET_ARCHIVED: { icon: Archive, tone: 'bg-muted text-muted-foreground' },
+  CABINET_RESTORED: { icon: ArchiveRestore, tone: 'bg-secondary/10 text-secondary' },
+  USER_ARCHIVED: { icon: Archive, tone: 'bg-muted text-muted-foreground' },
+  USER_RESTORED: { icon: ArchiveRestore, tone: 'bg-secondary/10 text-secondary' },
+  USER_SUSPENDED: { icon: PauseCircle, tone: 'bg-destructive/10 text-destructive' },
+  USER_REACTIVATED: { icon: PlayCircle, tone: 'bg-secondary/10 text-secondary' },
 };
 
 function auditMessage(log: AuditLogEntry): string {
   const cabinetName = log.cabinetName ?? 'un cabinet supprimé';
+  const targetUserName = log.targetUserName ?? 'un utilisateur supprimé';
   switch (log.action) {
     case 'CABINET_CREATED':
       return `« ${cabinetName} » a créé son compte.`;
@@ -29,6 +39,18 @@ function auditMessage(log: AuditLogEntry): string {
       return `« ${cabinetName} » a été suspendu par ${log.actorName ?? 'un administrateur'}.`;
     case 'CABINET_REACTIVATED':
       return `« ${cabinetName} » a été réactivé par ${log.actorName ?? 'un administrateur'}.`;
+    case 'CABINET_ARCHIVED':
+      return `« ${cabinetName} » a été archivé par ${log.actorName ?? 'un administrateur'} (purge dans ${CABINET_DELETION_RETENTION_DAYS} jours).`;
+    case 'CABINET_RESTORED':
+      return `« ${cabinetName} » a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'USER_ARCHIVED':
+      return `« ${targetUserName} » a été archivé par ${log.actorName ?? 'un administrateur'} (purge dans ${ACCOUNT_DELETION_RETENTION_DAYS} jours).`;
+    case 'USER_RESTORED':
+      return `« ${targetUserName} » a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'USER_SUSPENDED':
+      return `« ${targetUserName} » a été suspendu par ${log.actorName ?? 'un administrateur'}.`;
+    case 'USER_REACTIVATED':
+      return `« ${targetUserName} » a été réactivé par ${log.actorName ?? 'un administrateur'}.`;
     default:
       return log.action;
   }

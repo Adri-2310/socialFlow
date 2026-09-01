@@ -11,9 +11,9 @@ vi.mock('next/navigation', () => ({
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const CABINETS: CabinetRow[] = [
-  { id: '1', name: 'Alpha Cabinet', status: 'actif', plan: 'starter', gestionnaireCount: 2, createdAt: '2026-01-10T00:00:00.000Z' },
-  { id: '2', name: 'Beta Cabinet', status: 'suspendu', plan: 'pro', gestionnaireCount: 0, createdAt: '2026-03-05T00:00:00.000Z' },
-  { id: '3', name: 'Gamma Cabinet', status: 'actif', plan: null, gestionnaireCount: 5, createdAt: '2025-12-01T00:00:00.000Z' },
+  { id: '1', name: 'Alpha Cabinet', status: 'actif', plan: 'starter', gestionnaireCount: 2, createdAt: '2026-01-10T00:00:00.000Z', deletedAt: null },
+  { id: '2', name: 'Beta Cabinet', status: 'suspendu', plan: 'pro', gestionnaireCount: 0, createdAt: '2026-03-05T00:00:00.000Z', deletedAt: null },
+  { id: '3', name: 'Gamma Cabinet', status: 'actif', plan: null, gestionnaireCount: 5, createdAt: '2025-12-01T00:00:00.000Z', deletedAt: null },
 ];
 
 function manyCabinets(count: number): CabinetRow[] {
@@ -24,6 +24,7 @@ function manyCabinets(count: number): CabinetRow[] {
     plan: 'starter',
     gestionnaireCount: i,
     createdAt: new Date(2026, 0, 1 + i).toISOString(),
+    deletedAt: null,
   }));
 }
 
@@ -48,6 +49,12 @@ describe('CabinetsTable - mode apercu', () => {
       'href',
       '/dashboard/admin/cabinets',
     );
+
+    // Vue d'ensemble = lecture seule, aucune action de gestion (Suspendre,
+    // Archiver, Reactiver...) n'y est disponible.
+    expect(screen.queryByText('Actions')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Suspendre' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Archiver/ })).not.toBeInTheDocument();
   });
 
   it("affiche un message d'etat vide si aucun cabinet", () => {
@@ -176,5 +183,61 @@ describe('CabinetsTable - suspension et reactivation', () => {
     fireEvent.click(suspendButtons[suspendButtons.length - 1]);
 
     expect(await screen.findByText('Une erreur est survenue. Réessayez.')).toBeInTheDocument();
+  });
+});
+
+describe('CabinetsTable - archivage', () => {
+  it('demande confirmation avant d\'archiver, puis appelle DELETE et rafraichit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CabinetsTable cabinets={CABINETS} />);
+    fireEvent.click(within(screen.getAllByRole('row')[1]).getByRole('button', { name: 'Archiver Alpha Cabinet' }));
+
+    expect(screen.getByText('Archiver ce cabinet ?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archiver' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/cabinets/1', { method: 'DELETE' }),
+    );
+    await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+    expect(screen.queryByText('Archiver ce cabinet ?')).not.toBeInTheDocument();
+  });
+
+  it('affiche le badge "Archivé", la date de purge et masque les actions de suspension pour un cabinet archive', () => {
+    const archived: CabinetRow[] = [
+      { ...CABINETS[0], deletedAt: '2026-08-01T00:00:00.000Z' },
+    ];
+    render(<CabinetsTable cabinets={archived} />);
+    const row = screen.getAllByRole('row')[1];
+
+    expect(within(row).getByText('Archivé')).toBeInTheDocument();
+    expect(within(row).getByText(/Purge le/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Suspendre' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Archiver/ })).not.toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Restaurer' })).toBeInTheDocument();
+  });
+
+  it('filtre par statut "Archivé"', () => {
+    const mixed: CabinetRow[] = [...CABINETS, { ...CABINETS[0], id: '4', name: 'Delta Cabinet', deletedAt: '2026-08-01T00:00:00.000Z' }];
+    render(<CabinetsTable cabinets={mixed} />);
+
+    fireEvent.change(screen.getByDisplayValue('Tous les statuts'), { target: { value: 'archive' } });
+
+    expect(screen.getByText('Delta Cabinet')).toBeInTheDocument();
+    expect(screen.queryByText('Alpha Cabinet')).not.toBeInTheDocument();
+  });
+
+  it('restaure un cabinet archive sans demander de confirmation', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    const archived: CabinetRow[] = [{ ...CABINETS[0], deletedAt: '2026-08-01T00:00:00.000Z' }];
+
+    render(<CabinetsTable cabinets={archived} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Restaurer' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/admin/cabinets/1', { method: 'PUT' }));
+    await waitFor(() => expect(refreshMock).toHaveBeenCalled());
   });
 });

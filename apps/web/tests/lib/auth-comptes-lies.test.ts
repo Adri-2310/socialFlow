@@ -228,9 +228,8 @@ describe('suppression de compte', () => {
     expect(callback.status).toBe(200);
 
     // Archivage (pas de suppression reelle) : la ligne User survit avec
-    // deletedAt renseigne, recuperable via scripts/restore-account.ts
-    // jusqu'a la purge definitive 30 jours plus tard (voir
-    // api/cron/purge-deleted-accounts). Seules les sessions sont revoquees
+    // deletedAt renseigne (voir ACCOUNT_DELETION_RETENTION_DAYS) jusqu'a la
+    // purge definitive (voir api/cron/purge-deleted-accounts). Seules les sessions sont revoquees
     // immediatement pour rendre le compte inaccessible ; Account et
     // TwoFactor restent intacts pour une restauration complete.
     const archived = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
