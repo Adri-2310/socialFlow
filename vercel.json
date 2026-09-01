@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/purge-deleted-cabinets",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/purge-expired-sessions",
+      "schedule": "0 5 * * *"
     }
   ]
 }

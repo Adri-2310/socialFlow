@@ -23,6 +23,14 @@ const { prisma } = await import('@/lib/prisma');
 const PASSWORD = 'InitialPass123!';
 
 afterAll(async () => {
+  // Supprime les cabinets auto-crees a l'inscription avant les users (voir
+  // meme commentaire dans tests/lib/auth.test.ts).
+  const testUsers = await prisma.user.findMany({
+    where: { email: { startsWith: TEST_EMAIL_PREFIX } },
+    select: { cabinetId: true },
+  });
+  const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
+  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {
@@ -196,5 +204,34 @@ describe('rememberMe', () => {
     });
 
     expect(cookieJetonSession(res).toLowerCase()).not.toContain('max-age=');
+  });
+});
+
+describe('purge des sessions expirees (cron)', () => {
+  it('refuse une requete sans le bon secret', async () => {
+    const { GET } = await import('@/app/api/cron/purge-expired-sessions/route');
+    const res = await GET(new Request('http://localhost/api/cron/purge-expired-sessions'));
+    expect(res.status).toBe(401);
+  });
+
+  it('supprime les sessions expirees, laisse les actives intactes', async () => {
+    const mail = testEmail('purge-session');
+    const cj = cookieJar();
+    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+
+    const session = await prisma.session.findFirstOrThrow({ where: { userId: user.id } });
+    await prisma.session.update({ where: { id: session.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+
+    const { GET } = await import('@/app/api/cron/purge-expired-sessions/route');
+    const res = await GET(
+      new Request('http://localhost/api/cron/purge-expired-sessions', {
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).purged).toBeGreaterThanOrEqual(1);
+
+    expect(await prisma.session.findUnique({ where: { id: session.id } })).toBeNull();
   });
 });
