@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Building2, Euro, Gauge, AlertTriangle } from 'lucide-react';
 import { CabinetsTable } from '@/components/admin/cabinets-table';
 import { AuditLogList } from '@/components/admin/audit-log-list';
-import { getCabinets, getAuditLogEntries } from '@/lib/admin-data';
+import { MonitoringSummary } from '@/components/admin/monitoring-summary';
+import { getCabinets, getAuditLogEntries, getMonitoringData } from '@/lib/admin-data';
 
 export const metadata: Metadata = {
   title: 'Console SuperAdmin — SocialFlow',
@@ -22,7 +23,11 @@ export default async function AdminPage() {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [{ cabinets, rows }, auditLogs] = await Promise.all([getCabinets(), getAuditLogEntries(PREVIEW_SIZE)]);
+  const [{ cabinets, rows }, auditLogs, monitoring] = await Promise.all([
+    getCabinets(),
+    getAuditLogEntries(PREVIEW_SIZE),
+    getMonitoringData(),
+  ]);
 
   const cabinetsActifs = cabinets.filter((c) => c.status === 'actif' && !c.deletedAt).length;
   const nouveauxCeMois = cabinets.filter((c) => c.createdAt >= startOfMonth).length;
@@ -95,6 +100,9 @@ export default async function AdminPage() {
           {nouveauxCeMois > 1 ? 'x' : ''} ce mois-ci.
         </p>
       </section>
+
+      {/* ===== Apercu monitoring (le reste sur /dashboard/admin/monitoring) ===== */}
+      <MonitoringSummary data={monitoring} manageHref="/dashboard/admin/monitoring" />
 
       {/* ===== Aperçu cabinets (10 premiers, le reste sur /dashboard/admin/cabinets) ===== */}
       <CabinetsTable cabinets={rows} limit={PREVIEW_SIZE} manageHref="/dashboard/admin/cabinets" />

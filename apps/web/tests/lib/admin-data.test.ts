@@ -19,7 +19,7 @@ vi.mock('@/lib/email', () => ({
 
 const { auth } = await import('@/lib/auth');
 const { prisma } = await import('@/lib/prisma');
-const { getCabinets, getUsers, getAuditLogEntries } = await import('@/lib/admin-data');
+const { getCabinets, getUsers, getAuditLogEntries, getMonitoringData } = await import('@/lib/admin-data');
 
 const PASSWORD = 'InitialPass123!';
 
@@ -48,12 +48,30 @@ async function creerCabinetRH(label: string, plan?: 'starter' | 'pro' | 'enterpr
   return { mail, cj, user };
 }
 
+/** Cree un compte puis le force au role SUPER_ADMIN. Supprime au passage le
+ * cabinet auto-cree par l'inscription (plus d'utilite une fois cabinetId a
+ * null, sinon orphelin et invisible au nettoyage afterAll). */
+async function creerSuperAdmin(label: string) {
+  const { mail, cj, user } = await creerCabinetRH(label);
+  const cabinetId = user.cabinetId!;
+  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+  await prisma.cabinet.delete({ where: { id: cabinetId } });
+  return { mail, cj, user };
+}
+
 async function creerGestionnaire(label: string, cabinetId: string) {
   const mail = testEmail(label);
   const cj = cookieJar();
   cj.apply(await auth.api.signUpEmail({ body: { name: `Gestionnaire ${label}`, email: mail, password: PASSWORD }, asResponse: true }));
   const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+  // Le cabinet auto-cree a l'inscription est abandonne au profit de celui du
+  // Cabinet RH qui invite (parametre `cabinetId`) : le supprimer ici plutot
+  // que de le laisser orphelin (invisible ensuite, cabinetId reecrit).
+  // Detache d'abord (sinon supprimer le cabinet cascaderait sur le User
+  // lui-meme, via onDelete: Cascade sur User.cabinetId).
+  const ancienCabinetId = user.cabinetId!;
   await prisma.user.update({ where: { id: user.id }, data: { role: 'GESTIONNAIRE_RH', cabinetId } });
+  await prisma.cabinet.delete({ where: { id: ancienCabinetId } });
   return user;
 }
 
@@ -111,8 +129,7 @@ describe('getUsers', () => {
   });
 
   it('renvoie cabinetName null pour un utilisateur sans cabinet (SuperAdmin)', async () => {
-    const { user } = await creerCabinetRH('admindata-user-superadmin');
-    await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+    const { user } = await creerSuperAdmin('admindata-user-superadmin');
 
     const rows = await getUsers();
     const row = rows.find((r) => r.id === user.id);
@@ -139,8 +156,7 @@ describe('getUsers', () => {
 
 describe('getAuditLogEntries', () => {
   it('respecte la limite `take` et trie du plus recent au plus ancien', async () => {
-    const { user: admin } = await creerCabinetRH('admindata-audit-admin');
-    await prisma.user.update({ where: { id: admin.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+    const { user: admin } = await creerSuperAdmin('admindata-audit-admin');
     const { user: cible } = await creerCabinetRH('admindata-audit-cible');
 
     // 3 evenements espaces artificiellement pour un ordre sans ambiguite.
@@ -163,8 +179,7 @@ describe('getAuditLogEntries', () => {
   });
 
   it('resout les noms de l acteur, du cabinet et de l utilisateur cible', async () => {
-    const { user: admin } = await creerCabinetRH('admindata-audit-noms-admin');
-    await prisma.user.update({ where: { id: admin.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+    const { user: admin } = await creerSuperAdmin('admindata-audit-noms-admin');
     const { user: cabinetTitulaire } = await creerCabinetRH('admindata-audit-noms-cabinet');
     const { user: cible } = await creerCabinetRH('admindata-audit-noms-cible');
 
@@ -195,5 +210,69 @@ describe('getAuditLogEntries', () => {
     expect(entry?.targetUserName).toBeNull();
 
     await prisma.auditLog.delete({ where: { id: log.id } });
+  });
+});
+
+describe('getMonitoringData', () => {
+  it('mesure une latence DB reelle et rapporte une base saine', async () => {
+    const data = await getMonitoringData();
+
+    expect(data.db.healthy).toBe(true);
+    expect(data.db.latencyMs).not.toBeNull();
+    expect(data.db.latencyMs!).toBeGreaterThanOrEqual(0);
+  });
+
+  it('compte les sessions actives (au moins celle qui vient d etre creee)', async () => {
+    await creerCabinetRH('admindata-monitoring-session');
+
+    const data = await getMonitoringData();
+
+    expect(data.activeSessions).toBeGreaterThanOrEqual(1);
+    expect(data.activeUsers).toBeGreaterThanOrEqual(1);
+  });
+
+  it('compte les utilisateurs actifs par personne distincte, pas par session', async () => {
+    const before = await getMonitoringData();
+    const { mail } = await creerCabinetRH('admindata-monitoring-multisession');
+
+    // Une deuxieme connexion pour le meme compte : +1 session mais toujours
+    // la meme personne.
+    await auth.api.signInEmail({ body: { email: mail, password: PASSWORD }, headers: new Headers(), asResponse: true });
+
+    const after = await getMonitoringData();
+
+    expect(after.activeSessions).toBe(before.activeSessions + 2);
+    expect(after.activeUsers).toBe(before.activeUsers + 1);
+  });
+
+  it('incremente le bon compartiment de statut a la creation d un cabinet et d un utilisateur', async () => {
+    const before = await getMonitoringData();
+    const { user } = await creerCabinetRH('admindata-monitoring-statut');
+    const after = await getMonitoringData();
+
+    expect(after.cabinetsByStatus.actif).toBe(before.cabinetsByStatus.actif + 1);
+    expect(after.usersByStatus.actif).toBe(before.usersByStatus.actif + 1);
+
+    await prisma.user.update({ where: { id: user.id }, data: { status: 'suspendu' } });
+    const afterSuspend = await getMonitoringData();
+
+    expect(afterSuspend.cabinetsByStatus.actif).toBe(before.cabinetsByStatus.actif + 1);
+    expect(afterSuspend.usersByStatus.actif).toBe(before.usersByStatus.actif);
+    expect(afterSuspend.usersByStatus.suspendu).toBe(before.usersByStatus.suspendu + 1);
+  });
+
+  it('remonte les entrees RateLimit existantes, triees par nombre de requetes decroissant', async () => {
+    const key = `admindata-monitoring-ratelimit-${Date.now()}`;
+    await prisma.rateLimit.create({ data: { key, count: 999, lastRequest: BigInt(Date.now()) } });
+
+    const data = await getMonitoringData();
+    const hit = data.rateLimitHits.find((h) => h.key === key);
+
+    expect(hit).toBeDefined();
+    expect(hit?.count).toBe(999);
+    // 999 est le plus haut compteur possible dans ce test : doit apparaitre en tete.
+    expect(data.rateLimitHits[0].key).toBe(key);
+
+    await prisma.rateLimit.delete({ where: { key } });
   });
 });

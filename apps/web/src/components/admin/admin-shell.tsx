@@ -18,14 +18,14 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { UserMenu } from '@/components/layout/user-menu';
 
 // Reprend la nav de la maquette (voir doc/analysis + maquette 03-dashboard-
-// superadmin.html). Cabinets, Utilisateurs et Journal d'audit ont maintenant
-// leur propre page ; le reste n'en a pas encore - pas de lien mort, juste une
-// puce "Bientot".
+// superadmin.html). Cabinets, Utilisateurs, Monitoring et Journal d'audit ont
+// maintenant leur propre page ; le reste n'en a pas encore - pas de lien
+// mort, juste une puce "Bientot".
 const NAV_ITEMS: { label: string; icon: typeof LayoutDashboard; href?: string }[] = [
   { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard/admin' },
   { label: 'Cabinets', icon: Building2, href: '/dashboard/admin/cabinets' },
   { label: 'Utilisateurs', icon: Users, href: '/dashboard/admin/utilisateurs' },
-  { label: 'Monitoring', icon: Activity },
+  { label: 'Monitoring', icon: Activity, href: '/dashboard/admin/monitoring' },
   { label: "Journal d'audit", icon: ScrollText, href: '/dashboard/admin/audit' },
   { label: 'Facturation', icon: CreditCard },
   { label: 'Configuration', icon: Settings },
