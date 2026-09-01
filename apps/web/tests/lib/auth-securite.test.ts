@@ -110,16 +110,30 @@ describe('cloisonnement entre comptes', () => {
     const { cj: cjA, user: userA } = await creerCompte('idor-unlink-a');
     const { user: userB } = await creerCompte('idor-unlink-b');
     await prisma.account.create({
-      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `google-${userA.id}`, userId: userA.id },
+      data: {
+        id: crypto.randomUUID(),
+        providerId: 'google',
+        issuer: 'local:oauth:google',
+        accountId: `google-${userA.id}`,
+        userId: userA.id,
+      },
     });
+    const accountIdB = crypto.randomUUID();
     await prisma.account.create({
-      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `google-${userB.id}`, userId: userB.id },
+      data: {
+        id: accountIdB,
+        providerId: 'google',
+        issuer: 'local:oauth:google',
+        accountId: `google-${userB.id}`,
+        userId: userB.id,
+      },
     });
 
     // `accountId` est le seul identifiant accepte dans le corps : on verifie
-    // qu'il est bien resolu parmi les comptes de l'appelant uniquement.
+    // que meme en connaissant l'id interne du compte de B, il n'est resolu
+    // que parmi les comptes de l'appelant (A).
     const res = await auth.api.unlinkAccount({
-      body: { providerId: 'google', accountId: `google-${userB.id}` },
+      body: { accountId: accountIdB },
       headers: cjA.headers(),
       asResponse: true,
     });
@@ -267,11 +281,21 @@ describe('notifications de securite : declenchement maitrise', () => {
     cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     await prisma.account.create({
-      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `google-${user.id}`, userId: user.id },
+      data: {
+        id: crypto.randomUUID(),
+        providerId: 'google',
+        issuer: 'local:oauth:google',
+        accountId: `google-${user.id}`,
+        userId: user.id,
+      },
     });
     vi.mocked(email.sendAccountUnlinkedEmail).mockClear();
 
-    const res = await auth.api.unlinkAccount({ body: { providerId: 'microsoft' }, headers: cj.headers(), asResponse: true });
+    const res = await auth.api.unlinkAccount({
+      body: { accountId: crypto.randomUUID() },
+      headers: cj.headers(),
+      asResponse: true,
+    });
 
     expect(res.status).toBe(400);
     expect(email.sendAccountUnlinkedEmail).not.toHaveBeenCalled();

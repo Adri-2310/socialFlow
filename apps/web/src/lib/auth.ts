@@ -199,6 +199,22 @@ export const auth = betterAuth({
       const isCallbackGet = ctx.path === '/delete-user/callback';
       const isDeleteWithToken =
         ctx.path === '/delete-user' && !!(ctx.body as { token?: string } | undefined)?.token;
+      // /unlink-account ne recoit plus que `accountId` (depuis better-auth
+      // 1.7) : le libelle du fournisseur doit etre resolu ICI, avant que le
+      // vrai handler ne supprime la ligne Account, et transmis au hook
+      // `after` via ctx.context (meme mecanisme que ctx.context.returned).
+      if (ctx.path === '/unlink-account') {
+        const accountId = (ctx.body as { accountId?: string } | undefined)?.accountId;
+        const account = accountId
+          ? await prisma.account.findUnique({ where: { id: accountId }, select: { providerId: true } })
+          : null;
+        if (account) {
+          (ctx.context as unknown as { unlinkProviderLabel?: string }).unlinkProviderLabel =
+            OAUTH_PROVIDER_LABELS[account.providerId] ?? account.providerId;
+        }
+        return;
+      }
+
       if (!isCallbackGet && !isDeleteWithToken) return;
 
       const token = isCallbackGet
@@ -414,8 +430,7 @@ export const auth = betterAuth({
       }
 
       if (ctx.path === '/unlink-account') {
-        const providerId = (ctx.body as { providerId?: string } | undefined)?.providerId;
-        const label = providerId ? (OAUTH_PROVIDER_LABELS[providerId] ?? providerId) : null;
+        const label = (ctx.context as unknown as { unlinkProviderLabel?: string }).unlinkProviderLabel;
         if (label) await sendAccountUnlinkedEmail(session.user.email, label);
         return;
       }

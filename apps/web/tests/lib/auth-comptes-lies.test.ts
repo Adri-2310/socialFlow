@@ -39,10 +39,11 @@ async function creerCompteAvecOAuth(label: string, providerId: string) {
   const cj = cookieJar();
   cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
   const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+  const accountId = crypto.randomUUID();
   await prisma.account.create({
-    data: { id: crypto.randomUUID(), providerId, accountId: `${providerId}-${user.id}`, userId: user.id },
+    data: { id: accountId, providerId, issuer: `local:oauth:${providerId}`, accountId: `${providerId}-${user.id}`, userId: user.id },
   });
-  return { mail, cj, user };
+  return { mail, cj, user, accountId };
 }
 
 describe('deliaison de comptes', () => {
@@ -53,19 +54,30 @@ describe('deliaison de comptes', () => {
 
     // Le compte n'a que sa ligne `credential` : la delier laisserait
     // l'utilisateur sans aucun moyen de se connecter.
-    const res = await auth.api.unlinkAccount({ body: { providerId: 'credential' }, headers: cj.headers(), asResponse: true });
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    const credential = await prisma.account.findFirstOrThrow({ where: { userId: user.id, providerId: 'credential' } });
+    const res = await auth.api.unlinkAccount({
+      body: { accountId: credential.id },
+      headers: cj.headers(),
+      asResponse: true,
+    });
     const body = await res.json();
 
     expect(res.status).toBe(400);
     expect(body.code).toBe('FAILED_TO_UNLINK_LAST_ACCOUNT');
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     expect(await prisma.account.count({ where: { userId: user.id, providerId: 'credential' } })).toBe(1);
   });
 
   it("refuse de delier un fournisseur qui n'est pas rattache au compte", async () => {
     const { cj } = await creerCompteAvecOAuth('unlink-absent', 'google');
 
-    const res = await auth.api.unlinkAccount({ body: { providerId: 'microsoft' }, headers: cj.headers(), asResponse: true });
+    // Aucun compte du fournisseur "microsoft" n'existe pour cet utilisateur :
+    // un id invente simule la meme absence.
+    const res = await auth.api.unlinkAccount({
+      body: { accountId: crypto.randomUUID() },
+      headers: cj.headers(),
+      asResponse: true,
+    });
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -73,20 +85,20 @@ describe('deliaison de comptes', () => {
   });
 
   it('notifie par email avec le libelle du fournisseur', async () => {
-    const { mail, cj } = await creerCompteAvecOAuth('unlink-microsoft', 'microsoft');
+    const { mail, cj, accountId } = await creerCompteAvecOAuth('unlink-microsoft', 'microsoft');
 
-    const res = await auth.api.unlinkAccount({ body: { providerId: 'microsoft' }, headers: cj.headers(), asResponse: true });
+    const res = await auth.api.unlinkAccount({ body: { accountId }, headers: cj.headers(), asResponse: true });
 
     expect(res.status).toBe(200);
     expect(email.sendAccountUnlinkedEmail).toHaveBeenCalledWith(mail, 'Microsoft');
   });
 
   it("retombe sur l'identifiant brut pour un fournisseur sans libelle connu", async () => {
-    const { mail, cj } = await creerCompteAvecOAuth('unlink-inconnu', 'linkedin');
+    const { mail, cj, accountId } = await creerCompteAvecOAuth('unlink-inconnu', 'linkedin');
 
     // OAUTH_PROVIDER_LABELS (auth.ts) ne connait que google et microsoft :
     // on verifie que le repli n'envoie pas un email vide ou "undefined".
-    const res = await auth.api.unlinkAccount({ body: { providerId: 'linkedin' }, headers: cj.headers(), asResponse: true });
+    const res = await auth.api.unlinkAccount({ body: { accountId }, headers: cj.headers(), asResponse: true });
 
     expect(res.status).toBe(200);
     expect(email.sendAccountUnlinkedEmail).toHaveBeenCalledWith(mail, 'linkedin');
@@ -180,7 +192,13 @@ describe('suppression de compte', () => {
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
 
     await prisma.account.create({
-      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `google-${user.id}`, userId: user.id },
+      data: {
+        id: crypto.randomUUID(),
+        providerId: 'google',
+        issuer: 'local:oauth:google',
+        accountId: `google-${user.id}`,
+        userId: user.id,
+      },
     });
     const enable = await auth.api.enableTwoFactor({ body: { password: PASSWORD }, headers: cj.headers(), asResponse: true });
     const secret = new URL((await enable.json()).totpURI).searchParams.get('secret') as string;
@@ -229,7 +247,13 @@ describe('suppression de compte', () => {
     cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     await prisma.account.create({
-      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `google-${user.id}`, userId: user.id },
+      data: {
+        id: crypto.randomUUID(),
+        providerId: 'google',
+        issuer: 'local:oauth:google',
+        accountId: `google-${user.id}`,
+        userId: user.id,
+      },
     });
     // Retire le compte credential : simule un compte cree via OAuth
     // uniquement (la session deja emise reste valide, comme pour un vrai

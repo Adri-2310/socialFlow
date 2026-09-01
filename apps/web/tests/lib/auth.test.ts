@@ -334,11 +334,18 @@ describe('comptes lies et suppression', () => {
     cj.apply(signUp);
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    const accountId = crypto.randomUUID();
     await prisma.account.create({
-      data: { id: crypto.randomUUID(), providerId: 'google', accountId: `fake-google-${user.id}`, userId: user.id },
+      data: {
+        id: accountId,
+        providerId: 'google',
+        issuer: 'local:oauth:google',
+        accountId: `fake-google-${user.id}`,
+        userId: user.id,
+      },
     });
 
-    const res = await auth.api.unlinkAccount({ body: { providerId: 'google' }, headers: cj.headers(), asResponse: true });
+    const res = await auth.api.unlinkAccount({ body: { accountId }, headers: cj.headers(), asResponse: true });
     expect(res.status).toBe(200);
     expect(email.sendAccountUnlinkedEmail).toHaveBeenCalledWith(mail, 'Google');
   });

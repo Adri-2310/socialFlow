@@ -43,6 +43,12 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
       return;
     }
 
+    if (data.method !== 'totp') {
+      setLoading(false);
+      setError(translateAuthError('unknown'));
+      return;
+    }
+
     const dataUrl = await QRCode.toDataURL(data.totpURI);
 
     setLoading(false);

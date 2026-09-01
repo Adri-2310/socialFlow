@@ -12,13 +12,13 @@ const PROVIDERS = [
 ] as const;
 
 export function LinkedAccounts() {
-  const [providerIds, setProviderIds] = useState<string[] | null>(null);
+  const [accounts, setAccounts] = useState<{ providerId: string; id: string }[] | null>(null);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     authClient.listAccounts().then(({ data }) => {
-      if (data) setProviderIds(data.map((account) => account.providerId));
+      if (data) setAccounts(data.map((account) => ({ providerId: account.providerId, id: account.id })));
     });
   }, []);
 
@@ -38,10 +38,13 @@ export function LinkedAccounts() {
   }
 
   async function handleUnlink(providerId: string) {
+    const account = accounts?.find((a) => a.providerId === providerId);
+    if (!account) return;
+
     setErrors((prev) => ({ ...prev, [providerId]: '' }));
     setLoadingProvider(providerId);
 
-    const { error: unlinkError } = await authClient.unlinkAccount({ providerId });
+    const { error: unlinkError } = await authClient.unlinkAccount({ accountId: account.id });
 
     setLoadingProvider(null);
 
@@ -50,10 +53,10 @@ export function LinkedAccounts() {
       return;
     }
 
-    setProviderIds((prev) => prev?.filter((id) => id !== providerId) ?? null);
+    setAccounts((prev) => prev?.filter((a) => a.providerId !== providerId) ?? null);
   }
 
-  if (!providerIds) {
+  if (!accounts) {
     return null;
   }
 
@@ -66,7 +69,7 @@ export function LinkedAccounts() {
 
       <div className="mt-4 space-y-3">
         {PROVIDERS.map(({ id, label, Icon }) => {
-          const isLinked = providerIds.includes(id);
+          const isLinked = accounts.some((a) => a.providerId === id);
           const isLoading = loadingProvider === id;
           const error = errors[id];
 
