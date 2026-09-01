@@ -5,7 +5,7 @@
   "description": "SocialFlow — Plateforme SaaS de gestion de paie belge",
   "author": "Adrien Mertens",
   "license": "UNLICENSED",
-  "packageManager": "npm@11.12.1",
+  "packageManager": "npm@11.19.1",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
@@ -20,12 +20,15 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/react": "^19.0.0",
-    "prettier": "^3.0.0",
-    "turbo": "^2.0.0",
-    "typescript": "^5.0.0"
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.12",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18.0.0"
