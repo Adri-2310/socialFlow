@@ -25,6 +25,14 @@ const email = await import('@/lib/email');
 const PASSWORD = 'InitialPass123!';
 
 afterAll(async () => {
+  // Supprime les cabinets auto-crees a l'inscription avant les users (voir
+  // meme commentaire dans tests/lib/auth.test.ts).
+  const testUsers = await prisma.user.findMany({
+    where: { email: { startsWith: TEST_EMAIL_PREFIX } },
+    select: { cabinetId: true },
+  });
+  const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
+  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {

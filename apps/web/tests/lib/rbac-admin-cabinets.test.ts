@@ -53,7 +53,15 @@ async function creerCabinetRH(label: string) {
 /** Cree un compte puis le force au role SUPER_ADMIN (jamais pose par l'inscription elle-meme). */
 async function creerSuperAdmin(label: string) {
   const { mail, cj, user } = await creerCabinetRH(label);
+  // Le cabinet auto-cree par l'inscription (voir hooks.after de auth.ts)
+  // n'a plus d'utilite une fois le role SuperAdmin pose : cabinetId: null
+  // le rendrait sinon orphelin, invisible au nettoyage afterAll qui ne
+  // retrouve les cabinets de test que via le cabinetId des utilisateurs.
+  // Detache d'abord (sinon supprimer le cabinet cascaderait sur le User
+  // lui-meme, via onDelete: Cascade sur User.cabinetId).
+  const cabinetId = user.cabinetId!;
   await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+  await prisma.cabinet.delete({ where: { id: cabinetId } });
   return { mail, cj, user };
 }
 

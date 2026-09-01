@@ -48,7 +48,12 @@ async function creerCabinetRH(label: string) {
 
 async function creerSuperAdmin(label: string) {
   const { mail, cj, user } = await creerCabinetRH(label);
+  // Le cabinet auto-cree n'a plus d'utilite une fois le role SuperAdmin
+  // pose : cabinetId: null le rendrait sinon orphelin, invisible au
+  // nettoyage afterAll (voir meme commentaire dans rbac-admin-cabinets.test.ts).
+  const cabinetId = user.cabinetId!;
   await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+  await prisma.cabinet.delete({ where: { id: cabinetId } });
   return { mail, cj, user };
 }
 

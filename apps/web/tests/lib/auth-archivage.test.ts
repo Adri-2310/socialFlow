@@ -24,6 +24,17 @@ const { prisma } = await import('@/lib/prisma');
 const PASSWORD = 'InitialPass123!';
 
 afterAll(async () => {
+  // Supprime les cabinets auto-crees a l'inscription avant les users (voir
+  // meme commentaire dans tests/lib/auth.test.ts). Le compte purge pour de
+  // vrai dans "purge definitive des comptes archives" ci-dessous n'est plus
+  // trouvable ici (deja supprime par la purge elle-meme) : son cabinet est
+  // nettoye explicitement dans ce test-la.
+  const testUsers = await prisma.user.findMany({
+    where: { email: { startsWith: TEST_EMAIL_PREFIX } },
+    select: { cabinetId: true },
+  });
+  const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
+  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {
@@ -164,5 +175,11 @@ describe('purge definitive des comptes archives (cron)', () => {
 
     expect(await prisma.user.findUnique({ where: { id: userAncien.id } })).toBeNull();
     expect(await prisma.user.findUnique({ where: { email: mailRecent } })).not.toBeNull();
+
+    // userAncien n'est plus retrouvable par email dans afterAll (deja purge
+    // pour de vrai ci-dessus) : son cabinet auto-cree serait sinon orphelin.
+    if (userAncien.cabinetId) {
+      await prisma.cabinet.deleteMany({ where: { id: userAncien.cabinetId } });
+    }
   });
 });

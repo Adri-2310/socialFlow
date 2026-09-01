@@ -33,6 +33,15 @@ const PASSWORD = 'InitialPass123!';
 // par un serveur Next demarre. Tous les comptes crees sont prefixes et
 // supprimes en fin de suite.
 afterAll(async () => {
+  // Chaque inscription auto-cree un Cabinet (voir hooks.after de auth.ts) :
+  // le supprimer avant l'utilisateur (User.cabinetId a onDelete: Cascade,
+  // pas l'inverse) evite d'accumuler des cabinets orphelins en base de dev.
+  const testUsers = await prisma.user.findMany({
+    where: { email: { startsWith: TEST_EMAIL_PREFIX } },
+    select: { cabinetId: true },
+  });
+  const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
+  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
 });
 
