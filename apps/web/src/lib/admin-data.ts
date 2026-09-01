@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { stripe } from '@/lib/stripe';
 import type { CabinetRow } from '@/components/admin/cabinets-table';
 import type { UserRow } from '@/components/admin/users-table';
 import type { AuditLogEntry } from '@/components/admin/audit-log-list';
@@ -137,4 +138,68 @@ export async function getAuditLogEntries(take: number): Promise<AuditLogEntry[]>
     cabinetName: log.cabinet?.name ?? null,
     targetUserName: log.targetUser?.name ?? null,
   }));
+}
+
+export type BillingRow = {
+  cabinetId: string;
+  cabinetName: string;
+  planLabel: string | null;
+  amount: number;
+  currency: string;
+  interval: 'month' | 'year' | null;
+  status: string;
+  currentPeriodEnd: string | null;
+};
+
+export type BillingData = {
+  rows: BillingRow[];
+  mrr: number;
+};
+
+// Necessite un vrai Customer+Subscription Stripe par cabinet (voir
+// stripeCustomerId sur Cabinet) : aucune donnee de facturation n'est
+// dupliquee en base, tout vient en direct de l'API Stripe a chaque chargement
+// de la page (voir src/lib/stripe.ts). Un cabinet sans stripeCustomerId
+// (jamais passe par un abonnement reel) n'apparait simplement pas ici.
+export async function getBillingData(): Promise<BillingData> {
+  const cabinets = await prisma.cabinet.findMany({
+    where: { stripeCustomerId: { not: null } },
+    select: { id: true, name: true, stripeCustomerId: true },
+  });
+
+  const rows: BillingRow[] = [];
+  let mrr = 0;
+
+  for (const cabinet of cabinets) {
+    const subscriptions = await stripe.subscriptions.list({
+      customer: cabinet.stripeCustomerId!,
+      status: 'all',
+      limit: 1,
+      expand: ['data.items.data.price'],
+    });
+    const subscription = subscriptions.data[0];
+    if (!subscription) continue;
+
+    const item = subscription.items.data[0];
+    const price = item?.price;
+    const amount = (price?.unit_amount ?? 0) / 100;
+    const interval = price?.recurring?.interval ?? null;
+
+    if (subscription.status === 'active' || subscription.status === 'trialing') {
+      mrr += interval === 'year' ? amount / 12 : amount;
+    }
+
+    rows.push({
+      cabinetId: cabinet.id,
+      cabinetName: cabinet.name,
+      planLabel: price?.metadata?.planId ?? null,
+      amount,
+      currency: (price?.currency ?? 'eur').toUpperCase(),
+      interval: interval as 'month' | 'year' | null,
+      status: subscription.status,
+      currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000).toISOString() : null,
+    });
+  }
+
+  return { rows, mrr };
 }

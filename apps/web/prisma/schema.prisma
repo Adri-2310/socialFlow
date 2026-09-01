@@ -67,24 +67,28 @@ model User {
 }
 
 model Cabinet {
-  id          String       @id @default(cuid())
-  name        String
+  id               String       @id @default(cuid())
+  name             String
   // Suspension par un SuperAdmin (voir apps/web/src/app/api/admin/cabinets/[id]
   // et le blocage de connexion associe dans hooks.after de auth.ts). Meme
   // convention que Invitation.status : string libre plutot qu'un enum
   // Prisma, coherent avec le reste du schema.
-  status      String       @default("actif") // actif | suspendu
+  status           String       @default("actif") // actif | suspendu
   // Archivage par un SuperAdmin (pas de vraie suppression : User.cabinetId a
   // onDelete: Cascade, supprimer reellement un Cabinet supprimerait tous ses
   // utilisateurs). Meme convention que User.deletedAt : bloque l'acces
   // immediatement (voir hooks.after de auth.ts), purge reelle et definitive
   // apres CABINET_DELETION_RETENTION_DAYS (voir api/cron/purge-deleted-cabinets).
-  deletedAt   DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  users       User[]
-  invitations Invitation[]
-  auditLogs   AuditLog[]
+  deletedAt        DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  // Identifiant du Customer Stripe correspondant (voir src/lib/stripe.ts et
+  // /dashboard/admin/facturation) - null tant qu'aucun abonnement Stripe reel
+  // n'a ete cree pour ce cabinet. Unique : un Customer Stripe par cabinet.
+  stripeCustomerId String?      @unique
+  users            User[]
+  invitations      Invitation[]
+  auditLogs        AuditLog[]
 
   @@index([deletedAt])
   @@map("cabinet")
@@ -101,7 +105,7 @@ model Cabinet {
 // ne s'applique qu'aux actions CABINET_*).
 model AuditLog {
   id           String   @id @default(cuid())
-  action       String   // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED | CABINET_ARCHIVED | CABINET_RESTORED | USER_ARCHIVED | USER_RESTORED
+  action       String // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED | CABINET_ARCHIVED | CABINET_RESTORED | USER_ARCHIVED | USER_RESTORED
   actorId      String?
   actor        User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
   cabinetId    String?

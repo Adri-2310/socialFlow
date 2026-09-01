@@ -43,3 +43,8 @@ pnpm-debug.log*
 .vercel/
 
 .claude
+
+# Fichiers auto-generes par l'installation de l'integration Stripe, non
+# lies au code de l'application.
+.agents/
+skills-lock.json
