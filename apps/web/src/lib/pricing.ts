@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { Plan, PlanId } from '@/lib/plans';
+import type { Plan } from '@/lib/plans';
 
 export async function getPricingPlans(): Promise<Plan[]> {
   const rows = await prisma.pricingPlan.findMany({
@@ -8,7 +8,7 @@ export async function getPricingPlans(): Promise<Plan[]> {
   });
 
   return rows.map((row) => ({
-    id: row.planId as PlanId,
+    id: row.planId,
     name: row.name,
     description: row.description,
     monthlyPrice: row.monthlyPrice,

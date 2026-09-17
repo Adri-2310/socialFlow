@@ -26,6 +26,7 @@ const MESSAGES: Record<string, string> = {
     `Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à ${ACCOUNT_DELETION_RETENTION_DAYS} jours après la suppression).`,
   CABINET_SUSPENDED: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
   USER_SUSPENDED: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
+  INVALID_PLAN: "Ce plan n'existe pas ou n'est plus disponible. Choisissez-en un autre.",
 
   // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
   // distincts des codes d'API ci-dessus.
