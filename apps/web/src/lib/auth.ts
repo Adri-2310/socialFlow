@@ -5,6 +5,7 @@ import { deleteSessionCookie } from 'better-auth/cookies';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { provisionStripeTrial } from '@/lib/stripe-trial';
 import {
   sendMagicLinkEmail,
   sendOTPEmail,
@@ -152,13 +153,13 @@ export const auth = betterAuth({
         type: 'string',
         required: false,
         input: true,
-        // Enum synchronise a la main avec PlanId dans @/lib/plans (zod ne
-        // peut pas deriver un enum runtime depuis un type TS). Sans ce
-        // validateur, n'importe quel utilisateur connecte pouvait s'auto-
-        // attribuer n'importe quelle valeur de `plan` via update-user - a
-        // repasser en input:false le jour ou ce champ sera pose par un
-        // webhook Stripe plutot que par le client.
-        validator: { input: z.enum(['starter', 'pro', 'enterprise']) },
+        // Format seulement : les plans etant geres dynamiquement (voir
+        // PricingPlan, /dashboard/admin/configuration), un enum fige ici
+        // rejetterait tout plan cree apres coup. La vraie validation - le
+        // plan existe, n'est pas archive, n'est pas "sur devis" - se fait
+        // dans hooks.before ci-dessous pour /sign-up/email et /update-user,
+        // les deux seuls chemins qui ecrivent ce champ.
+        validator: { input: z.string().trim().min(1).max(100) },
       },
       billingPeriod: {
         type: 'string',
@@ -433,6 +434,45 @@ export const auth = betterAuth({
         : false;
       if (!success) return;
 
+      // Ni /sign-up/email ni /update-user (les deux seuls chemins qui
+      // ecrivent `plan`, voir additionalFields.plan ci-dessus) ne doivent
+      // persister un plan invalide (supprime/archive entre le chargement du
+      // formulaire et la soumission, ou valeur forgee) - le validateur zod
+      // ne verifie que le format. Fait en `after`, pas en `before` : une
+      // APIError levee depuis un hook `before` n'est pas convertie en
+      // reponse HTTP propre pour un appel serveur direct (auth.api.*),
+      // contrairement a `after` (verifie par les tests de ce fichier).
+      let validatedPlan: { planId: string; billingPeriod: 'monthly' | 'yearly' } | null = null;
+      if (ctx.path === '/sign-up/email' || ctx.path === '/update-user') {
+        const requestedPlan = (ctx.body as { plan?: string } | undefined)?.plan;
+        if (requestedPlan !== undefined) {
+          const validPlan = await prisma.pricingPlan.findFirst({
+            where: { planId: requestedPlan, archivedAt: null, custom: false },
+            select: { id: true },
+          });
+          if (!validPlan) {
+            const userId =
+              ctx.path === '/sign-up/email' ? ctx.context.newSession?.user.id : ctx.context.session?.user.id;
+            if (userId) {
+              await ctx.context.internalAdapter.updateUser(userId, { plan: null });
+            }
+            // /update-user est une action explicite qui doit clairement
+            // echouer ; /sign-up/email continue normalement (voir le bloc
+            // juste en dessous, qui cree toujours le Cabinet) plutot que
+            // d'abandonner tout le compte pour un simple plan invalide.
+            if (ctx.path === '/update-user') {
+              throw new APIError('BAD_REQUEST', {
+                code: 'INVALID_PLAN',
+                message: "Ce plan n'existe pas ou n'est plus disponible.",
+              });
+            }
+          } else {
+            const requestedBilling = (ctx.body as { billingPeriod?: string } | undefined)?.billingPeriod;
+            validatedPlan = { planId: requestedPlan, billingPeriod: requestedBilling === 'yearly' ? 'yearly' : 'monthly' };
+          }
+        }
+      }
+
       // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : l'auto-
       // inscription cree toujours un Cabinet RH (role par defaut ci-dessus).
       // On lui cree son Cabinet ici plutot que de le faire poser par le
@@ -453,8 +493,23 @@ export const auth = betterAuth({
           await prisma.auditLog.create({
             data: { action: 'CABINET_CREATED', actorId: newUser.id, cabinetId: cabinet.id },
           });
+
+          if (validatedPlan) {
+            // Best-effort : un souci Stripe ne doit pas faire echouer une
+            // inscription par ailleurs reussie. Cabinet.stripeCustomerId
+            // reste alors simplement null, comme un cabinet qui n'a pas
+            // encore de plan.
+            await provisionStripeTrial(cabinet.id, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
+          }
         }
         return;
+      }
+
+      if (ctx.path === '/update-user' && validatedPlan) {
+        const cabinetId = ctx.context.session?.user.cabinetId;
+        if (cabinetId) {
+          await provisionStripeTrial(cabinetId, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
+        }
       }
 
       const session = ctx.context.session;

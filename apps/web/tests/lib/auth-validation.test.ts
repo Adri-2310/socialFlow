@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, afterAll } from 'vitest';
+import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 // Meme convention que tests/lib/auth.test.ts : Resend est entierement mocke,
@@ -19,11 +19,36 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Un `plan` valide pose via signUpEmail/updateUser declenche le provisioning
+// Stripe (voir provisionStripeTrial dans lib/stripe-trial.ts) : pas d'appel
+// reseau reel vers le sandbox dans ces tests. Cabinet.stripeCustomerId est
+// unique en base : chaque appel doit renvoyer un id different, sinon un
+// deuxieme cabinet provisionne dans le meme fichier de test violerait la
+// contrainte (et l'echec, avale par le best-effort de auth.ts, se
+// manifesterait juste par un stripeCustomerId reste a null).
+let customerCounter = 0;
+const stripePricesList = vi.fn().mockResolvedValue({ data: [] });
+const stripeCustomersCreate = vi.fn(() => Promise.resolve({ id: `cus_test_${++customerCounter}` }));
+const stripeSubscriptionsCreate = vi.fn().mockResolvedValue({ id: 'sub_test' });
+vi.mock('@/lib/stripe', () => ({
+  stripe: {
+    prices: { list: stripePricesList },
+    customers: { create: stripeCustomersCreate },
+    subscriptions: { create: stripeSubscriptionsCreate },
+  },
+}));
+
 const { auth } = await import('@/lib/auth');
 const { prisma } = await import('@/lib/prisma');
 const email = await import('@/lib/email');
 
 const PASSWORD = 'InitialPass123!';
+
+beforeEach(() => {
+  stripePricesList.mockReset().mockResolvedValue({ data: [] });
+  stripeCustomersCreate.mockReset().mockImplementation(() => Promise.resolve({ id: `cus_test_${++customerCounter}` }));
+  stripeSubscriptionsCreate.mockReset().mockResolvedValue({ id: 'sub_test' });
+});
 
 afterAll(async () => {
   // Supprime les cabinets auto-crees a l'inscription avant les users (voir
@@ -91,6 +116,29 @@ describe('inscription : entrees invalides', () => {
     expect(res.status).toBe(400);
     expect(body.code).toBe('VALIDATION_ERROR');
     expect(await prisma.user.findUnique({ where: { email: 'pas-un-email' } })).toBeNull();
+  });
+
+  it("cree quand meme le compte et son Cabinet si le `plan` fourni n'existe pas, mais sans le retenir", async () => {
+    const mail = testEmail('signup-plan-invalide');
+    const res = await auth.api.signUpEmail({
+      body: { name: 'X', cabinetName: 'Cabinet X', email: mail, password: PASSWORD, plan: 'plan-inexistant' },
+      asResponse: true,
+    });
+
+    // Un plan invalide au moment de l'inscription (course entre le
+    // chargement du formulaire et la soumission, ou valeur forgee) ne doit
+    // pas empecher la creation du compte ni de son Cabinet - seul le plan
+    // lui-meme est ignore (voir hooks.after dans lib/auth.ts).
+    expect(res.status).toBe(200);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    expect(user.plan).toBeNull();
+    expect(user.cabinetId).not.toBeNull();
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'CABINET_CREATED', actorId: user.id },
+    });
+    expect(log.cabinetId).toBe(user.cabinetId);
   });
 });
 
@@ -164,21 +212,22 @@ describe('profil : champs acceptes et refuses', () => {
     expect(res.status).toBe(401);
   });
 
-  it("refuse une valeur de `plan` ou `billingPeriod` hors de l'enum autorise", async () => {
+  it("refuse un `plan` qui n'existe pas et un `billingPeriod` hors de l'enum autorise", async () => {
     const mail = testEmail('plan-invalide');
     const cj = cookieJar();
     cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
 
     // Empeche un utilisateur connecte de s'auto-attribuer une formule
     // arbitraire via update-user (voir doc/analysis/AUDIT_SECURITE_AUTH.md,
-    // finding #2).
+    // finding #2) : plan n'est plus un enum fige (voir hooks.before dans
+    // lib/auth.ts), donc verifie desormais que le plan existe reellement.
     const resPlan = await auth.api.updateUser({
       body: { plan: 'plan-inexistant' },
       headers: cj.headers(),
       asResponse: true,
     });
     expect(resPlan.status).toBe(400);
-    expect((await resPlan.json()).code).toBe('VALIDATION_ERROR');
+    expect((await resPlan.json()).code).toBe('INVALID_PLAN');
 
     const resBilling = await auth.api.updateUser({
       body: { billingPeriod: 'hebdomadaire' },
@@ -208,5 +257,50 @@ describe('profil : champs acceptes et refuses', () => {
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     expect(user.plan).toBe('enterprise');
     expect(user.billingPeriod).toBe('yearly');
+  });
+
+  it("provisionne un essai Stripe des l'inscription quand un plan valide est fourni", async () => {
+    stripePricesList.mockResolvedValue({
+      data: [{ id: 'price_starter_m', metadata: { planId: 'starter', billingPeriod: 'monthly' } }],
+    });
+    const mail = testEmail('signup-avec-plan');
+
+    const res = await auth.api.signUpEmail({
+      body: { name: 'X', cabinetName: 'Cabinet X', email: mail, password: PASSWORD, plan: 'starter' },
+      asResponse: true,
+    });
+    expect(res.status).toBe(200);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    expect(stripeCustomersCreate).toHaveBeenCalledWith(expect.objectContaining({ metadata: { cabinetId: user.cabinetId } }));
+    expect(stripeSubscriptionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ items: [{ price: 'price_starter_m' }], trial_period_days: 30 }),
+    );
+
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.stripeCustomerId).toMatch(/^cus_test_\d+$/);
+  });
+
+  it("provisionne un essai Stripe lors de la finalisation du plan apres une inscription OAuth (update-user)", async () => {
+    stripePricesList.mockResolvedValue({
+      data: [{ id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' } }],
+    });
+    const mail = testEmail('oauth-finalisation-plan');
+    const cj = cookieJar();
+    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
+
+    const res = await auth.api.updateUser({
+      body: { plan: 'pro', billingPeriod: 'yearly' },
+      headers: cj.headers(),
+      asResponse: true,
+    });
+    expect(res.status).toBe(200);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.stripeCustomerId).toMatch(/^cus_test_\d+$/);
+    expect(stripeSubscriptionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ items: [{ price: 'price_pro_y' }] }),
+    );
   });
 });
