@@ -3,7 +3,7 @@ import { Building2, Euro, Gauge, AlertTriangle } from 'lucide-react';
 import { CabinetsTable } from '@/components/admin/cabinets-table';
 import { AuditLogList } from '@/components/admin/audit-log-list';
 import { MonitoringSummary } from '@/components/admin/monitoring-summary';
-import { getCabinets, getAuditLogEntries, getMonitoringData } from '@/lib/admin-data';
+import { getCabinets, getAuditLogEntries, getMonitoringData, getBillingData } from '@/lib/admin-data';
 
 export const metadata: Metadata = {
   title: 'Console SuperAdmin — SocialFlow',
@@ -17,16 +17,22 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 const PREVIEW_SIZE = 10;
+const AMOUNT_FORMATTER = new Intl.NumberFormat('fr-BE', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+});
 
 export default async function AdminPage() {
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [{ cabinets, rows }, auditLogs, monitoring] = await Promise.all([
+  const [{ cabinets, rows }, auditLogs, monitoring, billing] = await Promise.all([
     getCabinets(),
     getAuditLogEntries(PREVIEW_SIZE),
     getMonitoringData(),
+    getBillingData(),
   ]);
 
   const cabinetsActifs = cabinets.filter((c) => c.status === 'actif' && !c.deletedAt).length;
@@ -39,6 +45,16 @@ export default async function AdminPage() {
     planCounts.set(key, (planCounts.get(key) ?? 0) + 1);
   }
   const totalAvecPlan = rows.filter((row) => !row.deletedAt).length;
+
+  // Plans derives des cabinets reels plutot que d'une liste figee : un plan
+  // cree apres coup depuis /dashboard/admin/configuration doit apparaitre
+  // ici sans modification de code. "aucun" toujours en dernier.
+  const planEntries = [...planCounts.entries()]
+    .filter(([key]) => key !== 'aucun')
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  if (planCounts.has('aucun')) {
+    planEntries.push(['aucun', planCounts.get('aucun')!]);
+  }
 
   return (
     <>
@@ -57,8 +73,15 @@ export default async function AdminPage() {
           <p className="text-sm text-muted-foreground">Cabinets actifs</p>
         </div>
 
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Euro className="h-5 w-5" />
+          </span>
+          <p className="mt-4 text-2xl font-bold text-foreground">{AMOUNT_FORMATTER.format(billing.mrr)}</p>
+          <p className="text-sm text-muted-foreground">MRR (revenu mensuel récurrent)</p>
+        </div>
+
         {[
-          { icon: Euro, label: 'MRR (revenu mensuel)' },
           { icon: Gauge, label: 'Uptime' },
           { icon: AlertTriangle, label: 'Incidents ouverts' },
         ].map(({ icon: Icon, label }) => (
@@ -81,19 +104,15 @@ export default async function AdminPage() {
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-4 font-semibold text-foreground">Répartition des abonnements</h2>
         <div className="space-y-3 text-sm">
-          {(['starter', 'pro', 'enterprise', 'aucun'] as const).map((planKey) => {
-            const count = planCounts.get(planKey) ?? 0;
-            if (count === 0) return null;
-            return (
-              <div key={planKey} className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-foreground">
-                  <span className="h-3 w-3 rounded-sm bg-primary" />
-                  {PLAN_LABELS[planKey] ?? 'Aucun plan'}
-                </span>
-                <span className="font-semibold text-foreground">{count}</span>
-              </div>
-            );
-          })}
+          {planEntries.map(([planKey, count]) => (
+            <div key={planKey} className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-foreground">
+                <span className="h-3 w-3 rounded-sm bg-primary" />
+                {planKey === 'aucun' ? 'Aucun plan' : (PLAN_LABELS[planKey] ?? planKey)}
+              </span>
+              <span className="font-semibold text-foreground">{count}</span>
+            </div>
+          ))}
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
           {totalAvecPlan} cabinet{totalAvecPlan > 1 ? 's' : ''} — {nouveauxCeMois} nouveau
