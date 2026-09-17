@@ -123,6 +123,7 @@ function PlanFormFields({
           <input
             type="number"
             min={0}
+            step={1}
             value={form.monthlyPrice}
             onChange={(e) => onChange({ monthlyPrice: e.target.value })}
             placeholder="Sur devis"
@@ -134,6 +135,7 @@ function PlanFormFields({
           <input
             type="number"
             min={0}
+            step={1}
             value={form.yearlyPrice}
             onChange={(e) => onChange({ yearlyPrice: e.target.value })}
             placeholder="Sur devis"

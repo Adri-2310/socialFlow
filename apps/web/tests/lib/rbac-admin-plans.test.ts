@@ -176,6 +176,13 @@ describe('PATCH /api/admin/plans/[id]', () => {
     expect(res.status).toBe(400);
   });
 
+  it('refuse un prix non entier', async () => {
+    const { cj } = await creerSuperAdmin('plan-prix-non-entier');
+    const plan = await creerPlanTest('prix-non-entier');
+    const res = await patch(plan.id, { ...VALID_BODY, monthlyPrice: 49.5 }, cj);
+    expect(res.status).toBe(400);
+  });
+
   it('refuse un plan inexistant', async () => {
     const { cj } = await creerSuperAdmin('plan-inexistant');
     const res = await patch('id-qui-n-existe-pas', VALID_BODY, cj);
@@ -299,6 +306,12 @@ describe('POST /api/admin/plans', () => {
   it('refuse un planId au mauvais format', async () => {
     const { cj } = await creerSuperAdmin('plan-create-format-invalide');
     const res = await create({ ...VALID_CREATE_BODY, planId: 'Plan Avec Espaces' }, cj);
+    expect(res.status).toBe(400);
+  });
+
+  it('refuse un prix non entier a la creation', async () => {
+    const { cj } = await creerSuperAdmin('plan-create-prix-non-entier');
+    const res = await create({ ...VALID_CREATE_BODY, planId: `${TEST_PLAN_PREFIX}prix-non-entier`, monthlyPrice: 49.5 }, cj);
     expect(res.status).toBe(400);
   });
 

@@ -20,8 +20,8 @@ function parseBody(body: unknown): PlanUpdateBody | null {
 
   if (typeof b.name !== 'string' || !b.name.trim()) return null;
   if (typeof b.description !== 'string' || !b.description.trim()) return null;
-  if (b.monthlyPrice !== null && typeof b.monthlyPrice !== 'number') return null;
-  if (b.yearlyPrice !== null && typeof b.yearlyPrice !== 'number') return null;
+  if (b.monthlyPrice !== null && (typeof b.monthlyPrice !== 'number' || !Number.isInteger(b.monthlyPrice))) return null;
+  if (b.yearlyPrice !== null && (typeof b.yearlyPrice !== 'number' || !Number.isInteger(b.yearlyPrice))) return null;
   if (b.badge !== null && typeof b.badge !== 'string') return null;
   if (typeof b.highlighted !== 'boolean') return null;
   if (typeof b.sortOrder !== 'number') return null;
