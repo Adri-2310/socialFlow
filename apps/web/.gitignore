@@ -1,1 +1,6 @@
 .env*
+
+# Filet de securite : agentRules est desactive dans next.config.ts, mais au
+# cas ou une version de Next.js regenererait ces fichiers quand meme.
+/AGENTS.md
+/CLAUDE.md

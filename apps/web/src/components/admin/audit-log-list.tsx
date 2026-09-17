@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { UserPlus, PauseCircle, PlayCircle, Archive, ArchiveRestore } from 'lucide-react';
+import { UserPlus, PauseCircle, PlayCircle, Archive, ArchiveRestore, Tag } from 'lucide-react';
 import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
 import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
@@ -27,6 +27,10 @@ const AUDIT_ICONS: Record<string, { icon: typeof UserPlus; tone: string }> = {
   USER_RESTORED: { icon: ArchiveRestore, tone: 'bg-secondary/10 text-secondary' },
   USER_SUSPENDED: { icon: PauseCircle, tone: 'bg-destructive/10 text-destructive' },
   USER_REACTIVATED: { icon: PlayCircle, tone: 'bg-secondary/10 text-secondary' },
+  PRICING_PLAN_CREATED: { icon: Tag, tone: 'bg-secondary/10 text-secondary' },
+  PRICING_PLAN_UPDATED: { icon: Tag, tone: 'bg-primary/10 text-primary' },
+  PRICING_PLAN_ARCHIVED: { icon: Archive, tone: 'bg-muted text-muted-foreground' },
+  PRICING_PLAN_RESTORED: { icon: ArchiveRestore, tone: 'bg-secondary/10 text-secondary' },
 };
 
 function auditMessage(log: AuditLogEntry): string {
@@ -51,6 +55,14 @@ function auditMessage(log: AuditLogEntry): string {
       return `« ${targetUserName} » a été suspendu par ${log.actorName ?? 'un administrateur'}.`;
     case 'USER_REACTIVATED':
       return `« ${targetUserName} » a été réactivé par ${log.actorName ?? 'un administrateur'}.`;
+    case 'PRICING_PLAN_CREATED':
+      return `Un plan tarifaire a été créé par ${log.actorName ?? 'un administrateur'}.`;
+    case 'PRICING_PLAN_UPDATED':
+      return `Un plan tarifaire a été modifié par ${log.actorName ?? 'un administrateur'}.`;
+    case 'PRICING_PLAN_ARCHIVED':
+      return `Un plan tarifaire a été archivé par ${log.actorName ?? 'un administrateur'}.`;
+    case 'PRICING_PLAN_RESTORED':
+      return `Un plan tarifaire a été restauré par ${log.actorName ?? 'un administrateur'}.`;
     default:
       return log.action;
   }

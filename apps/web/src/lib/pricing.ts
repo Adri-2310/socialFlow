@@ -2,7 +2,10 @@ import { prisma } from '@/lib/prisma';
 import type { Plan, PlanId } from '@/lib/plans';
 
 export async function getPricingPlans(): Promise<Plan[]> {
-  const rows = await prisma.pricingPlan.findMany({ orderBy: { sortOrder: 'asc' } });
+  const rows = await prisma.pricingPlan.findMany({
+    where: { archivedAt: null },
+    orderBy: { sortOrder: 'asc' },
+  });
 
   return rows.map((row) => ({
     id: row.planId as PlanId,

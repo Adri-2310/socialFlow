@@ -203,3 +203,105 @@ export async function getBillingData(): Promise<BillingData> {
 
   return { rows, mrr };
 }
+
+export type PlanConfigRow = {
+  id: string;
+  planId: string;
+  name: string;
+  description: string;
+  monthlyPrice: number | null;
+  yearlyPrice: number | null;
+  custom: boolean;
+  highlighted: boolean;
+  badge: string | null;
+  features: string[];
+  sortOrder: number;
+  archivedAt: string | null;
+  stripe: {
+    productId: string | null;
+    monthlyPriceId: string | null;
+    monthlyPriceAmount: number | null;
+    yearlyPriceId: string | null;
+    yearlyPriceAmount: number | null;
+  };
+  inSync: boolean;
+};
+
+// Les ids Stripe ne sont pas stockes en base : le catalogue reste volontai-
+// rement petit, donc on liste produits+prix une seule fois et on les
+// rattache aux PricingPlan locaux via metadata.planId/billingPeriod. Evite
+// une desynchronisation silencieuse si le catalogue est modifie directement
+// dans le dashboard Stripe plutot que par cette page.
+//
+// Pas de filtre `active` sur les prix : un plan archive a son Price desactive
+// (voir api/admin/plans/route.ts), il ne faut pas pour autant que son montant
+// disparaisse de cette page. Stripe renvoie ses listes du plus recent au plus
+// ancien, donc le premier match par planId/billingPeriod est toujours le
+// Price "courant" (actif ou dernier desactive), meme apres plusieurs
+// changements de prix au fil du temps.
+export async function getPricingPlansConfig(): Promise<PlanConfigRow[]> {
+  const [plans, products, prices] = await Promise.all([
+    prisma.pricingPlan.findMany({ orderBy: { sortOrder: 'asc' } }),
+    stripe.products.list({ limit: 100 }),
+    stripe.prices.list({ limit: 100 }),
+  ]);
+
+  return plans.map((plan) => {
+    const product = products.data.find((p) => p.metadata.planId === plan.planId) ?? null;
+    const monthlyPrice =
+      prices.data.find((p) => p.metadata.planId === plan.planId && p.metadata.billingPeriod === 'monthly') ?? null;
+    const yearlyPrice =
+      prices.data.find((p) => p.metadata.planId === plan.planId && p.metadata.billingPeriod === 'yearly') ?? null;
+
+    const monthlyPriceAmount = monthlyPrice ? (monthlyPrice.unit_amount ?? 0) / 100 : null;
+    const yearlyPriceAmount = yearlyPrice ? (yearlyPrice.unit_amount ?? 0) / 100 : null;
+
+    return {
+      id: plan.id,
+      planId: plan.planId,
+      name: plan.name,
+      description: plan.description,
+      monthlyPrice: plan.monthlyPrice,
+      yearlyPrice: plan.yearlyPrice,
+      custom: plan.custom,
+      highlighted: plan.highlighted,
+      badge: plan.badge,
+      features: plan.features,
+      sortOrder: plan.sortOrder,
+      archivedAt: plan.archivedAt?.toISOString() ?? null,
+      stripe: {
+        productId: product?.id ?? null,
+        monthlyPriceId: monthlyPrice?.id ?? null,
+        monthlyPriceAmount,
+        yearlyPriceId: yearlyPrice?.id ?? null,
+        yearlyPriceAmount,
+      },
+      inSync: plan.monthlyPrice === monthlyPriceAmount && plan.yearlyPrice === yearlyPriceAmount,
+    };
+  });
+}
+
+export type StripeStatus = {
+  mode: 'test' | 'live' | 'inconnu';
+  webhook: { url: string; enabledEventsCount: number; disabled: boolean } | null;
+};
+
+// La cle secrete elle-meme n'est jamais lue au-dela de son prefixe (sk_test_
+// vs sk_live_) : elle ne doit jamais transiter jusqu'au navigateur, y compris
+// partiellement. Le webhook est en lecture seule ici (voir page
+// Configuration) : le creer necessite une URL publique que l'environnement
+// de dev n'a pas, ce n'est pas le role de cette page.
+export async function getStripeStatus(): Promise<StripeStatus> {
+  const key = process.env.STRIPE_SECRET_KEY ?? '';
+  const mode = key.startsWith('sk_live_') ? 'live' : key.startsWith('sk_test_') ? 'test' : 'inconnu';
+
+  const endpoints = await stripe.webhookEndpoints.list({ limit: 1 });
+  const endpoint = endpoints.data[0] ?? null;
+
+  return {
+    mode,
+    webhook: endpoint
+      ? { url: endpoint.url, enabledEventsCount: endpoint.enabled_events.length, disabled: endpoint.status !== 'enabled' }
+      : null,
+  };
+}

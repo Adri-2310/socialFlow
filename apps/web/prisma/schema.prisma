@@ -105,7 +105,7 @@ model Cabinet {
 // ne s'applique qu'aux actions CABINET_*).
 model AuditLog {
   id           String   @id @default(cuid())
-  action       String // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED | CABINET_ARCHIVED | CABINET_RESTORED | USER_ARCHIVED | USER_RESTORED
+  action       String // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED | CABINET_ARCHIVED | CABINET_RESTORED | USER_ARCHIVED | USER_RESTORED | PRICING_PLAN_CREATED | PRICING_PLAN_UPDATED | PRICING_PLAN_ARCHIVED | PRICING_PLAN_RESTORED
   actorId      String?
   actor        User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
   cabinetId    String?
@@ -182,19 +182,20 @@ model Account {
 }
 
 model PricingPlan {
-  id           String   @id @default(cuid())
-  planId       String   @unique
+  id           String    @id @default(cuid())
+  planId       String    @unique
   name         String
   description  String
   monthlyPrice Int?
   yearlyPrice  Int?
-  custom       Boolean  @default(false)
-  highlighted  Boolean  @default(false)
+  custom       Boolean   @default(false)
+  highlighted  Boolean   @default(false)
   badge        String?
   features     String[]
-  sortOrder    Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  sortOrder    Int       @default(0)
+  archivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("pricing_plan")
 }

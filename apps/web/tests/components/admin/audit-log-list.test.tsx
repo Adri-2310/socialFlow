@@ -90,6 +90,24 @@ describe('AuditLogList - formatage des messages', () => {
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
+  it.each([
+    ['PRICING_PLAN_CREATED', 'Adrien', 'Un plan tarifaire a été créé par Adrien.'],
+    ['PRICING_PLAN_UPDATED', 'Adrien', 'Un plan tarifaire a été modifié par Adrien.'],
+    ['PRICING_PLAN_ARCHIVED', null, 'Un plan tarifaire a été archivé par un administrateur.'],
+    ['PRICING_PLAN_RESTORED', 'Adrien', 'Un plan tarifaire a été restauré par Adrien.'],
+  ])('formate %s (acteur=%s)', (action, actorName, expected) => {
+    const log: AuditLogEntry = {
+      id: '1',
+      action,
+      createdAt: new Date().toISOString(),
+      actorName,
+      cabinetName: null,
+      targetUserName: null,
+    };
+    render(<AuditLogList logs={[log]} />);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
   it('retombe sur le code brut pour une action inconnue', () => {
     const log: AuditLogEntry = {
       id: '1',

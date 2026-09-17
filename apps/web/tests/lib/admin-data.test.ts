@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterAll, beforeEach, afterEach } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 vi.mock('@/lib/email', () => ({
@@ -17,18 +17,33 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Pas d'appel reseau reel vers le sandbox Stripe dans les tests : seul
-// getBillingData() (voir describe dedie plus bas) s'en sert.
+// Pas d'appel reseau reel vers le sandbox Stripe dans les tests : seuls
+// getBillingData(), getPricingPlansConfig() et getStripeStatus() (voir
+// describes dedies plus bas) s'en servent.
 const stripeSubscriptionsList = vi.fn();
+const stripeProductsList = vi.fn().mockResolvedValue({ data: [] });
+const stripePricesList = vi.fn().mockResolvedValue({ data: [] });
+const stripeWebhookEndpointsList = vi.fn().mockResolvedValue({ data: [] });
 vi.mock('@/lib/stripe', () => ({
-  stripe: { subscriptions: { list: stripeSubscriptionsList } },
+  stripe: {
+    subscriptions: { list: stripeSubscriptionsList },
+    products: { list: stripeProductsList },
+    prices: { list: stripePricesList },
+    webhookEndpoints: { list: stripeWebhookEndpointsList },
+  },
 }));
 
 const { auth } = await import('@/lib/auth');
 const { prisma } = await import('@/lib/prisma');
-const { getCabinets, getUsers, getAuditLogEntries, getMonitoringData, getBillingData } = await import(
-  '@/lib/admin-data'
-);
+const {
+  getCabinets,
+  getUsers,
+  getAuditLogEntries,
+  getMonitoringData,
+  getBillingData,
+  getPricingPlansConfig,
+  getStripeStatus,
+} = await import('@/lib/admin-data');
 
 const PASSWORD = 'InitialPass123!';
 
@@ -404,5 +419,119 @@ describe('getBillingData', () => {
 
     const data = await getBillingData();
     expect(data.rows.find((r) => r.cabinetId === user.cabinetId)).toBeUndefined();
+  });
+});
+
+describe('getPricingPlansConfig', () => {
+  // Les plans (starter/pro/enterprise) sont des donnees d'amorcage reelles,
+  // pas creees par les tests : on ne mocke que le catalogue Stripe autour
+  // d'eux plutot que de creer des PricingPlan de test.
+  beforeEach(() => {
+    stripeProductsList.mockReset();
+    stripePricesList.mockReset();
+  });
+
+  it('associe chaque plan a son Price Stripe actif via les metadata planId/billingPeriod', async () => {
+    stripeProductsList.mockResolvedValue({ data: [{ id: 'prod_starter', metadata: { planId: 'starter' } }] });
+    stripePricesList.mockResolvedValue({
+      data: [
+        { id: 'price_starter_m', metadata: { planId: 'starter', billingPeriod: 'monthly' }, unit_amount: 15000 },
+        { id: 'price_starter_y', metadata: { planId: 'starter', billingPeriod: 'yearly' }, unit_amount: 12000 },
+      ],
+    });
+
+    const data = await getPricingPlansConfig();
+    const starter = data.find((p) => p.planId === 'starter');
+
+    expect(starter?.stripe.productId).toBe('prod_starter');
+    expect(starter?.stripe.monthlyPriceId).toBe('price_starter_m');
+    expect(starter?.stripe.monthlyPriceAmount).toBe(150);
+    expect(starter?.stripe.yearlyPriceAmount).toBe(120);
+  });
+
+  it('marque un plan comme synchronise quand les montants locaux correspondent au Price Stripe actif', async () => {
+    stripeProductsList.mockResolvedValue({ data: [{ id: 'prod_pro', metadata: { planId: 'pro' } }] });
+    stripePricesList.mockResolvedValue({
+      data: [
+        { id: 'price_pro_m', metadata: { planId: 'pro', billingPeriod: 'monthly' }, unit_amount: 30000 },
+        { id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' }, unit_amount: 24000 },
+      ],
+    });
+
+    const data = await getPricingPlansConfig();
+    expect(data.find((p) => p.planId === 'pro')?.inSync).toBe(true);
+  });
+
+  it('marque un plan comme desynchronise quand le Price Stripe actif ne correspond plus au montant local', async () => {
+    stripeProductsList.mockResolvedValue({ data: [{ id: 'prod_pro', metadata: { planId: 'pro' } }] });
+    stripePricesList.mockResolvedValue({
+      data: [{ id: 'price_pro_m', metadata: { planId: 'pro', billingPeriod: 'monthly' }, unit_amount: 99900 }],
+    });
+
+    const data = await getPricingPlansConfig();
+    expect(data.find((p) => p.planId === 'pro')?.inSync).toBe(false);
+  });
+
+  it("laisse les champs Stripe a null quand aucun produit/prix ne correspond au plan", async () => {
+    stripeProductsList.mockResolvedValue({ data: [] });
+    stripePricesList.mockResolvedValue({ data: [] });
+
+    const data = await getPricingPlansConfig();
+    const enterprise = data.find((p) => p.planId === 'enterprise');
+
+    expect(enterprise?.stripe.productId).toBeNull();
+    expect(enterprise?.stripe.monthlyPriceId).toBeNull();
+    expect(enterprise?.inSync).toBe(false);
+  });
+});
+
+describe('getStripeStatus', () => {
+  const originalKey = process.env.STRIPE_SECRET_KEY;
+
+  afterEach(() => {
+    if (originalKey === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = originalKey;
+  });
+
+  it('detecte le mode test via le prefixe sk_test_', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_abc';
+    stripeWebhookEndpointsList.mockResolvedValueOnce({ data: [] });
+
+    const status = await getStripeStatus();
+    expect(status.mode).toBe('test');
+  });
+
+  it('detecte le mode production via le prefixe sk_live_', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_live_abc';
+    stripeWebhookEndpointsList.mockResolvedValueOnce({ data: [] });
+
+    const status = await getStripeStatus();
+    expect(status.mode).toBe('live');
+  });
+
+  it("retombe sur 'inconnu' si aucune cle n'est configuree", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    stripeWebhookEndpointsList.mockResolvedValueOnce({ data: [] });
+
+    const status = await getStripeStatus();
+    expect(status.mode).toBe('inconnu');
+  });
+
+  it("renvoie webhook a null quand aucun webhook n'est configure", async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_abc';
+    stripeWebhookEndpointsList.mockResolvedValueOnce({ data: [] });
+
+    const status = await getStripeStatus();
+    expect(status.webhook).toBeNull();
+  });
+
+  it("renvoie l'url et le nombre d evenements actifs du premier webhook trouve", async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_abc';
+    stripeWebhookEndpointsList.mockResolvedValueOnce({
+      data: [{ url: 'https://example.com/webhook', enabled_events: ['a', 'b'], status: 'enabled' }],
+    });
+
+    const status = await getStripeStatus();
+    expect(status.webhook).toEqual({ url: 'https://example.com/webhook', enabledEventsCount: 2, disabled: false });
   });
 });
