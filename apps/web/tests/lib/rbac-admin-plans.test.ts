@@ -400,8 +400,11 @@ describe('DELETE /api/admin/plans/[id] (archivage)', () => {
     stripeProductsList.mockResolvedValue({ data: [{ id: 'prod_a_archiver', metadata: { planId: plan.planId } }] });
     stripePricesList.mockResolvedValue({
       data: [
-        { id: 'price_m', metadata: { planId: plan.planId, billingPeriod: 'monthly' } },
-        { id: 'price_y', metadata: { planId: plan.planId, billingPeriod: 'yearly' } },
+        { id: 'price_m', metadata: { planId: plan.planId, billingPeriod: 'monthly' }, active: true },
+        { id: 'price_y', metadata: { planId: plan.planId, billingPeriod: 'yearly' }, active: true },
+        // Ancien Price deja desactive par un changement de prix anterieur :
+        // l'archivage ne doit pas y toucher (deja inactif, rien a faire).
+        { id: 'price_m_ancien', metadata: { planId: plan.planId, billingPeriod: 'monthly' }, active: false },
       ],
     });
 
@@ -411,6 +414,7 @@ describe('DELETE /api/admin/plans/[id] (archivage)', () => {
     expect(stripeProductsUpdate).toHaveBeenCalledWith('prod_a_archiver', { active: false });
     expect(stripePricesUpdate).toHaveBeenCalledWith('price_m', { active: false });
     expect(stripePricesUpdate).toHaveBeenCalledWith('price_y', { active: false });
+    expect(stripePricesUpdate).not.toHaveBeenCalledWith('price_m_ancien', expect.anything());
 
     const updated = await prisma.pricingPlan.findUniqueOrThrow({ where: { id: plan.id } });
     expect(updated.archivedAt).not.toBeNull();
@@ -454,5 +458,29 @@ describe('PUT /api/admin/plans/[id] (restauration)', () => {
       where: { action: 'PRICING_PLAN_RESTORED', actorId: user.id },
     });
     expect(log.actorId).toBe(user.id);
+  });
+
+  it("ne reactive que le Price le plus recent de chaque periode, pas un ancien Price deja remplace", async () => {
+    const { cj } = await creerSuperAdmin('plan-restore-historique');
+    const plan = await creerPlanTest('restore-historique');
+    await prisma.pricingPlan.update({ where: { id: plan.id }, data: { archivedAt: new Date() } });
+
+    stripeProductsList.mockResolvedValue({ data: [{ id: 'prod_test', metadata: { planId: plan.planId } }] });
+    // Stripe liste du plus recent au plus ancien : "price_m_actuel" est le
+    // Price courant au moment de l'archivage, "price_m_ancien" un Price
+    // desactive par un changement de prix anterieur - la restauration ne
+    // doit reactiver que le premier.
+    stripePricesList.mockResolvedValue({
+      data: [
+        { id: 'price_m_actuel', metadata: { planId: plan.planId, billingPeriod: 'monthly' }, active: false },
+        { id: 'price_m_ancien', metadata: { planId: plan.planId, billingPeriod: 'monthly' }, active: false },
+      ],
+    });
+
+    const res = await restore(plan.id, cj);
+    expect(res.status).toBe(200);
+
+    expect(stripePricesUpdate).toHaveBeenCalledWith('price_m_actuel', { active: true });
+    expect(stripePricesUpdate).not.toHaveBeenCalledWith('price_m_ancien', expect.anything());
   });
 });

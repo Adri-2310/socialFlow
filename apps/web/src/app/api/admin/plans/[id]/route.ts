@@ -82,7 +82,7 @@ async function syncStripePrice(
 }
 
 // Archivage/restauration (voir DELETE/PUT ci-dessous) : bascule `active` sur
-// le Product et tous ses Price existants plutot que d'en creer de nouveaux -
+// le Product et sur le(s) Price existants plutot que d'en creer de nouveaux -
 // contrairement au montant, `active` est modifiable dans les deux sens sur
 // un Price Stripe.
 async function setPlanStripeActive(planId: string, active: boolean) {
@@ -95,8 +95,26 @@ async function setPlanStripeActive(planId: string, active: boolean) {
   if (product) {
     await stripe.products.update(product.id, { active });
   }
-  for (const price of prices.data.filter((p) => p.metadata.planId === planId)) {
-    await stripe.prices.update(price.id, { active });
+
+  if (active) {
+    // Restauration : ne reactive que le Price le plus recent de chaque
+    // periode (Stripe liste du plus recent au plus ancien, voir
+    // getPricingPlansConfig dans lib/admin-data.ts) - jamais un ancien Price
+    // deja desactive par un changement de prix avant l'archivage.
+    for (const billingPeriod of ['monthly', 'yearly'] as const) {
+      const current = prices.data.find(
+        (p) => p.metadata.planId === planId && p.metadata.billingPeriod === billingPeriod,
+      );
+      if (current) {
+        await stripe.prices.update(current.id, { active: true });
+      }
+    }
+  } else {
+    // Archivage : desactive uniquement ce qui est actif (au plus un Price
+    // actif par periode a la fois, voir syncStripePrice).
+    for (const price of prices.data.filter((p) => p.metadata.planId === planId && p.active)) {
+      await stripe.prices.update(price.id, { active: false });
+    }
   }
 }
 
