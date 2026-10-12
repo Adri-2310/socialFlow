@@ -85,10 +85,12 @@ Voir [doc/PLANNING.md](./doc/PLANNING.md) pour le roadmap complet avec dates.
 
 ## 📖 Documentation
 
-- **[doc/PLANNING.md](./doc/PLANNING.md)** — Roadmap avec étapes et dates
-- **[doc/analysis/PRD_CLIENT.md](./doc/analysis/PRD_CLIENT.md)** — Cahier des charges complet
-- **[doc/analysis/SPEC_FINAL.md](./doc/analysis/SPEC_FINAL.md)** — Spécification technique détaillée
-- **[doc/analysis/ARCHITECTURE.md](./doc/analysis/ARCHITECTURE.md)** — Architecture système & API cible
+Point d'entrée : **[doc/README.md](./doc/README.md)** (sommaire complet).
+
+- **[doc/DECISIONS.md](./doc/DECISIONS.md)** — Décisions produit, source de vérité
+- **[doc/FONCTIONNEMENT.md](./doc/FONCTIONNEMENT.md)** — Fonctionnement de bout en bout
+- **[doc/ROADMAP.md](./doc/ROADMAP.md)** — Feuille de route jusqu'à juin 2027
+- **[doc/reference/PRD_CLIENT.md](./doc/reference/PRD_CLIENT.md)** — Cahier des charges du client
 
 ---
 
