@@ -138,7 +138,7 @@ Depuis une fiche `ENVOYEE` : « Créer une rectificative » → nouvelle fiche `
 | Déclaration trimestrielle ONSS (DmfA) | Fin de trimestre, à partir des fiches envoyées | préparée → contrôlée → envoyée → acceptée / anomalies |
 | Certificat de chômage C4 | Sortie du salarié | généré → transmis |
 
-Les intégrations réelles (D2) passent par un **adaptateur** : `DeclarationGateway` avec une implémentation simulée (tests, démo) et une implémentation réelle, interchangeables par configuration.
+Les déclarations passent par un **adaptateur** `DeclarationGateway`. Pour le TFE, l'implémentation est **simulée** à partir de la documentation officielle publique (D50) ; une implémentation réelle pourra s'y brancher plus tard. Détails : [modules/integrations.md](../modules/integrations.md).
 
 ## 8. Messagerie (D42)
 Un fil par entreprise, partagé par le(s) gestionnaire(s) assigné(s) et l'admin de l'entreprise. Messages texte avec pièces jointes (comptent dans le stockage du cabinet), badge de non-lus, notification email groupée si non lu après un délai.

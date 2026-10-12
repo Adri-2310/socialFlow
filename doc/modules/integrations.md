@@ -1,7 +1,7 @@
 # Module : intégrations externes
 
 > Statut : **à construire**. Décisions : D2, **D50** (DIMONA, DmfA et C4 simulées à partir de la documentation officielle ; Exact Online réel), D36, D40.
-> Ce document fait aussi office d'**étude de faisabilité** : il dit ce qui est réellement accessible, à quelles conditions, et ce qu'on fait si l'accès n'est pas obtenu à temps.
+> Ce document fait aussi office d'**étude de faisabilité** : il dit ce qui est réellement accessible et à quelles conditions, et justifie le choix de D50 (déclarations sociales simulées, Exact Online réel).
 
 ## 1. Architecture commune
 
@@ -30,7 +30,7 @@ lib/integrations/
 | Prérequis | Compte sur le portail de la sécurité sociale + configuration du canal dans **Chaman** + **certificat X.509** au nom de l'organisation + protocole **OAuth** (Client ID `self_service_expeditor_X`) |
 | Droits | Le déclarant doit être **l'employeur ou son mandataire** (sinon 403) |
 | Traitement | **Asynchrone** : POST → 201 avec l'URL de consultation ; GET jusqu'au résultat `A` (acceptée), `W` (acceptée avec avertissements), `B` (refusée), `S` (attente d'identification du travailleur). Médiane 2,5 s ; interrogation chaque seconde jusqu'à 30 s, puis chaque minute jusqu'à 20 min |
-| Contact technique | `TBDIMONA@smals.be` |
+| Contact technique (pour une future connexion réelle) | `TBDIMONA@smals.be` |
 
 **Flux dans SocialFlow**
 1. Création ou modification d'un dossier → `Declaration` `A_ENVOYER` (D40).
