@@ -17,13 +17,13 @@
 
 | # | Dates | Branche(s) | Contenu | Docs |
 |---|---|---|---|---|
-| **C0** | 12/10 → 25/10 | `feature/dashboard`, `feature/stripe-webhook` | Finir et fusionner le portail Cabinet RH en cours. Dette critique : Stripe Checkout avec carte (C1), plan sur `Cabinet` (C2), jeton d'invitation haché (C3), webhook Stripe et délai de grâce, 2FA obligatoire pour le SuperAdmin, outils de support. **Lancer les demandes d'accès** (DIMONA, Exact) | `roles/01`, `roles/02` |
+| **C0** | 12/10 → 25/10 | `feature/dashboard`, `feature/stripe-webhook` | Finir et fusionner le portail Cabinet RH en cours. Dette critique : Stripe Checkout avec carte (C1), plan sur `Cabinet` (C2), jeton d'invitation haché (C3), webhook Stripe et délai de grâce, 2FA obligatoire pour le SuperAdmin, outils de support. **Télécharger la documentation officielle** DIMONA et DmfA, créer le compte Exact Online | `roles/01`, `roles/02` |
 | **C1** | 26/10 → 15/11 | `feature/entreprises` | `lib/authz.ts` et matrice de permissions testée ; quotas des plans ; entreprises clientes, assignations N:M, invitation de l'admin entreprise ; journal d'audit du cabinet | `roles/02`, `PERMISSIONS.md` |
 | **C2** | 16/11 → 06/12 | `feature/salaries` | Dossiers salariés (chiffrement NISS/IBAN, historique daté, import CSV), invitation du collaborateur, file des demandes | `roles/03` § 4, `modules/collaboration.md` |
 | **C3** | 07/12 → 17/01 | `feature/moteur-paie` | **Moteur de paie** : barèmes 2026 versionnés, cas de référence, employés, ouvriers, temps partiel, maladie, heures sup (vacances de fin d'année incluses) | `modules/paie.md` |
 | **C4** | 18/01 → 14/02 | `feature/cycle-paie` | Périodes, prestations (portail entreprise), fiches et machine à états, validation et rejet, PDF, envoi par lien + code, rectificative ; portails Entreprise et Collaborateur | `roles/03` à `05` |
 | **C5** | 15/02 → 07/03 | `feature/calendrier`, `feature/collaboration` | Calendrier et rappels, notifications in-app, messagerie, documents (stockage et quota) | `modules/calendrier-echeances.md`, `modules/collaboration.md` |
-| **C6** | 08/03 → 28/03 | `feature/declarations` | DIMONA (simulée, puis réelle si l'accès est obtenu), génération DmfA, C4 | `modules/integrations.md` |
+| **C6** | 08/03 → 28/03 | `feature/declarations` | DIMONA simulée fidèle à la documentation officielle (D50), génération et contrôle de la DmfA, C4 | `modules/integrations.md` |
 | **C7** | 29/03 → 18/04 | `feature/personnalisation`, `feature/pecule` | Branding, modèles d'emails, white-label Enterprise ; pécule de vacances | `modules/personnalisation.md`, `modules/paie.md` § 4 |
 | **C8** | 19/04 → 09/05 | `feature/exact`, `feature/analytics` | Exact Online, fiche 281.10, tableaux de bord analytiques | `modules/integrations.md`, `modules/intelligence.md` |
 | **C9** | 10/05 → 30/05 | `feature/qualite` | Mise à jour automatique des barèmes, tests Playwright, CI GitHub Actions, sécurité, performance, seed de démonstration ; IA si le temps le permet | `TESTS.md`, `modules/intelligence.md` |
@@ -39,7 +39,7 @@ Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entr
 | 06/12/2026 | Portefeuille et dossiers salariés complets |
 | 17/01/2027 | Moteur de paie validé sur tous les cas de référence |
 | 14/02/2027 | **Premier cycle de paie complet de bout en bout** (démontrable) |
-| 28/03/2027 | Déclarations sociales (au moins en simulation) |
+| 28/03/2027 | Déclarations sociales (simulées, D50) |
 | 30/05/2027 | Gel technique : tout le périmètre démontrable |
 | 30/06/2027 | Remise du TFE |
 
@@ -48,7 +48,7 @@ Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entr
 | Risque | Probabilité | Parade |
 |---|---|---|
 | Périmètre trop large pour un développeur seul | Élevée | Ordre de coupe défini ci-dessous ; chaque chantier fusionnable seul |
-| Accès DIMONA/ONSS non obtenu | Élevée | Implémentation simulée fidèle (`modules/integrations.md` § 8) ; demande lancée en C0 |
+| Simulation DIMONA/DmfA jugée trop éloignée du réel | Faible | Simulation construite sur la documentation officielle, avec les vrais formats, statuts et anomalies (D50) |
 | Erreurs du moteur de paie | Moyenne | Cas de référence au centime, idéalement issus de vraies fiches |
 | Retard sur C3/C4 (cœur) | Moyenne | Priorité absolue : rien d'autre ne commence avant le jalon du 14/02 |
 | Données réelles en démo | Faible | Seed fictif uniquement, générateur de NISS fictifs |

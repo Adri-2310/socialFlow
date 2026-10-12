@@ -41,7 +41,7 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 
 ### Périmètre
 - **D1.** Périmètre visé : tout ce qui figure dans les documents d'analyse (cœur + calendrier ONSS, messagerie, documents, white-label, DIMONA, C4, Exact Online, analytics…). Ordre : cœur d'abord, puis **calendrier ONSS + alertes** en premier module secondaire.
-- **D2.** Intégrations officielles (DIMONA, ONSS, C4, Exact Online) : objectif **connexion réelle**. Constat du 12/10 : la DIMONA dispose d'un environnement de **simulation** officiel, mais l'accès suppose d'être l'employeur ou son mandataire (certificat, Chaman, OAuth). Plan de repli : implémentation simulée fidèle (voir `modules/integrations.md`).
+- **D2.** Intégrations officielles (DIMONA, ONSS, C4, Exact Online) : objectif **connexion réelle**. Constat du 12/10 : la DIMONA dispose d'un environnement de **simulation** officiel, mais l'accès suppose d'être l'employeur ou son mandataire (certificat, Chaman, OAuth). Plan de repli : implémentation simulée fidèle (voir `modules/integrations.md`). **Révisée par D50.**
 
 ### Rôles et relations
 - **D3.** Le **Cabinet RH** est un rôle de **pilotage uniquement** : abonnement, équipe, entreprises clientes, paramètres. Il ne crée ni ne prépare de fiches. Pour produire, il faut un compte Gestionnaire RH.
@@ -117,6 +117,9 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 - **D47.** L'admin de l'entreprise **consulte** les dossiers de ses salariés et **signale** des changements (nouvel engagement, sortie, changement de salaire ou de régime) via une **demande** adressée au gestionnaire, qui l'applique. Il ne modifie jamais un dossier directement.
 - **D48.** L'admin de l'entreprise voit **tout le détail** des fiches de ses salariés (brut, retenues, net, coût employeur), l'historique et les PDF.
 - **D49.** Portail Collaborateur : ses **fiches de paie** (5 ans), ses **données personnelles** (lecture + demande de correction), ses **documents** (contrat, attestations, C4 ; fiche fiscale 281.10 si elle entre dans le périmètre, question ouverte) et l'**export RGPD** de ses données.
+
+### Intégrations officielles (12/10/2026, suite)
+- **D50.** DIMONA, DmfA et C4 : **implémentation simulée**, construite à partir de la **documentation officielle publique** de la sécurité sociale (formats JSON, statuts, anomalies). Pas de demande d'accès au service réel pour le TFE. L'architecture reste prête pour une connexion réelle plus tard (interface `DeclarationGateway`). **Exact Online reste en connexion réelle** (app de test sur sa propre instance).
 
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.

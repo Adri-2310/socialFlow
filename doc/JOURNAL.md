@@ -42,5 +42,6 @@
 
 **Reste à faire** :
 - Trancher les points ouverts listés dans `doc/README.md`.
-- Lancer les demandes d'accès DIMONA et Exact Online.
+- Télécharger la documentation officielle DIMONA et DmfA ; créer le compte Exact Online.
+- Décision complémentaire D50 : DIMONA, DmfA et C4 simulées à partir de la documentation officielle publique (accès réel hors de portée du TFE) ; Exact Online reste réel.
 - Mettre à jour les commentaires du code qui citent encore `doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md`, `SPEC_FINAL.md` ou `doc/analysis/PRD_CLIENT.md` (`lib/auth.ts`, `api/admin/cabinets/[id]`, `api/invitations`, `dashboard/page.tsx`, `prisma/seed.mjs`, `prisma/schema.prisma`) : remplacer par les nouveaux chemins.

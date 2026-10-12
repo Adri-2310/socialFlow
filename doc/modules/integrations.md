@@ -1,6 +1,6 @@
 # Module : intégrations externes
 
-> Statut : **à construire**. Décisions : D2 (objectif : connexion réelle), D36, D40.
+> Statut : **à construire**. Décisions : D2, **D50** (DIMONA, DmfA et C4 simulées à partir de la documentation officielle ; Exact Online réel), D36, D40.
 > Ce document fait aussi office d'**étude de faisabilité** : il dit ce qui est réellement accessible, à quelles conditions, et ce qu'on fait si l'accès n'est pas obtenu à temps.
 
 ## 1. Architecture commune
@@ -38,7 +38,7 @@ lib/integrations/
 3. Job d'interrogation selon le rythme recommandé → `ACCEPTEE` (avec avertissements éventuels) ou `REFUSEE` (anomalies affichées en clair au gestionnaire).
 4. Alerte si une DIMONA IN n'est pas acceptée la veille du premier jour de travail.
 
-**Risque principal** : l'accès suppose une organisation enregistrée (numéro d'entreprise, gestion des accès) qui agit pour des employeurs. En tant qu'étudiant, il faut vérifier **dès maintenant** si l'école, ton client ou un secrétariat social partenaire peut te donner accès à la simulation. Écrire à `TBDIMONA@smals.be` en expliquant le projet.
+**Choix retenu (D50)** : l'accès suppose une organisation enregistrée qui agit pour des employeurs, hors de portée du TFE. SocialFlow implémente donc une **simulation fidèle** du web service, à partir de la documentation fonctionnelle publique : mêmes blocs JSON, mêmes réponses (201 puis A / W / B / S), mêmes codes d'anomalie, même rythme d'interrogation. La simulation produit aussi des refus réalistes (NISS invalide, déclaration hors délai…) pour tester l'affichage des anomalies. Passer au réel = ajouter l'implémentation `socialsecurity.ts` sans toucher au reste.
 
 ## 3. Déclaration trimestrielle ONSS (DmfA)
 
@@ -48,11 +48,11 @@ lib/integrations/
 | Contenu | Pour chaque travailleur et chaque trimestre : périodes d'occupation, rémunérations, codes de prestations, cotisations et réductions |
 | Dans SocialFlow | Génération à partir des fiches `ENVOYEE` du trimestre → contrôle de cohérence → envoi → suivi des anomalies |
 
-Proposition : construire d'abord la **génération et le contrôle du fichier**. Ce travail ne dépend d'aucun accès et a de la valeur seul. L'envoi réel vient ensuite si l'accès est obtenu.
+Choix retenu (D50) : **génération et contrôle du fichier** selon les schémas officiels publics, puis **réponse simulée** (acceptation ou anomalies). Pas d'envoi réel pour le TFE.
 
 ## 4. Certificat de chômage C4
 
-Document remis au travailleur à la fin du contrat, avec une version électronique transmise par les canaux de la sécurité sociale **[à vérifier : canal électronique et conditions d'accès]**. Dans SocialFlow : génération du C4 à partir du dossier (dates, motif de fin, rémunérations), PDF dans les documents du collaborateur, transmission électronique si l'accès est obtenu.
+Document remis au travailleur à la fin du contrat, avec une version électronique transmise par les canaux de la sécurité sociale **[à vérifier : canal électronique et conditions d'accès]**. Dans SocialFlow : génération du C4 à partir du dossier (dates, motif de fin, rémunérations), PDF dans les documents du collaborateur ; transmission électronique **simulée** (D50).
 
 ## 5. Exact Online (plans Pro et Enterprise, D36)
 
@@ -80,23 +80,22 @@ Fiche annuelle des rémunérations, transmise au SPF Finances via **BelCotax-on-
 
 Voir `roles/01-superadmin.md` § 6.1 et `roles/02-cabinet-rh.md` : Checkout avec essai, portail client, webhook signé et idempotent, délai de grâce.
 
-## 8. Plan de repli (important pour la remise)
+## 8. Ce qui est réel et ce qui est simulé (D50)
 
-| Intégration | Si l'accès réel est obtenu | Sinon, pour la remise |
+| Intégration | Pour la remise | Évolution possible |
 |---|---|---|
-| DIMONA | Envoi réel en simulation officielle | Implémentation simulée fidèle aux formats et statuts officiels + documentation de la démarche d'accès |
-| DmfA | Envoi réel | Génération et contrôle du fichier + simulation de la réponse |
-| C4 | Transmission électronique | PDF + simulation |
-| Exact Online | Synchronisation réelle sur une instance de démonstration | Simulation |
-| BelCotax | Dépôt manuel du XML généré | Idem |
+| DIMONA | **Simulée**, fidèle à la documentation officielle | Connexion réelle via un mandat et un certificat |
+| DmfA | Fichier **réellement généré et contrôlé**, réponse simulée | Envoi réel |
+| C4 | PDF réel, transmission simulée | Transmission électronique réelle |
+| Exact Online | **Réelle**, sur une instance de démonstration | Validation de l'app par Exact |
+| BelCotax (si dans le périmètre) | XML généré, dépôt manuel | Envoi automatique |
 
-Ce plan permet de **démontrer tout le périmètre** même si une administration tarde à répondre. Le rapport présente alors la démarche d'accès comme une évolution immédiate.
+Le rapport présente la connexion réelle aux services de la sécurité sociale comme une **évolution immédiate**, rendue simple par l'architecture en interfaces.
 
 ## 9. Actions à lancer tout de suite (sans attendre le développement)
 
-1. Écrire à `TBDIMONA@smals.be` : demander l'accès à la simulation DIMONA pour un projet de fin d'études et les conditions (mandat, certificat, Chaman).
-2. Demander à ton client (`PRD_CLIENT`) s'il peut agir comme organisation déclarante pour la simulation.
-3. Créer un compte App Center Exact Online et vérifier l'accès à une instance de démonstration.
+1. Télécharger la documentation officielle (documentation fonctionnelle du web service REST Dimona, glossaires et schémas de la bibliothèque technique, instructions DmfA) et la ranger dans `doc/reference/dimona/` et `doc/reference/dmfa/`, avec la date de téléchargement.
+2. Créer un compte App Center Exact Online et vérifier l'accès à une instance de démonstration.
 
 ## Sources
 

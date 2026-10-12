@@ -157,7 +157,7 @@ Fonctions pures dans `lib/payroll/`, montants en **centimes entiers**, **barème
 | C4 | Sortie d'un salarié | À l'événement |
 | Fiche fiscale annuelle (281.10) | Fiches de l'année | Annuelle **[périmètre à confirmer]** |
 
-Toutes passent par une interface `DeclarationGateway` : implémentation **simulée** (tests, démo du TFE) et **réelle** (D2), interchangeables par configuration. Statuts communs : `A_ENVOYER → ENVOYEE → ACCEPTEE | REFUSEE (motif)`.
+Toutes passent par une interface `DeclarationGateway`. Pour le TFE, l'implémentation est **simulée** à partir de la documentation officielle publique (D50) ; une implémentation réelle pourra s'y brancher plus tard sans changer le reste. Statuts communs : `A_ENVOYER → ENVOYEE → ACCEPTEE | REFUSEE (motif)`.
 
 ## 9. Modèle de données cible
 
