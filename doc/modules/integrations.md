@@ -92,7 +92,20 @@ Voir `roles/01-superadmin.md` § 6.1 et `roles/02-cabinet-rh.md` : Checkout avec
 
 Le rapport présente la connexion réelle aux services de la sécurité sociale comme une **évolution immédiate**, rendue simple par l'architecture en interfaces.
 
-## 9. Actions à lancer tout de suite (sans attendre le développement)
+## 9. Mise à jour mensuelle des données de référence (D51, chantier C9)
+
+| Donnée | Format attendu | Traitement |
+|---|---|---|
+| Codes et libellés d'anomalies DIMONA, glossaires | À vérifier (XML, CSV ou PDF) | Import automatique en table versionnée si lisible, sinon saisie assistée |
+| Schémas DIMONA et DmfA | JSON ou XSD | Nouvelle version enregistrée ; la simulation valide les messages contre la version active |
+| Barèmes de paie | PDF, HTML | Version `A_VERIFIER`, activation par le SuperAdmin (voir `modules/paie.md` § 5) |
+
+- Cron mensuel : détection d'une nouvelle publication (date, numéro de version, empreinte du fichier) et alerte au SuperAdmin.
+- Le site de la sécurité sociale interdit les robots (`robots.txt`) : pas de téléchargement automatique de ses fichiers. Le SuperAdmin télécharge le fichier signalé et le dépose ; l'import en base est ensuite automatique.
+- Les anciennes versions restent en base : une déclaration ou une fiche garde la version qui était active au moment de sa création.
+- Avant C9, les données de référence sont saisies une première fois (seed) à partir de la documentation téléchargée dans `doc/reference/`.
+
+## 10. Actions à lancer tout de suite (sans attendre le développement)
 
 1. Télécharger la documentation officielle (documentation fonctionnelle du web service REST Dimona, glossaires et schémas de la bibliothèque technique, instructions DmfA) et la ranger dans `doc/reference/dimona/` et `doc/reference/dmfa/`, avec la date de téléchargement.
 2. Créer un compte App Center Exact Online et vérifier l'accès à une instance de démonstration.

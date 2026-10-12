@@ -120,6 +120,7 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 
 ### Intégrations officielles (12/10/2026, suite)
 - **D50.** DIMONA, DmfA et C4 : **implémentation simulée**, construite à partir de la **documentation officielle publique** de la sécurité sociale (formats JSON, statuts, anomalies). Pas de demande d'accès au service réel pour le TFE. L'architecture reste prête pour une connexion réelle plus tard (interface `DeclarationGateway`). **Exact Online reste en connexion réelle** (app de test sur sa propre instance).
+- **D51.** **Mise à jour mensuelle automatique des données de référence** (codes d'anomalies et glossaires DIMONA, schémas DIMONA et DmfA, barèmes) : détection des nouvelles versions officielles, import en base dans des tables versionnées pour les formats lisibles, validation par le SuperAdmin pour les PDF et les barèmes (D22). Le site de la sécurité sociale interdisant les robots, les fichiers concernés sont téléchargés par un clic du SuperAdmin, puis importés automatiquement. **Réalisé en dernier** (chantier C9) : jusque-là, les données de référence sont saisies une première fois à partir de la documentation officielle.
 
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.

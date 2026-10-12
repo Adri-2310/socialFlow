@@ -26,7 +26,7 @@
 | **C6** | 08/03 → 28/03 | `feature/declarations` | DIMONA simulée fidèle à la documentation officielle (D50), génération et contrôle de la DmfA, C4 | `modules/integrations.md` |
 | **C7** | 29/03 → 18/04 | `feature/personnalisation`, `feature/pecule` | Branding, modèles d'emails, white-label Enterprise ; pécule de vacances | `modules/personnalisation.md`, `modules/paie.md` § 4 |
 | **C8** | 19/04 → 09/05 | `feature/exact`, `feature/analytics` | Exact Online, fiche 281.10, tableaux de bord analytiques | `modules/integrations.md`, `modules/intelligence.md` |
-| **C9** | 10/05 → 30/05 | `feature/qualite` | Mise à jour automatique des barèmes, tests Playwright, CI GitHub Actions, sécurité, performance, seed de démonstration ; IA si le temps le permet | `TESTS.md`, `modules/intelligence.md` |
+| **C9** | 10/05 → 30/05 | `feature/qualite`, `feature/references` | Mise à jour mensuelle automatique des données de référence et des barèmes (D51), tests Playwright, CI GitHub Actions, sécurité, performance, seed de démonstration ; IA si le temps le permet | `TESTS.md`, `modules/intelligence.md` |
 | **R** | 31/05 → 30/06 | — | Rédaction finale du rapport, captures, préparation de la défense, gel des fonctionnalités le 15/06 | `JOURNAL.md` |
 
 Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entrée détaillée dans `JOURNAL.md` sert de matière pour les chapitres « Analyse » et « Réalisation ».
@@ -55,10 +55,10 @@ Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entr
 
 **Ordre de coupe** si le retard dépasse deux semaines (de la première à la dernière chose à sacrifier) :
 1. IA (assistant, détection par IA) → présentée en « évolutions pressenties »
-2. Domaine personnalisé du white-label
-3. Fiche 281.10 / BelCotax
-4. Exact Online
-5. Envoi réel de la DmfA (la génération reste)
+2. Automatisation mensuelle des données de référence (D51) : on garde la saisie manuelle des versions
+3. Domaine personnalisé du white-label
+4. Fiche 281.10 / BelCotax
+5. Exact Online
 6. Tableaux de bord analytiques avancés
 
 Le cœur (C0 à C4), le calendrier et les déclarations simulées ne sont **jamais** coupés.
