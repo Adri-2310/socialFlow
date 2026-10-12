@@ -17,22 +17,56 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserMenu } from '@/components/layout/user-menu';
 
-// Reprend la nav de la maquette (voir doc/analysis + maquette 03-dashboard-
-// superadmin.html). Toutes les entrees ont desormais leur propre page.
-const NAV_ITEMS: { label: string; icon: typeof LayoutDashboard; href?: string }[] = [
-  { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard/admin' },
-  { label: 'Cabinets', icon: Building2, href: '/dashboard/admin/cabinets' },
-  { label: 'Utilisateurs', icon: Users, href: '/dashboard/admin/utilisateurs' },
-  { label: 'Monitoring', icon: Activity, href: '/dashboard/admin/monitoring' },
-  { label: "Journal d'audit", icon: ScrollText, href: '/dashboard/admin/audit' },
-  { label: 'Facturation', icon: CreditCard, href: '/dashboard/admin/facturation' },
-  { label: 'Configuration', icon: Settings, href: '/dashboard/admin/configuration' },
-];
+type NavItem = { label: string; icon: typeof LayoutDashboard; href?: string };
 
-export function AdminShell({ userName, children }: { userName: string; children: ReactNode }) {
+type ShellConfig = { consoleLabel: string; roleLabel: string; nav: NavItem[] };
+
+// Navigation et libelles par role. Vit ici (composant client) plutot que
+// d'etre passee en props depuis le layout serveur : les icones lucide sont
+// des composants, non serialisables a travers la frontiere serveur/client.
+// Une entree sans href s'affiche "Bientot" (page pas encore construite), a
+// retirer au fil des passes - meme convention que celle qu'avait AdminShell.
+const SHELL_CONFIG = {
+  SUPER_ADMIN: {
+    consoleLabel: 'Console SuperAdmin',
+    roleLabel: 'SuperAdmin',
+    nav: [
+      { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard/admin' },
+      { label: 'Cabinets', icon: Building2, href: '/dashboard/admin/cabinets' },
+      { label: 'Utilisateurs', icon: Users, href: '/dashboard/admin/utilisateurs' },
+      { label: 'Monitoring', icon: Activity, href: '/dashboard/admin/monitoring' },
+      { label: "Journal d'audit", icon: ScrollText, href: '/dashboard/admin/audit' },
+      { label: 'Facturation', icon: CreditCard, href: '/dashboard/admin/facturation' },
+      { label: 'Configuration', icon: Settings, href: '/dashboard/admin/configuration' },
+    ],
+  },
+  CABINET_RH: {
+    consoleLabel: 'Espace Cabinet RH',
+    roleLabel: 'Cabinet RH',
+    nav: [
+      { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard' },
+      { label: 'Gestionnaires', icon: Users },
+      { label: 'Entreprises', icon: Building2 },
+      { label: 'Facturation', icon: CreditCard },
+    ],
+  },
+} satisfies Record<string, ShellConfig>;
+
+export type ShellRole = keyof typeof SHELL_CONFIG;
+
+export function DashboardShell({
+  role,
+  userName,
+  children,
+}: {
+  role: ShellRole;
+  userName: string;
+  children: ReactNode;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const activeItem = NAV_ITEMS.find((item) => item.href === pathname) ?? NAV_ITEMS[0];
+  const { consoleLabel, roleLabel, nav }: ShellConfig = SHELL_CONFIG[role];
+  const activeItem = nav.find((item) => item.href === pathname) ?? nav[0];
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -42,16 +76,22 @@ export function AdminShell({ userName, children }: { userName: string; children:
         }`}
       >
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
-          <Image src="/logo-simple.png" alt="SocialFlow" width={36} height={36} className="rounded-xl" />
+          <Image
+            src="/logo-simple.png"
+            alt="SocialFlow"
+            width={36}
+            height={36}
+            className="rounded-xl"
+          />
           <div>
             <p className="text-sm font-bold leading-none text-sidebar-foreground">
               Social<span className="text-primary dark:text-indigo-400">Flow</span>
             </p>
-            <p className="text-[11px] font-medium text-muted-foreground">Console SuperAdmin</p>
+            <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
           </div>
         </div>
         <nav className="space-y-1 p-3 text-sm">
-          {NAV_ITEMS.map((item) =>
+          {nav.map((item) =>
             item.href ? (
               <Link
                 key={item.label}
@@ -72,7 +112,9 @@ export function AdminShell({ userName, children }: { userName: string; children:
                 <span className="flex items-center gap-3">
                   <item.icon className="h-4 w-4" /> {item.label}
                 </span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">Bientôt</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">
+                  Bientôt
+                </span>
               </span>
             ),
           )}
@@ -97,7 +139,7 @@ export function AdminShell({ userName, children }: { userName: string; children:
           <h1 className="text-base font-bold text-foreground">{activeItem.label}</h1>
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
-            <UserMenu userName={userName} roleLabel="SuperAdmin" />
+            <UserMenu userName={userName} roleLabel={roleLabel} />
           </div>
         </header>
         <main className="space-y-6 p-4 sm:p-6">{children}</main>

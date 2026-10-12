@@ -9,8 +9,8 @@ import { signOut } from '@/lib/auth-client';
 // Point d'acces unique et commun a tous les roles pour "Mon profil" et la
 // deconnexion (remplace l'ancien LogoutButton, supprime). Le declencheur est
 // le bloc avatar + nom + role (comme l'ancienne topbar statique de
-// AdminShell), pas une icone hamburger separee - distinct du hamburger
-// mobile de AdminShell, qui lui ouvre/ferme la sidebar de nav.
+// DashboardShell), pas une icone hamburger separee - distinct du hamburger
+// mobile de DashboardShell, qui lui ouvre/ferme la sidebar de nav.
 export function UserMenu({ userName, roleLabel }: { userName: string; roleLabel: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

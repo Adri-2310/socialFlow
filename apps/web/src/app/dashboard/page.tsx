@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   // Chaque role a vocation a avoir son propre tableau de bord sous
   // /dashboard/<role> (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md
   // section 7) ; seul SuperAdmin en a un pour l'instant (/dashboard/admin,
-  // voir components/admin/admin-shell.tsx). Les autres roles atterrissent
+  // voir components/layout/dashboard-shell.tsx). Les autres roles atterrissent
   // ici en attendant leur propre passe - le contenu compte/securite commun
   // a tous les roles vit desormais sur /profil (voir components/layout).
   if (user.role === 'SUPER_ADMIN') {

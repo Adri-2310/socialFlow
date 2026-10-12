@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 
@@ -9,20 +9,13 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Premiere iteration RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md
 // section 4.1) : seul un Cabinet RH peut inviter, et uniquement en tant que
-// Gestionnaire RH. requireSession() n'est pas reutilise ici : concu pour les
-// Server Components (redirect() de next/navigation), il renverrait une
-// redirection HTML sur un appel fetch() JSON plutot qu'un 401/403 propre.
-// Lit request.headers directement (pas next/headers()) : ce Route Handler
-// doit rester appelable/testable comme une fonction pure, sans dependre du
-// contexte de requete implicite de Next.js.
+// Gestionnaire RH. La garde (401/403 JSON, pas de redirection HTML) vit dans
+// lib/api-guard.ts.
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'CABINET_RH' || !session.user.cabinetId) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  if (guard.response) return guard.response;
+  const { session } = guard;
+  const cabinetId = session.user.cabinetId as string;
 
   const body = await request.json().catch(() => null);
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -36,13 +29,13 @@ export async function POST(request: Request) {
   }
 
   const existingInvitation = await prisma.invitation.findFirst({
-    where: { email, cabinetId: session.user.cabinetId, status: 'pending', expiresAt: { gt: new Date() } },
+    where: { email, cabinetId, status: 'pending', expiresAt: { gt: new Date() } },
   });
   if (existingInvitation) {
     return NextResponse.json({ error: 'INVITATION_ALREADY_PENDING' }, { status: 409 });
   }
 
-  const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: session.user.cabinetId } });
+  const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinetId } });
 
   const token = crypto.randomBytes(32).toString('base64url');
   await prisma.invitation.create({
