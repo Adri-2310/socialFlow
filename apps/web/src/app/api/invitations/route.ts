@@ -3,6 +3,7 @@ import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
+import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,6 +33,17 @@ export async function POST(request: Request) {
   });
   if (existingInvitation) {
     return NextResponse.json({ error: 'INVITATION_ALREADY_PENDING' }, { status: 409 });
+  }
+
+  // D15 : quota d'utilisateurs du cabinet (Cabinet RH + gestionnaires +
+  // invitations en attente) bloquant. Controle apres les doublons pour ne pas
+  // masquer une erreur plus precise.
+  const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinetId);
+  if (limits && isQuotaReached(utilisateurs.used, limits.maxUtilisateurs)) {
+    return NextResponse.json(
+      quotaExceededBody('maxUtilisateurs', limits.maxUtilisateurs as number, utilisateurs.used),
+      { status: 403 },
+    );
   }
 
   const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinetId } });

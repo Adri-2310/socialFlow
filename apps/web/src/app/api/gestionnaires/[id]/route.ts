@@ -3,6 +3,7 @@ import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { sendGestionnaireAccessChangedEmail, type GestionnaireAccessChange } from '@/lib/email';
 import { gestionnaireRestoreDeadline } from '@/lib/gestionnaire-retention';
+import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
 type GestionnaireStatus = (typeof VALID_STATUSES)[number];
@@ -187,6 +188,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   if (gestionnaireRestoreDeadline(target.deletedAt).getTime() < Date.now()) {
     return NextResponse.json({ error: 'RESTORE_WINDOW_EXPIRED' }, { status: 409 });
+  }
+
+  // D15 : restaurer un gestionnaire reprend une place du quota. Entre son
+  // retrait et sa restauration, le cabinet a pu inviter quelqu'un d'autre.
+  const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinetId);
+  if (limits && isQuotaReached(utilisateurs.used, limits.maxUtilisateurs)) {
+    return NextResponse.json(
+      quotaExceededBody('maxUtilisateurs', limits.maxUtilisateurs as number, utilisateurs.used),
+      { status: 403 },
+    );
   }
 
   const done = await prisma.$transaction(async (tx) => {

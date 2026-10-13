@@ -46,6 +46,7 @@ afterAll(async () => {
   await prisma.verification.deleteMany({
     where: { OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }] },
   });
+  await prisma.pricingPlan.deleteMany({ where: { planId: { startsWith: 'vitest-quota-' } } });
 });
 
 async function creerCabinetRH(label: string) {
@@ -516,6 +517,32 @@ describe('restauration d un gestionnaire retire (D52)', () => {
       expect(res.status).toBe(403);
       expect(await res.json()).toEqual({ error: 'RESTORE_NOT_ALLOWED' });
     }
+  });
+
+  it('refuse de restaurer quand le quota d utilisateurs est atteint (D15)', async () => {
+    const { cj, user: titulaire } = await creerCabinetRH('rest-quota');
+    const planId = `vitest-quota-rest-${Date.now()}`;
+    await prisma.pricingPlan.create({
+      data: { planId, name: planId, description: 'plan de test', features: ['test'], maxUtilisateurs: 2 },
+    });
+    await prisma.user.update({ where: { id: titulaire.id }, data: { plan: planId } });
+
+    const { user: retire } = await creerGestionnaire(titulaire.cabinetId!, 'rest-quota-retire');
+    await del(retire.id, cj);
+    // Une place est reprise par un autre gestionnaire : titulaire + lui = 2/2.
+    await creerGestionnaire(titulaire.cabinetId!, 'rest-quota-autre');
+
+    const res = await put(retire.id, cj);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      error: 'QUOTA_EXCEEDED',
+      quota: 'maxUtilisateurs',
+      limit: 2,
+      used: 2,
+    });
+
+    const apres = await prisma.user.findUniqueOrThrow({ where: { id: retire.id } });
+    expect(apres.deletedAt).not.toBeNull();
   });
 
   it('renvoie 404 pour un gestionnaire d un autre cabinet ou non archive (isolation)', async () => {

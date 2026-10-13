@@ -50,6 +50,7 @@ afterAll(async () => {
   });
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.invitation.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
+  await prisma.pricingPlan.deleteMany({ where: { planId: { startsWith: 'vitest-quota-' } } });
   await prisma.verification.deleteMany({
     where: {
       OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }],
@@ -149,6 +150,87 @@ describe('creation d une invitation', () => {
 
     const second = await createInvitation(requestJSON(`${APP_URL}/api/invitations`, { email: cibleEmail }, cj));
     expect(second.status).toBe(409);
+  });
+});
+
+describe('quota d utilisateurs du plan (D15)', () => {
+  async function creerPlan(label: string, maxUtilisateurs: number | null) {
+    const planId = `vitest-quota-${label}-${Date.now()}`;
+    await prisma.pricingPlan.create({
+      data: { planId, name: planId, description: 'plan de test', features: ['test'], maxUtilisateurs },
+    });
+    return planId;
+  }
+
+  it('bloque une invitation qui depasserait le quota, en comptant les invitations en attente', async () => {
+    const { cj, user } = await creerCabinetRH('quota-bloque');
+    // Titulaire = 1 place ; une seule invitation possible avec un plan a 2.
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { plan: await creerPlan('bloque', 2) },
+    });
+
+    const premier = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-un') }, cj),
+    );
+    expect(premier.status).toBe(200);
+
+    const second = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-deux') }, cj),
+    );
+    expect(second.status).toBe(403);
+    expect(await second.json()).toEqual({
+      error: 'QUOTA_EXCEEDED',
+      quota: 'maxUtilisateurs',
+      limit: 2,
+      used: 2,
+    });
+  });
+
+  it('libere la place quand l invitation est revoquee', async () => {
+    const { cj, user } = await creerCabinetRH('quota-revoque');
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { plan: await creerPlan('revoque', 2) },
+    });
+    const { invitation } = await inviter(cj, 'quota-revoque-cible');
+    expect(
+      (
+        await createInvitation(
+          requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-r2') }, cj),
+        )
+      ).status,
+    ).toBe(403);
+
+    await revokeInvitation(
+      requestWith('DELETE', `${APP_URL}/api/invitations/${invitation.id}`, cj),
+      ctx(invitation.id),
+    );
+
+    const apres = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-r3') }, cj),
+    );
+    expect(apres.status).toBe(200);
+  });
+
+  it('n applique aucune limite a un plan illimite ni a un cabinet sans plan', async () => {
+    const { cj, user } = await creerCabinetRH('quota-illimite');
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { plan: await creerPlan('illimite', null) },
+    });
+    for (const label of ['quota-i1', 'quota-i2', 'quota-i3']) {
+      const res = await createInvitation(
+        requestJSON(`${APP_URL}/api/invitations`, { email: testEmail(label) }, cj),
+      );
+      expect(res.status).toBe(200);
+    }
+
+    const { cj: sansPlanCj } = await creerCabinetRH('quota-sans-plan');
+    const res = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-sp') }, sansPlanCj),
+    );
+    expect(res.status).toBe(200);
   });
 });
 
