@@ -100,6 +100,7 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 
 | Élément | Où | Remarque |
 |---|---|---|
+| Quotas du plan (D15) | `lib/cabinet-quotas.ts`, `components/cabinet/quota-usage.tsx`, `PricingPlan.max*`, réglage dans la page Configuration SuperAdmin | ✅ Utilisateurs bloquants (invitation, restauration) ; entreprises et stockage : valeur lue, blocage à brancher avec C1 et C5 |
 | Inscription avec choix du plan | `(auth)/register`, `components/auth/register-flow.tsx` | Plan validé côté serveur (existe, non archivé, pas « sur devis ») |
 | Création automatique du cabinet | `lib/auth.ts`, hook après `/sign-up/email` | Nom = raison sociale saisie ; audit `CABINET_CREATED` |
 | Essai Stripe 30 jours | `lib/stripe-trial.ts` | Customer + abonnement **sans moyen de paiement** |
@@ -142,6 +143,7 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 
 - Les comptes Entreprise cliente et Collaborateur ne comptent **pas** dans les utilisateurs du cabinet.
 - Options : +25 €/mois par utilisateur supplémentaire, +10 €/mois par tranche de 10 Go (articles Stripe additionnels qui augmentent le quota).
+- **Règles appliquées (octobre 2026)** : `null` = illimité ; les utilisateurs comptés sont le Cabinet RH et les gestionnaires non archivés (**suspendus compris**) ; une **invitation en attente réserve une place** ; restaurer un gestionnaire retiré reprend une place. Un cabinet sans plan connu n'est soumis à aucun quota. Un plan archivé continue de s'appliquer à ceux qui l'ont déjà.
 
 ## 10. Fonctionnalités par plan
 
