@@ -87,6 +87,36 @@ describe('GestionnairesManager', () => {
     expect(screen.getByRole('button', { name: 'Restaurer Eva Roche' })).toBeInTheDocument();
   });
 
+  it('mentionne les comptes supprimes par la personne, sans bouton de restauration', () => {
+    render(
+      <GestionnairesManager
+        gestionnaires={[]}
+        invitations={[]}
+        archived={[]}
+        selfDeleted={[
+          {
+            id: 's1',
+            name: 'Adrien mertens T',
+            email: 'adrien@gmail.com',
+            deletedAt: new Date('2026-10-13T12:56:00Z'),
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Comptes supprimés par la personne')).toBeInTheDocument();
+    expect(screen.getByText('Adrien mertens T')).toBeInTheDocument();
+    expect(screen.getByText(/A supprimé son compte le 13\/10\/2026/)).toBeInTheDocument();
+    // 13/10/2026 + 90 jours.
+    expect(screen.getByText(/suppression définitive le 11\/01\/2027/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Restaurer/ })).not.toBeInTheDocument();
+  });
+
+  it('masque la section des comptes supprimes quand il n y en a aucun', () => {
+    render(<GestionnairesManager gestionnaires={[]} invitations={[]} archived={[]} />);
+    expect(screen.queryByText('Comptes supprimés par la personne')).not.toBeInTheDocument();
+  });
+
   it('masque la section des retires quand il n y en a aucun', () => {
     render(<GestionnairesManager gestionnaires={[]} invitations={[]} archived={[]} />);
     expect(screen.queryByText('Gestionnaires retirés')).not.toBeInTheDocument();

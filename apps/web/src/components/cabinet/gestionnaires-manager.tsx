@@ -4,8 +4,10 @@ import { InvitationActions } from '@/components/cabinet/invitation-actions';
 import { GestionnaireActions } from '@/components/cabinet/gestionnaire-actions';
 import { GestionnaireRestore } from '@/components/cabinet/gestionnaire-restore';
 import { GESTIONNAIRE_RESTORE_WINDOW_DAYS } from '@/lib/gestionnaire-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 import type {
   ArchivedGestionnaireRow,
+  SelfDeletedGestionnaireRow,
   GestionnaireRow,
   InvitationRow,
   InvitationStatus,
@@ -36,11 +38,14 @@ export function GestionnairesManager({
   gestionnaires,
   invitations,
   archived,
+  selfDeleted = [],
   userQuota,
 }: {
   gestionnaires: GestionnaireRow[];
   invitations: InvitationRow[];
   archived: ArchivedGestionnaireRow[];
+  // Comptes supprimes par la personne elle-meme : information seulement.
+  selfDeleted?: SelfDeletedGestionnaireRow[];
   // Places utilisees / maximum du plan (D15) ; absent = aucun quota connu.
   userQuota?: { used: number; limit: number | null };
 }) {
@@ -124,6 +129,34 @@ export function GestionnairesManager({
           </ul>
         )}
       </section>
+
+      {selfDeleted.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card">
+          <header className="border-b border-border px-4 py-4 sm:px-5">
+            <h2 className="text-sm font-bold text-foreground">Comptes supprimés par la personne</h2>
+            <p className="text-xs text-muted-foreground">
+              Ces gestionnaires ont supprimé eux-mêmes leur compte : vous ne pouvez pas le restaurer.
+              Seule l&apos;administration SocialFlow le peut, jusqu&apos;à la suppression définitive.
+            </p>
+          </header>
+          <ul className="divide-y divide-border">
+            {selfDeleted.map((s) => (
+              <li key={s.id} className="flex flex-col gap-1 px-4 py-3 sm:px-5">
+                <p className="truncate text-sm font-semibold text-foreground">{s.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{s.email}</p>
+                <p className="text-xs text-muted-foreground">
+                  A supprimé son compte le {formatDate(s.deletedAt)} · suppression définitive le{' '}
+                  {formatDate(
+                    new Date(
+                      s.deletedAt.getTime() + ACCOUNT_DELETION_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+                    ),
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {archived.length > 0 && (
         <section className="rounded-2xl border border-border bg-card">

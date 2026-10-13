@@ -6,6 +6,7 @@ import {
   getCabinetOverview,
   getGestionnaires,
   getInvitations,
+  getSelfDeletedGestionnaires,
   invitationDisplayStatus,
 } from '@/lib/cabinet-data';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
@@ -323,6 +324,42 @@ describe('getArchivedGestionnaires', () => {
     expect(rows.map((r) => r.id)).toEqual([recent.id]);
     // Echeance = retrait + 30 jours.
     expect(rows[0].restorableUntil.getTime() - rows[0].deletedAt.getTime()).toBe(30 * day);
+  });
+});
+
+describe('getSelfDeletedGestionnaires', () => {
+  it('ne liste que les comptes supprimes par la personne dans ce cabinet', async () => {
+    const mine = await createCabinet(`Cabinet S ${stamp}`);
+    const other = await createCabinet(`Cabinet T ${stamp}`);
+
+    const self = await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(),
+      deletedBy: null,
+    });
+    await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(),
+      deletedBy: 'CABINET_RH',
+    });
+    await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(),
+      deletedBy: 'SUPER_ADMIN',
+    });
+    await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH' });
+    await createUser({
+      cabinetId: other.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(),
+      deletedBy: null,
+    });
+
+    const rows = await getSelfDeletedGestionnaires(mine.id);
+    expect(rows.map((r) => r.id)).toEqual([self.id]);
   });
 });
 

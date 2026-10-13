@@ -7,6 +7,7 @@ import {
   getArchivedGestionnaires,
   getGestionnaires,
   getInvitations,
+  getSelfDeletedGestionnaires,
 } from '@/lib/cabinet-data';
 
 export const metadata: Metadata = {
@@ -20,10 +21,11 @@ export default async function GestionnairesPage() {
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
 
-  const [gestionnaires, invitations, archived, quotas] = await Promise.all([
+  const [gestionnaires, invitations, archived, selfDeleted, quotas] = await Promise.all([
     getGestionnaires(user.cabinetId),
     getInvitations(user.cabinetId),
     getArchivedGestionnaires(user.cabinetId),
+    getSelfDeletedGestionnaires(user.cabinetId),
     getCabinetQuotaUsage(user.cabinetId),
   ]);
 
@@ -32,6 +34,7 @@ export default async function GestionnairesPage() {
       gestionnaires={gestionnaires}
       invitations={invitations}
       archived={archived}
+      selfDeleted={selfDeleted}
       userQuota={
         quotas.limits
           ? { used: quotas.utilisateurs.used, limit: quotas.limits.maxUtilisateurs }

@@ -202,3 +202,28 @@ export async function getArchivedGestionnaires(
       : [],
   );
 }
+
+export type SelfDeletedGestionnaireRow = {
+  id: string;
+  name: string;
+  email: string;
+  deletedAt: Date;
+};
+
+// Gestionnaires qui ont supprime leur propre compte (deletedBy absent). Le
+// cabinet ne peut pas les restaurer (RGPD : c'est leur choix, et seul le
+// SuperAdmin le peut jusqu'a la purge) ; on les liste uniquement pour qu'une
+// invitation "acceptee" ne laisse pas une personne disparaitre sans
+// explication. Les comptes retires par le cabinet ou archives par le
+// SuperAdmin ont un auteur et n'en font pas partie.
+export async function getSelfDeletedGestionnaires(
+  cabinetId: string,
+): Promise<SelfDeletedGestionnaireRow[]> {
+  const rows = await prisma.user.findMany({
+    where: { cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: { not: null }, deletedBy: null },
+    orderBy: { deletedAt: 'desc' },
+    select: { id: true, name: true, email: true, deletedAt: true },
+  });
+
+  return rows.flatMap((row) => (row.deletedAt ? [{ ...row, deletedAt: row.deletedAt }] : []));
+}
