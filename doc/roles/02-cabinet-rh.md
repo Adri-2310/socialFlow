@@ -100,6 +100,7 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 
 | Élément | Où | Remarque |
 |---|---|---|
+| Alertes du dashboard (§ 4.1) | `lib/cabinet-alerts.ts`, `components/cabinet/alerts.tsx` | ✅ Quota atteint ou ≥ 80 %, invitations expirées, gestionnaires suspendus, restauration à moins de 7 jours, aucun gestionnaire. À venir avec leurs chantiers : entreprise sans gestionnaire, échéances ONSS, paiement en échec |
 | Journal d'audit du cabinet (D31) | `dashboard/cabinet/audit`, `lib/cabinet-audit.ts`, `components/cabinet/audit-log.tsx` | ✅ Filtres action, personne, période (heure de Bruxelles), pagination. Le cycle de vie du cabinet (création, suspension, archivage) n'y figure pas. Un SuperAdmin apparaît comme « Administration SocialFlow ». Les actions du SuperAdmin sur un utilisateur du cabinet n'y figurent pas (pas de `cabinetId` posé) ; les assignations, entreprises et paramètres s'ajouteront avec leurs chantiers |
 | Quotas du plan (D15) | `lib/cabinet-quotas.ts`, `components/cabinet/quota-usage.tsx`, `PricingPlan.max*`, réglage dans la page Configuration SuperAdmin | ✅ Utilisateurs bloquants (invitation, restauration) ; entreprises et stockage : valeur lue, blocage à brancher avec C1 et C5 |
 | Inscription avec choix du plan | `(auth)/register`, `components/auth/register-flow.tsx` | Plan validé côté serveur (existe, non archivé, pas « sur devis ») |
