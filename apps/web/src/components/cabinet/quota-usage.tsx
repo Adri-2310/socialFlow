@@ -1,13 +1,10 @@
 import { Building2, HardDrive, Users } from 'lucide-react';
-import { quotaPercent, isQuotaReached, type CabinetQuotaUsage } from '@/lib/cabinet-quotas';
-
-function formatStorage(mb: number): string {
-  if (mb >= 1024) {
-    const go = mb / 1024;
-    return `${Number.isInteger(go) ? go : go.toFixed(1)} Go`;
-  }
-  return `${mb} Mo`;
-}
+import {
+  formatStorageMb,
+  quotaPercent,
+  isQuotaReached,
+  type CabinetQuotaUsage,
+} from '@/lib/cabinet-quotas';
 
 function QuotaRow({
   icon: Icon,
@@ -102,7 +99,7 @@ export function QuotaUsage({ data }: { data: CabinetQuotaUsage }) {
             label="Stockage"
             used={storageMb.used}
             limit={limits.maxStorageMb}
-            format={formatStorage}
+            format={formatStorageMb}
           />
         </div>
       )}
