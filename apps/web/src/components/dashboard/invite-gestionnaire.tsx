@@ -58,7 +58,7 @@ export function InviteGestionnaire() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -68,7 +68,7 @@ export function InviteGestionnaire() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="gestionnaire@cabinet.be"
-            className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-base text-foreground sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <button

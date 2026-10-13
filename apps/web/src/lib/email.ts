@@ -326,3 +326,72 @@ export async function sendGestionnaireInvitationEmail(
 
   if (error) throw new Error(error.message);
 }
+
+export type GestionnaireAccessChange =
+  | 'suspended'
+  | 'reactivated'
+  | 'archived'
+  | 'restored'
+  | 'email_changed';
+
+const ACCESS_CHANGE_COPY: Record<
+  GestionnaireAccessChange,
+  { subject: string; title: string; body: (cabinet: string) => string }
+> = {
+  suspended: {
+    subject: 'Votre accès à SocialFlow a été suspendu',
+    title: 'Votre accès a été suspendu',
+    body: (cabinet) =>
+      `${cabinet} a suspendu votre accès à SocialFlow. Vous ne pouvez plus vous connecter pour le moment. Pour le réactiver, contactez le responsable de votre cabinet.`,
+  },
+  reactivated: {
+    subject: 'Votre accès à SocialFlow a été réactivé',
+    title: 'Votre accès a été réactivé',
+    body: (cabinet) =>
+      `${cabinet} a réactivé votre accès à SocialFlow. Vous pouvez de nouveau vous connecter avec vos identifiants habituels.`,
+  },
+  archived: {
+    subject: 'Votre accès à SocialFlow a été retiré',
+    title: 'Votre accès a été retiré',
+    body: (cabinet) =>
+      `${cabinet} a retiré votre accès à SocialFlow. Si vous pensez qu'il s'agit d'une erreur, contactez le responsable de votre cabinet.`,
+  },
+  restored: {
+    subject: 'Votre accès à SocialFlow a été rétabli',
+    title: 'Votre accès a été rétabli',
+    body: (cabinet) =>
+      `${cabinet} a rétabli votre compte SocialFlow. Vous pouvez de nouveau vous connecter, sauf si votre accès a été suspendu par ailleurs.`,
+  },
+  // Envoye a l'ANCIENNE adresse (D53) : c'est elle qui doit etre prevenue.
+  email_changed: {
+    subject: "L'adresse email de votre compte SocialFlow a été modifiée",
+    title: "L'adresse de votre compte a été modifiée",
+    body: (cabinet) =>
+      `${cabinet} a modifié l'adresse email de connexion de votre compte SocialFlow. Vous devez désormais vous connecter avec la nouvelle adresse, que vous allez devoir confirmer par email. Si vous pensez qu'il s'agit d'une erreur, contactez le responsable de votre cabinet.`,
+  },
+};
+
+// D52 : informe un gestionnaire d'un changement d'acces decide par son cabinet.
+export async function sendGestionnaireAccessChangedEmail(
+  email: string,
+  name: string,
+  cabinetName: string,
+  change: GestionnaireAccessChange,
+) {
+  const copy = ACCESS_CHANGE_COPY[change];
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Accès au compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">${copy.title}</h1>
+    <p style="margin:0 0 12px; color:#475569;">Bonjour ${escapeHtml(name)},</p>
+    <p style="margin:0; color:#475569;">${escapeHtml(copy.body(cabinetName))}</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: copy.subject,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}

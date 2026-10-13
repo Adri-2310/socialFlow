@@ -187,6 +187,13 @@ export const auth = betterAuth({
         defaultValue: 'actif',
         input: false,
       },
+      // Auteur de la suspension (D52) : lu a la connexion pour distinguer une
+      // suspension par le cabinet d'une suspension par le SuperAdmin.
+      suspendedBy: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
     },
   },
   hooks: {
@@ -324,9 +331,17 @@ export const auth = betterAuth({
         deleteSessionCookie(ctx, true);
         ctx.context.setNewSession(null);
 
+        // D52 : suspendu par son cabinet, l'utilisateur doit s'adresser a son
+        // cabinet et non au support SocialFlow. Toute autre valeur
+        // (SUPER_ADMIN ou null, anterieur au champ) garde le message d'origine.
+        const byCabinet =
+          (freshSession.user as { suspendedBy?: string | null }).suspendedBy === 'CABINET_RH';
+        const apiCode = byCabinet ? 'USER_SUSPENDED_BY_CABINET' : 'USER_SUSPENDED';
+        const redirectCode = byCabinet ? 'user_suspended_by_cabinet' : 'user_suspended';
+
         if (ctx.path === '/sign-in/email') {
           throw new APIError('FORBIDDEN', {
-            code: 'USER_SUSPENDED',
+            code: apiCode,
             message: 'Ce compte a ete suspendu.',
           });
         }
@@ -334,11 +349,11 @@ export const auth = betterAuth({
         if (ctx.path === '/magic-link/verify' || ctx.path.startsWith('/callback/')) {
           const errorURL = ctx.context.options.onAPIError?.errorURL || '/erreur-connexion';
           const separator = errorURL.includes('?') ? '&' : '?';
-          throw ctx.redirect(`${errorURL}${separator}error=user_suspended`);
+          throw ctx.redirect(`${errorURL}${separator}error=${redirectCode}`);
         }
 
         throw new APIError('FORBIDDEN', {
-          code: 'USER_SUSPENDED',
+          code: apiCode,
           message: 'Ce compte a ete suspendu.',
         });
       }

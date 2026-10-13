@@ -35,6 +35,12 @@ model User {
   // (contrairement a Cabinet.status qui suspend tout le cabinet). Meme
   // convention que Cabinet.status : string libre plutot qu'un enum Prisma.
   status String @default("actif") // actif | suspendu
+  // Qui a pose la suspension (D52) : SUPER_ADMIN | CABINET_RH. Sert a (1)
+  // n'autoriser la levee que par l'auteur (un Cabinet RH ne leve pas une
+  // suspension du SuperAdmin) et (2) afficher le bon message a la connexion.
+  // null avec status "suspendu" = suspension anterieure a ce champ, donc
+  // forcement du SuperAdmin.
+  suspendedBy String?
 
   // Archivage (au lieu d'une suppression definitive immediate) : la ligne
   // reste en base, toutes les sessions sont revoquees et toute nouvelle
@@ -42,6 +48,10 @@ model User {
   // reelle (voir ACCOUNT_DELETION_RETENTION_DAYS et route
   // /api/cron/purge-deleted-accounts).
   deletedAt DateTime?
+  // Qui a archive le compte (D52) : CABINET_RH | SUPER_ADMIN ; null =
+  // auto-suppression par l'utilisateur. Un Cabinet RH ne peut restaurer que
+  // ce qu'il a lui-meme retire (jamais une suppression voulue par la personne).
+  deletedBy String?
 
   // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : un Cabinet RH
   // en cree un a l'inscription (hooks.after dans auth.ts) ; un utilisateur

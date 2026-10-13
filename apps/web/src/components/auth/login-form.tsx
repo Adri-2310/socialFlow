@@ -77,6 +77,11 @@ export function LoginForm() {
         router.push('/erreur-connexion?error=user_suspended');
         return;
       }
+      // D52 : suspension posee par le cabinet de l'utilisateur.
+      if (signInError.code === 'USER_SUSPENDED_BY_CABINET') {
+        router.push('/erreur-connexion?error=user_suspended_by_cabinet');
+        return;
+      }
       setError(translateAuthError(signInError.code));
       return;
     }

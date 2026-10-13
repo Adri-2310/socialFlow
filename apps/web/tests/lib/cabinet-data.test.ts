@@ -2,6 +2,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import {
+  getArchivedGestionnaires,
   getCabinetOverview,
   getGestionnaires,
   getInvitations,
@@ -25,6 +26,8 @@ async function createUser(data: {
   cabinetId: string;
   role: string;
   status?: string;
+  suspendedBy?: string | null;
+  deletedBy?: string | null;
   deletedAt?: Date | null;
   plan?: string | null;
   billingPeriod?: string | null;
@@ -158,6 +161,38 @@ describe('getGestionnaires', () => {
     expect(rows.map((r) => r.id)).toEqual([actif.id, suspendu.id]);
     expect(rows.map((r) => r.status)).toEqual(['actif', 'suspendu']);
   });
+
+  it('indique si la suspension peut etre levee par le cabinet (D52)', async () => {
+    const cabinet = await createCabinet(`Cabinet K ${stamp}`);
+    const parCabinet = await createUser({
+      cabinetId: cabinet.id,
+      role: 'GESTIONNAIRE_RH',
+      status: 'suspendu',
+      suspendedBy: 'CABINET_RH',
+    });
+    const parAdmin = await createUser({
+      cabinetId: cabinet.id,
+      role: 'GESTIONNAIRE_RH',
+      status: 'suspendu',
+      suspendedBy: 'SUPER_ADMIN',
+    });
+    const sansAuteur = await createUser({
+      cabinetId: cabinet.id,
+      role: 'GESTIONNAIRE_RH',
+      status: 'suspendu',
+    });
+    const actif = await createUser({ cabinetId: cabinet.id, role: 'GESTIONNAIRE_RH' });
+
+    const rows = await getGestionnaires(cabinet.id);
+    const reactivatable = Object.fromEntries(rows.map((r) => [r.id, r.reactivatableByCabinet]));
+
+    expect(reactivatable).toEqual({
+      [parCabinet.id]: true,
+      [parAdmin.id]: false,
+      [sansAuteur.id]: false,
+      [actif.id]: false,
+    });
+  });
 });
 
 describe('getInvitations', () => {
@@ -204,6 +239,54 @@ describe('getInvitations', () => {
     });
     // Le jeton ne doit jamais sortir de la couche de lecture.
     for (const row of rows) expect(row).not.toHaveProperty('tokenHash');
+  });
+});
+
+describe('getArchivedGestionnaires', () => {
+  const day = 24 * 60 * 60 * 1000;
+
+  it('ne liste que les gestionnaires retires par le cabinet dans les 30 jours', async () => {
+    const mine = await createCabinet(`Cabinet L ${stamp}`);
+    const other = await createCabinet(`Cabinet M ${stamp}`);
+    const now = new Date();
+
+    const recent = await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(now.getTime() - 5 * day),
+      deletedBy: 'CABINET_RH',
+    });
+    await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(now.getTime() - 31 * day),
+      deletedBy: 'CABINET_RH',
+    });
+    await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(now.getTime() - 2 * day),
+      deletedBy: null,
+    });
+    await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(now.getTime() - 2 * day),
+      deletedBy: 'SUPER_ADMIN',
+    });
+    await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH' });
+    await createUser({
+      cabinetId: other.id,
+      role: 'GESTIONNAIRE_RH',
+      deletedAt: new Date(now.getTime() - 1 * day),
+      deletedBy: 'CABINET_RH',
+    });
+
+    const rows = await getArchivedGestionnaires(mine.id, now);
+
+    expect(rows.map((r) => r.id)).toEqual([recent.id]);
+    // Echeance = retrait + 30 jours.
+    expect(rows[0].restorableUntil.getTime() - rows[0].deletedAt.getTime()).toBe(30 * day);
   });
 });
 

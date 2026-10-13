@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/prisma';
+import {
+  GESTIONNAIRE_RESTORE_WINDOW_DAYS,
+  gestionnaireRestoreDeadline,
+} from '@/lib/gestionnaire-retention';
 
 // Couche de lecture du dashboard Cabinet RH (/dashboard). Meme principe que
 // admin-data.ts pour le SuperAdmin : une requete par concept, scopee par
@@ -67,6 +71,9 @@ export type GestionnaireRow = {
   name: string;
   email: string;
   status: 'actif' | 'suspendu';
+  // D52 : true si la suspension peut etre levee par le Cabinet RH (posee par
+  // lui). Une suspension du SuperAdmin, ou anterieure au champ, ne l'est pas.
+  reactivatableByCabinet: boolean;
   createdAt: Date;
 };
 
@@ -77,12 +84,23 @@ export async function getGestionnaires(cabinetId: string): Promise<GestionnaireR
   const rows = await prisma.user.findMany({
     where: { cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: null },
     orderBy: { createdAt: 'asc' },
-    select: { id: true, name: true, email: true, status: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      status: true,
+      suspendedBy: true,
+      createdAt: true,
+    },
   });
 
   return rows.map((row) => ({
-    ...row,
+    id: row.id,
+    name: row.name,
+    email: row.email,
     status: row.status === 'suspendu' ? 'suspendu' : 'actif',
+    reactivatableByCabinet: row.status === 'suspendu' && row.suspendedBy === 'CABINET_RH',
+    createdAt: row.createdAt,
   }));
 }
 
@@ -109,8 +127,8 @@ export function invitationDisplayStatus(
   return expiresAt.getTime() <= now.getTime() ? 'expired' : 'pending';
 }
 
-// Le jeton (Invitation.token) n'est volontairement jamais selectionne : il
-// n'a pas a quitter la base, il n'existe que dans l'email envoye (C3).
+// Le hash du jeton (Invitation.tokenHash) n'est volontairement jamais
+// selectionne : le jeton en clair n'existe que dans l'email envoye (C3).
 export async function getInvitations(cabinetId: string): Promise<InvitationRow[]> {
   const now = new Date();
   const rows = await prisma.invitation.findMany({
@@ -127,4 +145,39 @@ export async function getInvitations(cabinetId: string): Promise<InvitationRow[]
     expiresAt: row.expiresAt,
     createdAt: row.createdAt,
   }));
+}
+
+export type ArchivedGestionnaireRow = {
+  id: string;
+  name: string;
+  email: string;
+  deletedAt: Date;
+  restorableUntil: Date;
+};
+
+// Gestionnaires retires par le cabinet et encore restaurables (D52) : retires
+// par le Cabinet RH lui-meme (deletedBy) - jamais une auto-suppression ni un
+// archivage du SuperAdmin - et dans le delai de restauration.
+export async function getArchivedGestionnaires(
+  cabinetId: string,
+  now: Date = new Date(),
+): Promise<ArchivedGestionnaireRow[]> {
+  const since = new Date(now.getTime() - GESTIONNAIRE_RESTORE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  const rows = await prisma.user.findMany({
+    where: {
+      cabinetId,
+      role: 'GESTIONNAIRE_RH',
+      deletedBy: 'CABINET_RH',
+      deletedAt: { gte: since },
+    },
+    orderBy: { deletedAt: 'desc' },
+    select: { id: true, name: true, email: true, deletedAt: true },
+  });
+
+  return rows.flatMap((row) =>
+    row.deletedAt
+      ? [{ ...row, deletedAt: row.deletedAt, restorableUntil: gestionnaireRestoreDeadline(row.deletedAt) }]
+      : [],
+  );
 }

@@ -42,12 +42,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // le blocage dans hooks.after de auth.ts empeche les NOUVELLES sessions,
     // mais ne touche pas celles deja actives.
     await prisma.session.deleteMany({ where: { userId } });
-    await prisma.user.update({ where: { id: userId }, data: { status: 'suspendu' } });
+    // D52 : memorise l'auteur, pour qu'un Cabinet RH ne puisse pas lever
+    // une suspension posee par le SuperAdmin.
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: 'suspendu', suspendedBy: 'SUPER_ADMIN' },
+    });
     await prisma.auditLog.create({
       data: { action: 'USER_SUSPENDED', actorId: session.user.id, targetUserId: userId },
     });
   } else {
-    await prisma.user.update({ where: { id: userId }, data: { status: 'actif' } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: 'actif', suspendedBy: null },
+    });
     await prisma.auditLog.create({
       data: { action: 'USER_REACTIVATED', actorId: session.user.id, targetUserId: userId },
     });
@@ -88,7 +96,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   }
 
   await prisma.session.deleteMany({ where: { userId } });
-  await prisma.user.update({ where: { id: userId }, data: { deletedAt: new Date() } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { deletedAt: new Date(), deletedBy: 'SUPER_ADMIN' },
+  });
   await prisma.auditLog.create({
     data: { action: 'USER_ARCHIVED', actorId: session.user.id, targetUserId: userId },
   });
@@ -115,7 +126,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'USER_NOT_ARCHIVED' }, { status: 400 });
   }
 
-  await prisma.user.update({ where: { id: userId }, data: { deletedAt: null } });
+  await prisma.user.update({ where: { id: userId }, data: { deletedAt: null, deletedBy: null } });
   await prisma.auditLog.create({
     data: { action: 'USER_RESTORED', actorId: session.user.id, targetUserId: userId },
   });

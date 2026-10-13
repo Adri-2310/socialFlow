@@ -63,6 +63,16 @@ function auditMessage(log: AuditLogEntry): string {
       return `Un plan tarifaire a été archivé par ${log.actorName ?? 'un administrateur'}.`;
     case 'PRICING_PLAN_RESTORED':
       return `Un plan tarifaire a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'USER_EMAIL_CHANGED':
+      return `L'email de « ${targetUserName} » a été modifié par ${log.actorName ?? 'un administrateur'}.`;
+    case 'INVITATION_SENT':
+      return `« ${cabinetName} » : une invitation a été envoyée par ${log.actorName ?? 'un utilisateur'}.`;
+    case 'INVITATION_RESENT':
+      return `« ${cabinetName} » : une invitation a été renvoyée par ${log.actorName ?? 'un utilisateur'}.`;
+    case 'INVITATION_REVOKED':
+      return `« ${cabinetName} » : une invitation a été révoquée par ${log.actorName ?? 'un utilisateur'}.`;
+    case 'INVITATION_ACCEPTED':
+      return `« ${cabinetName} » : ${log.actorName ?? 'un utilisateur'} a accepté une invitation.`;
     default:
       return log.action;
   }

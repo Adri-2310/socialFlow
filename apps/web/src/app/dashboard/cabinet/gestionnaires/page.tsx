@@ -2,7 +2,11 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { GestionnairesManager } from '@/components/cabinet/gestionnaires-manager';
 import { requireSession } from '@/lib/require-session';
-import { getGestionnaires, getInvitations } from '@/lib/cabinet-data';
+import {
+  getArchivedGestionnaires,
+  getGestionnaires,
+  getInvitations,
+} from '@/lib/cabinet-data';
 
 export const metadata: Metadata = {
   title: 'Gestionnaires — SocialFlow',
@@ -15,10 +19,17 @@ export default async function GestionnairesPage() {
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
 
-  const [gestionnaires, invitations] = await Promise.all([
+  const [gestionnaires, invitations, archived] = await Promise.all([
     getGestionnaires(user.cabinetId),
     getInvitations(user.cabinetId),
+    getArchivedGestionnaires(user.cabinetId),
   ]);
 
-  return <GestionnairesManager gestionnaires={gestionnaires} invitations={invitations} />;
+  return (
+    <GestionnairesManager
+      gestionnaires={gestionnaires}
+      invitations={invitations}
+      archived={archived}
+    />
+  );
 }

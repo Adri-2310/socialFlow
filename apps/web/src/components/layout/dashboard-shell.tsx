@@ -96,6 +96,7 @@ export function DashboardShell({
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 font-semibold transition ${
                   item.href === pathname
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
@@ -136,7 +137,7 @@ export function DashboardShell({
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-bold text-foreground">{activeItem.label}</h1>
+          <h1 className="truncate text-base font-bold text-foreground">{activeItem.label}</h1>
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
             <UserMenu userName={userName} roleLabel={roleLabel} />
