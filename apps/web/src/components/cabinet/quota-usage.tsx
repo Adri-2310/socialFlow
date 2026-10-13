@@ -77,7 +77,7 @@ export function QuotaUsage({ data }: { data: CabinetQuotaUsage }) {
         <div className="mt-4 space-y-5">
           <QuotaRow
             icon={Users}
-            label="Utilisateurs du cabinet"
+            label="Gestionnaires RH"
             used={utilisateurs.used}
             limit={limits.maxUtilisateurs}
             hint={

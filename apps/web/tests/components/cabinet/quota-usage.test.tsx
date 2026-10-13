@@ -14,8 +14,8 @@ describe('QuotaUsage', () => {
   it('affiche utilise / maximum pour chaque quota', () => {
     render(<QuotaUsage data={base} />);
 
-    expect(screen.getByText('Utilisateurs du cabinet')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Utilisateurs du cabinet' })).toHaveAttribute(
+    expect(screen.getByText('Gestionnaires RH')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Gestionnaires RH' })).toHaveAttribute(
       'aria-valuenow',
       '2',
     );
@@ -45,7 +45,7 @@ describe('QuotaUsage', () => {
     );
 
     expect(screen.getAllByText(/illimité/)).toHaveLength(2);
-    expect(screen.queryByRole('progressbar', { name: 'Utilisateurs du cabinet' })).toBeNull();
+    expect(screen.queryByRole('progressbar', { name: 'Gestionnaires RH' })).toBeNull();
     expect(screen.getByText(/100 Go/)).toBeInTheDocument();
   });
 

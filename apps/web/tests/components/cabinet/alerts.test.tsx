@@ -7,7 +7,7 @@ const alerts: CabinetAlert[] = [
   {
     id: 'a',
     level: 'danger',
-    title: "Quota d'utilisateurs atteint",
+    title: "Quota de gestionnaires atteint",
     description: 'Vous utilisez 3 sur 3.',
     href: '/dashboard/cabinet/gestionnaires',
   },
@@ -23,7 +23,7 @@ describe('CabinetAlerts', () => {
   it('affiche chaque alerte avec son titre, sa description et le compteur', () => {
     render(<CabinetAlerts alerts={alerts} />);
 
-    expect(screen.getByText("Quota d'utilisateurs atteint")).toBeInTheDocument();
+    expect(screen.getByText("Quota de gestionnaires atteint")).toBeInTheDocument();
     expect(screen.getByText('Vous utilisez 3 sur 3.')).toBeInTheDocument();
     expect(screen.getByText('(2)')).toBeInTheDocument();
   });

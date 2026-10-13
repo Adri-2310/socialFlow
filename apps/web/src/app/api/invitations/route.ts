@@ -35,8 +35,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'INVITATION_ALREADY_PENDING' }, { status: 409 });
   }
 
-  // D15 : quota d'utilisateurs du cabinet (Cabinet RH + gestionnaires +
-  // invitations en attente) bloquant. Controle apres les doublons pour ne pas
+  // D15, D56 : quota de gestionnaires (gestionnaires + invitations en
+  // attente ; le titulaire ne compte pas) bloquant. Controle apres les doublons pour ne pas
   // masquer une erreur plus precise.
   const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinetId);
   if (limits && isQuotaReached(utilisateurs.used, limits.maxUtilisateurs)) {

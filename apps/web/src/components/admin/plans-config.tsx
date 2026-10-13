@@ -180,7 +180,7 @@ function PlanFormFields({
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Utilisateurs du cabinet (max)</span>
+          <span className="mb-1 block font-medium text-foreground">Gestionnaires RH (max)</span>
           <input
             type="number"
             min={0}

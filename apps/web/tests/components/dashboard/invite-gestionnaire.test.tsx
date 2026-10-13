@@ -8,9 +8,9 @@ describe('InviteGestionnaire', () => {
   it('affiche les places utilisees et reste actif sous le quota', () => {
     render(<InviteGestionnaire quota={{ used: 2, limit: 3 }} />);
 
-    expect(screen.getByText('2 / 3 utilisateurs')).toBeInTheDocument();
+    expect(screen.getByText('2 / 3 gestionnaires')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inviter' })).toBeEnabled();
-    expect(screen.queryByText(/quota d'utilisateurs de votre plan est atteint/)).toBeNull();
+    expect(screen.queryByText(/quota de gestionnaires de votre plan est atteint/)).toBeNull();
   });
 
   it('desactive le formulaire et explique quand le quota est atteint', () => {
@@ -18,7 +18,7 @@ describe('InviteGestionnaire', () => {
 
     expect(screen.getByRole('button', { name: 'Inviter' })).toBeDisabled();
     expect(screen.getByPlaceholderText('gestionnaire@cabinet.be')).toBeDisabled();
-    expect(screen.getByText(/quota d'utilisateurs de votre plan est atteint/)).toBeInTheDocument();
+    expect(screen.getByText(/quota de gestionnaires de votre plan est atteint/)).toBeInTheDocument();
   });
 
   it('ne bloque rien pour un plan illimite ou sans information de quota', () => {

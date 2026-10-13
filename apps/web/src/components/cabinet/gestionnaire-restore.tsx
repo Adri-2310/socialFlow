@@ -9,7 +9,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   GESTIONNAIRE_NOT_FOUND: 'Ce gestionnaire est introuvable.',
   QUOTA_EXCEEDED:
-    "Le quota d'utilisateurs de votre plan est atteint : libérez une place ou passez à un plan supérieur.",
+    "Le quota de gestionnaires de votre plan est atteint : libérez une place ou passez à un plan supérieur.",
   RESTORE_NOT_ALLOWED: "Ce compte ne peut pas être restauré par le cabinet.",
   RESTORE_WINDOW_EXPIRED:
     'Le délai de restauration est dépassé. Contactez le support pour récupérer ce compte.',

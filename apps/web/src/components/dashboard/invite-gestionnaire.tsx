@@ -11,7 +11,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à inviter un gestionnaire.",
   QUOTA_EXCEEDED:
-    "Le quota d'utilisateurs de votre plan est atteint. Passez à un plan supérieur pour inviter davantage.",
+    "Le quota de gestionnaires de votre plan est atteint. Passez à un plan supérieur pour inviter davantage.",
 };
 
 // `quota` (places utilisees / maximum du plan, D15) sert uniquement a
@@ -68,7 +68,7 @@ export function InviteGestionnaire({
               <>
                 {' '}
                 <span className="whitespace-nowrap font-medium">
-                  {quota.used} / {quota.limit} utilisateurs
+                  {quota.used} / {quota.limit} gestionnaires
                 </span>
               </>
             )}
