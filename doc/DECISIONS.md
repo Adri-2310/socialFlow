@@ -130,6 +130,11 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 ### Stockage des fichiers (13/10/2026)
 - **D54.** Stockage des fichiers : **Vercel Blob** derrière une interface `StorageGateway` (implémentation en mémoire pour les tests), évolutif vers un stockage S3-compatible en production. Les métadonnées et le calcul du quota (D15) restent en base. Avatars et logos : redimensionnés en WebP, hors quota du plan. Documents et PDF de fiches : téléchargement toujours via une route serveur avec `authorize()` et audit, jamais de lien direct. Détail : `modules/stockage.md`.
 
+### Abonnement du cabinet (14/10/2026)
+- **D55.** Le **plan appartient au cabinet** (dette C2) : `Cabinet.planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`. États d'abonnement (`billingStatus`) : `EN_ATTENTE_PAIEMENT` (inscrit, rien payé), `ESSAI`, `ACTIF`, `DELAI_GRACE` (paiement échoué, D23), `IMPAYE` (suspendu pour impayé, D29), `RESILIE` (lecture seule après résiliation, D28). L'archivage reste `Cabinet.deletedAt` et la suspension manuelle du SuperAdmin `Cabinet.status`, qu'un paiement ne lève jamais. `User.plan` et `User.billingPeriod` ne sont plus lus : valeurs transitoires du formulaire d'inscription, à supprimer avec le passage à Stripe Checkout (D25). Dans cette étape le statut est **affiché** ; ses transitions par webhook Stripe et le blocage des écritures (`423 CABINET_READ_ONLY`) restent au chantier C0.
+
+- **D56.** Le quota « utilisateurs du cabinet » (`maxUtilisateurs`, D15, D34) ne compte **que les gestionnaires RH** : le titulaire (Cabinet RH) n'y figure pas, ni les comptes Entreprise cliente et Collaborateur. Les gestionnaires suspendus comptent, les archivés non, et une invitation en attente réserve une place. Les valeurs du plan restent 3 / 10 / illimité : Starter = 3 gestionnaires, comme annoncé sur la page tarifs. Remplace la lecture « Cabinet RH + gestionnaires » de la fiche Cabinet RH.
+
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.
 - **D17.** Lecteurs : Adrien (référence) et toute personne ou outil qui implémente (règles précises, critères d'acceptation).

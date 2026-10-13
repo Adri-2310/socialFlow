@@ -46,14 +46,14 @@ ESSAI (trialing) ─► fin d'essai : débit auto ─► ACTIF
 
 ### 4.1 Tableau de bord (à construire)
 - Abonnement : plan, statut (essai J-x / actif / délai de grâce / suspendu), prochaine échéance.
-- Consommation des quotas (D15, § 9) : entreprises clientes, utilisateurs du cabinet, stockage, en barres « utilisé / maximum ».
+- Consommation des quotas (D15, § 9) : entreprises clientes, gestionnaires RH, stockage, en barres « utilisé / maximum ».
 - Activité de paie **agrégée** (D26) pour la période en cours : fiches par statut (brouillon, à valider, validées, envoyées), retards, par gestionnaire et par entreprise. **Aucun montant de salaire.**
 - Alertes : entreprise sans gestionnaire, invitations expirées, échéances ONSS proches (module calendrier), paiement en échec.
 
 ### 4.2 Équipe — Gestionnaires RH
 | Action | Règles |
 |---|---|
-| Inviter | Email ; invitation `GESTIONNAIRE_RH` valable 7 jours ; refus si l'email a déjà un compte (D7) ou une invitation en cours ; **bloqué au-delà du quota `maxUtilisateurs`** (Cabinet RH + gestionnaires, § 9) |
+| Inviter | Email ; invitation `GESTIONNAIRE_RH` valable 7 jours ; refus si l'email a déjà un compte (D7) ou une invitation en cours ; **bloqué au-delà du quota `maxUtilisateurs`** (gestionnaires seulement, le titulaire ne compte pas, D56, § 9) |
 | Suivre les invitations | Liste : email, statut (en attente, acceptée, expirée, révoquée), date d'expiration ; actions **renvoyer** (nouveau jeton, nouvelle date) et **révoquer** |
 | Assigner | Associer un gestionnaire à une ou plusieurs entreprises (relation N:M) |
 | Suspendre (D52) | Réversible. Sessions coupées, connexion refusée avec un message l'invitant à contacter son cabinet ; le gestionnaire est **prévenu par email**. **Interdit tant qu'une entreprise lui est assignée sans autre gestionnaire** (D27, à appliquer avec les entreprises) |
@@ -105,7 +105,8 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | Quotas du plan (D15) | `lib/cabinet-quotas.ts`, `components/cabinet/quota-usage.tsx`, `PricingPlan.max*`, réglage dans la page Configuration SuperAdmin | ✅ Utilisateurs bloquants (invitation, restauration) ; entreprises et stockage : valeur lue, blocage à brancher avec C1 et C5 |
 | Inscription avec choix du plan | `(auth)/register`, `components/auth/register-flow.tsx` | Plan validé côté serveur (existe, non archivé, pas « sur devis ») |
 | Création automatique du cabinet | `lib/auth.ts`, hook après `/sign-up/email` | Nom = raison sociale saisie ; audit `CABINET_CREATED` |
-| Essai Stripe 30 jours | `lib/stripe-trial.ts` | Customer + abonnement **sans moyen de paiement** |
+| Essai Stripe 30 jours | `lib/stripe-trial.ts` | Customer + abonnement **sans moyen de paiement** (C1) ; pose `ESSAI`, `trialEndsAt` et `currentPeriodEnd` sur le cabinet |
+| Abonnement du cabinet (D55) | `Cabinet.planId` / `billingPeriod` / `billingStatus` / `trialEndsAt` / `currentPeriodEnd`, `lib/billing.ts`, carte Abonnement du dashboard | ✅ Affichage de l'état et de « J-x » ; alertes essai (≤ 7 jours), paiement en échec, impayé, résiliation. Un client ne peut pas changer le plan d'un cabinet qui en a déjà un |
 | Invitation de gestionnaire | `api/invitations`, `components/dashboard/invite-gestionnaire.tsx` | Jeton 7 jours, email via Resend |
 | Acceptation d'invitation | `api/invitations/accept`, `(auth)/invitations/accept` | Crée le compte par mot de passe, supprime le cabinet « fantôme » créé par le hook |
 | Vue d'ensemble du cabinet | `dashboard/cabinet`, `lib/cabinet-data.ts` (`getCabinetOverview`), `components/layout/dashboard-shell.tsx` | ✅ |
@@ -119,7 +120,7 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | # | Problème | Correction |
 |---|---|---|
 | C1 | Essai créé sans carte : Stripe ne pourra rien débiter (contraire à D25) | Remplacer `provisionStripeTrial` par une **session Stripe Checkout** (`mode: subscription`, `trial_period_days: 30`) ; le cabinet est activé par le webhook `checkout.session.completed` |
-| C2 | Plan stocké sur `User.plan` / `User.billingPeriod` | Déplacer sur `Cabinet` (`planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`) ; le plan appartient au cabinet, pas à une personne |
+| C2 | ~~Plan stocké sur `User.plan` / `User.billingPeriod`~~ | Corrigé le 14/10 (D55) : `Cabinet.planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`. `User.plan` n'est plus lu ; les colonnes seront supprimées avec Stripe Checkout (C1). Reste : transitions par webhook et blocage `423` (chantier C0) |
 | C3 | ~~Jeton d'invitation stocké en clair~~ | Corrigé le 13/10 : `Invitation.tokenHash` = `sha256(token)` (voir `lib/invitations.ts`) |
 | C4 | Acceptation d'invitation : mot de passe uniquement | Proposer aussi Google/Microsoft (email du compte OAuth = email invité) |
 | C5 | ~~Pas de renvoi ni de révocation d'invitation~~ | Corrigé le 13/10 (voir § 6) |
@@ -140,12 +141,12 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | Quota | Starter | Pro | Enterprise |
 |---|---|---|---|
 | Entreprises clientes (`maxEntreprises`) | 25 | 100 | illimité |
-| Utilisateurs du cabinet (`maxUtilisateurs` = Cabinet RH + gestionnaires) | 3 | 10 | illimité |
+| Gestionnaires RH (`maxUtilisateurs`, titulaire exclu, D56) | 3 | 10 | illimité |
 | Stockage (`maxStorageMb`) | 5 Go | 25 Go | 100 Go |
 
-- Les comptes Entreprise cliente et Collaborateur ne comptent **pas** dans les utilisateurs du cabinet.
+- Les comptes Entreprise cliente et Collaborateur ne comptent **pas** dans le quota, pas plus que le titulaire (Cabinet RH).
 - Options : +25 €/mois par utilisateur supplémentaire, +10 €/mois par tranche de 10 Go (articles Stripe additionnels qui augmentent le quota).
-- **Règles appliquées (octobre 2026)** : `null` = illimité ; les utilisateurs comptés sont le Cabinet RH et les gestionnaires non archivés (**suspendus compris**) ; une **invitation en attente réserve une place** ; restaurer un gestionnaire retiré reprend une place. Un cabinet sans plan connu n'est soumis à aucun quota. Un plan archivé continue de s'appliquer à ceux qui l'ont déjà.
+- **Règles appliquées (octobre 2026)** : `null` = illimité ; seuls les gestionnaires non archivés sont comptés (**suspendus compris** ; le titulaire n'est pas compté, D56) ; une **invitation en attente réserve une place** ; restaurer un gestionnaire retiré reprend une place. Un cabinet sans plan connu n'est soumis à aucun quota. Un plan archivé continue de s'appliquer à ceux qui l'ont déjà.
 
 ## 10. Fonctionnalités par plan
 
