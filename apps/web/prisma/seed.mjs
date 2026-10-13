@@ -28,6 +28,9 @@ const plans = [
       'Calendrier ONSS',
     ],
     sortOrder: 1,
+    maxEntreprises: 25,
+    maxUtilisateurs: 3,
+    maxStorageMb: 5120,
   },
   {
     planId: 'pro',
@@ -47,6 +50,9 @@ const plans = [
       'Branding personnalisé',
     ],
     sortOrder: 2,
+    maxEntreprises: 100,
+    maxUtilisateurs: 10,
+    maxStorageMb: 25600,
   },
   {
     planId: 'enterprise',
@@ -66,6 +72,9 @@ const plans = [
       'Accompagnement dédié',
     ],
     sortOrder: 3,
+    maxEntreprises: null,
+    maxUtilisateurs: null,
+    maxStorageMb: 102400,
   },
 ];
 

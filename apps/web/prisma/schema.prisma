@@ -206,6 +206,11 @@ model PricingPlan {
   badge        String?
   features     String[]
   sortOrder    Int       @default(0)
+  // Quotas bloquants (D15, valeurs par defaut en D34) ; null = illimite.
+  // maxUtilisateurs = Cabinet RH + gestionnaires ; maxStorageMb en Mo.
+  maxEntreprises  Int?
+  maxUtilisateurs Int?
+  maxStorageMb    Int?
   archivedAt   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
