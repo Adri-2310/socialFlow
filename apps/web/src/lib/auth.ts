@@ -502,7 +502,13 @@ export const auth = betterAuth({
         const newUser = ctx.context.newSession?.user;
         if (newUser?.role === 'CABINET_RH' && !newUser.cabinetId) {
           const cabinet = await prisma.cabinet.create({
-            data: { name: newUser.cabinetName?.trim() || `Cabinet de ${newUser.name}` },
+            data: {
+              name: newUser.cabinetName?.trim() || `Cabinet de ${newUser.name}`,
+              // D55 : le plan appartient au cabinet. User.plan n'est plus lu.
+              ...(validatedPlan
+                ? { planId: validatedPlan.planId, billingPeriod: validatedPlan.billingPeriod }
+                : {}),
+            },
           });
           await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId: cabinet.id });
           await prisma.auditLog.create({
@@ -521,9 +527,21 @@ export const auth = betterAuth({
       }
 
       if (ctx.path === '/update-user' && validatedPlan) {
-        const cabinetId = ctx.context.session?.user.cabinetId;
-        if (cabinetId) {
-          await provisionStripeTrial(cabinetId, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
+        const sessionUser = ctx.context.session?.user;
+        const cabinetId = sessionUser?.cabinetId;
+        // Seule la finalisation d'une inscription (OAuth) pose le plan, et une
+        // seule fois : un cabinet qui a deja un plan ne peut pas le changer par
+        // ce chemin, sinon n'importe quel client pourrait s'attribuer des
+        // quotas plus eleves sans payer (le changement de plan passe par le
+        // portail Stripe, D25).
+        if (cabinetId && sessionUser?.role === 'CABINET_RH') {
+          const { count } = await prisma.cabinet.updateMany({
+            where: { id: cabinetId, planId: null },
+            data: { planId: validatedPlan.planId, billingPeriod: validatedPlan.billingPeriod },
+          });
+          if (count > 0) {
+            await provisionStripeTrial(cabinetId, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
+          }
         }
       }
 

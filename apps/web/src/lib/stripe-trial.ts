@@ -30,12 +30,27 @@ export async function provisionStripeTrial(
   if (!price) return;
 
   const customer = await stripe.customers.create({ name: cabinet.name, metadata: { cabinetId } });
-  await stripe.subscriptions.create({
+  const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ price: price.id }],
     trial_period_days: TRIAL_DAYS,
     metadata: { cabinetId },
   });
 
-  await prisma.cabinet.update({ where: { id: cabinetId }, data: { stripeCustomerId: customer.id } });
+  // D55 : fin d'essai fournie par Stripe ; repli sur 30 jours si absente.
+  const trialEndsAt = subscription.trial_end
+    ? new Date(subscription.trial_end * 1000)
+    : new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+
+  await prisma.cabinet.update({
+    where: { id: cabinetId },
+    data: {
+      stripeCustomerId: customer.id,
+      planId,
+      billingPeriod,
+      billingStatus: 'ESSAI',
+      trialEndsAt,
+      currentPeriodEnd: trialEndsAt,
+    },
+  });
 }

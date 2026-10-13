@@ -96,6 +96,16 @@ model Cabinet {
   // /dashboard/admin/facturation) - null tant qu'aucun abonnement Stripe reel
   // n'a ete cree pour ce cabinet. Unique : un Customer Stripe par cabinet.
   stripeCustomerId String?      @unique
+  // Abonnement (D55) : le plan appartient au cabinet. Les transitions de
+  // billingStatus viendront du webhook Stripe (chantier C0) ; pour l'instant
+  // elles sont posees a l'inscription (voir lib/stripe-trial.ts).
+  // planId = PricingPlan.planId ; billingPeriod : monthly | yearly ;
+  // billingStatus : EN_ATTENTE_PAIEMENT | ESSAI | ACTIF | DELAI_GRACE | IMPAYE | RESILIE.
+  planId           String?
+  billingPeriod    String?
+  billingStatus    String       @default("EN_ATTENTE_PAIEMENT")
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
   users            User[]
   invitations      Invitation[]
   auditLogs        AuditLog[]

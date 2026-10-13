@@ -75,6 +75,30 @@ describe('provisionStripeTrial', () => {
 
     const updated = await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } });
     expect(updated.stripeCustomerId).toBe('cus_nouveau');
+    // D55 : plan, periode et etat d'abonnement poses sur le cabinet. Sans
+    // trial_end dans la reponse Stripe, repli sur 30 jours.
+    expect(updated.planId).toBe('starter');
+    expect(updated.billingPeriod).toBe('monthly');
+    expect(updated.billingStatus).toBe('ESSAI');
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(updated.trialEndsAt!.getTime() - (Date.now() + thirtyDays))).toBeLessThan(60_000);
+    expect(updated.currentPeriodEnd?.getTime()).toBe(updated.trialEndsAt?.getTime());
+  });
+
+  it('reprend la fin d essai renvoyee par Stripe', async () => {
+    const cabinet = await creerCabinetTest('trial-end-stripe');
+    stripePricesList.mockResolvedValue({
+      data: [{ id: 'price_monthly', metadata: { planId: 'starter', billingPeriod: 'monthly' } }],
+    });
+    const trialEnd = Math.floor(Date.now() / 1000) + 12 * 24 * 60 * 60;
+    // Identifiant client propre a ce test : Cabinet.stripeCustomerId est unique.
+    stripeCustomersCreate.mockResolvedValue({ id: 'cus_trial_end' });
+    stripeSubscriptionsCreate.mockResolvedValue({ id: 'sub_x', trial_end: trialEnd });
+
+    await provisionStripeTrial(cabinet.id, 'starter', 'monthly');
+
+    const updated = await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } });
+    expect(updated.trialEndsAt?.getTime()).toBe(trialEnd * 1000);
   });
 
   it('distingue bien la periode mensuelle de la periode annuelle', async () => {

@@ -132,8 +132,9 @@ describe('inscription : entrees invalides', () => {
     expect(res.status).toBe(200);
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBeNull();
     expect(user.cabinetId).not.toBeNull();
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBeNull();
 
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'CABINET_CREATED', actorId: user.id },
@@ -238,8 +239,9 @@ describe('profil : champs acceptes et refuses', () => {
     expect((await resBilling.json()).code).toBe('VALIDATION_ERROR');
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBeNull();
-    expect(user.billingPeriod).toBe('monthly');
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBeNull();
+    expect(cabinet.billingPeriod).toBeNull();
   });
 
   it('accepte une valeur de `plan` et `billingPeriod` faisant partie de l enum', async () => {
@@ -254,9 +256,34 @@ describe('profil : champs acceptes et refuses', () => {
     });
     expect(res.status).toBe(200);
 
+    // D55 : le plan est pose sur le cabinet, pas sur la personne.
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBe('enterprise');
-    expect(user.billingPeriod).toBe('yearly');
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBe('enterprise');
+    expect(cabinet.billingPeriod).toBe('yearly');
+  });
+
+  it('ne permet pas de changer le plan d un cabinet qui en a deja un (pas de quotas gratuits)', async () => {
+    const mail = testEmail('plan-deja-pose');
+    const cj = cookieJar();
+    cj.apply(
+      await auth.api.signUpEmail({
+        body: { name: 'X', cabinetName: 'Cabinet X', email: mail, password: PASSWORD, plan: 'starter' },
+        asResponse: true,
+      }),
+    );
+
+    const res = await auth.api.updateUser({
+      body: { plan: 'enterprise', billingPeriod: 'yearly' },
+      headers: cj.headers(),
+      asResponse: true,
+    });
+    expect(res.status).toBe(200);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBe('starter');
+    expect(cabinet.billingPeriod).toBe('monthly');
   });
 
   it("provisionne un essai Stripe des l'inscription quand un plan valide est fourni", async () => {
