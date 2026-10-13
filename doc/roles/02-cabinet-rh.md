@@ -32,7 +32,7 @@ ESSAI (trialing) ─► fin d'essai : débit auto ─► ACTIF
               ┌───────────────────────────────────┼──────────────────────────────┐
               ▼                                   ▼                              ▼
      paiement échoué                       résiliation (D28)            suspension manuelle
-     délai de grâce 14 j (D23)             accès complet jusqu'à        par le SuperAdmin
+     délai de grâce 7 j (D57)             accès complet jusqu'à        par le SuperAdmin
      │ non régularisé                      la fin de période
      ▼                                     ▼
      SUSPENDU (impayé)                     LECTURE SEULE 90 j (export possible)

@@ -86,7 +86,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | A3 | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
 | A4 | **Modifier un cabinet** (D19) | Fiche cabinet : nom, coordonnées, et changement de plan **uniquement via Stripe** (le plan local suit l'abonnement, jamais l'inverse). Audit `CABINET_UPDATED` avec avant/après |
 | A5 | **Quotas par plan** (D15) | `PricingPlan` + `maxEntreprises`, `maxUtilisateurs`, `maxStorageMb` (`null` = illimité) et droits `integrations`, `whiteLabel`, éditables dans Configuration ; valeurs de départ = cahier des charges client (D34) |
-| A6 | **Webhook Stripe + délai de grâce** (D23) | Voir § 6.1 |
+| A6 | **Webhook Stripe + délai de grâce** (D23, D57) | Voir § 6.1. ✅ Webhook `api/webhooks/stripe` (signature, idempotence, ordre des événements, plan repris du prix) ; 🟡 tâche quotidienne de fin de délai et blocage en lecture seule à construire |
 | A7 | **Barèmes automatiques** (D22) | Voir § 6.2 |
 | A8 | **Notifications in-app** | Modèle `Notification` (destinataire, type, message, lien, lu/non lu) + cloche dans l'en-tête, partagé par tous les rôles |
 | A9 | Journal d'audit | Filtres (action, acteur, cabinet, période), export CSV ; ajout `ipAddress`, `userAgent`, `metadata Json` |
@@ -98,8 +98,8 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 Inscription ─► essai 30 j (trialing) ─► 1er paiement ─► actif
                                           │ échec
                                           ▼
-                               past_due : délai de grâce 14 j
-                    (Stripe relance la carte, emails J0 / J7 / J12)
+                               past_due : délai de grâce 7 j
+                    (Stripe relance la carte, emails à J0 et J5)
                           │ paiement OK          │ fin du délai
                           ▼                      ▼
                         actif         cabinet suspendu (status = 'suspendu',
@@ -111,10 +111,10 @@ Inscription ─► essai 30 j (trialing) ─► 1er paiement ─► actif
 
 - Route `api/webhooks/stripe` : vérification de signature, idempotence (table `WebhookEvent`, `eventId` unique).
 - Événements : `customer.subscription.updated` (trialing/active/past_due/canceled), `invoice.payment_failed`, `invoice.paid`, `customer.subscription.deleted`.
-- Fin du délai : un cron quotidien suspend les cabinets en `past_due` depuis plus de 14 jours.
+- Fin du délai : un cron quotidien passe à `IMPAYE` les cabinets en `past_due` depuis plus de 7 jours (D57).
 - Alertes : email au titulaire du cabinet (Resend) et au SuperAdmin, plus une notification in-app pour chacun (A8). Bandeau rouge permanent dans le portail du cabinet pendant le délai de grâce.
 - `Cabinet` gagne `billingStatus` (miroir de Stripe) et `suspendedReason` (`'admin' | 'impaye'`) : une suspension manuelle ne doit jamais être levée par un paiement.
-- Durée du délai : **14 jours par défaut**, à confirmer.
+- Durée du délai : **7 jours** (D57).
 
 ### 6.2 Barèmes de paie automatiques (proposition à valider, détail dans [modules/paie.md](../modules/paie.md) § 5)
 
@@ -129,5 +129,5 @@ Contrainte : un changement silencieux de barème fausserait des fiches de paie. 
 
 ## 7. Questions ouvertes
 
-1. Délai de grâce de **14 jours** : ça te va ?
+1. ~~Délai de grâce de 14 jours~~ : fixé à **7 jours** (D57).
 2. **Barèmes** : es-tu d'accord avec « détection automatique + activation validée par le SuperAdmin » ? L'alternative, un remplacement 100 % automatique, est risquée pour un logiciel de paie.

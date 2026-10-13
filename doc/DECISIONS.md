@@ -135,6 +135,9 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 
 - **D56.** Le quota « utilisateurs du cabinet » (`maxUtilisateurs`, D15, D34) ne compte **que les gestionnaires RH** : le titulaire (Cabinet RH) n'y figure pas, ni les comptes Entreprise cliente et Collaborateur. Les gestionnaires suspendus comptent, les archivés non, et une invitation en attente réserve une place. Les valeurs du plan restent 3 / 10 / illimité : Starter = 3 gestionnaires, comme annoncé sur la page tarifs. Remplace la lecture « Cabinet RH + gestionnaires » de la fiche Cabinet RH.
 
+### Facturation : impayés (14/10/2026)
+- **D57.** Paiement échoué : **délai de grâce de 7 jours** (remplace les 14 jours proposés avec D23). Pendant le délai, tout fonctionne avec une alerte visible ; à l'échéance le cabinet passe à `IMPAYE` (lecture seule, D29) **sans toucher à `Cabinet.status`**, que seul le SuperAdmin modifie : un paiement ne lève jamais une suspension manuelle. L'état d'abonnement suit Stripe par **webhook** (signature vérifiée, événements dédupliqués, ordre des événements respecté) et une tâche quotidienne applique la fin du délai. Le **titulaire et les SuperAdmins** sont prévenus par email (D23) ; la cloche in-app viendra avec A8.
+
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.
 - **D17.** Lecteurs : Adrien (référence) et toute personne ou outil qui implémente (règles précises, critères d'acceptation).

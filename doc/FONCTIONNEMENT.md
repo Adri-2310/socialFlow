@@ -81,7 +81,7 @@ stateDiagram-v2
     Essai --> Actif: 1er débit réussi
     Actif --> DelaiGrace: paiement échoué
     DelaiGrace --> Actif: paiement régularisé
-    DelaiGrace --> Suspendu: 14 jours écoulés
+    DelaiGrace --> Suspendu: 7 jours écoulés
     Suspendu --> Actif: paiement régularisé
     Actif --> LectureSeule: résiliation, fin de période
     LectureSeule --> Archive: 90 jours
