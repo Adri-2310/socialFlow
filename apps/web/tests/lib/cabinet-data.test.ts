@@ -87,14 +87,14 @@ describe('getCabinetOverview', () => {
         {
           ...base,
           email: `a-${stamp}@example.com`,
-          token: `t-a-${stamp}`,
+          tokenHash: `t-a-${stamp}`,
           cabinetId: mine.id,
           invitedById: inviter.id,
         },
         {
           ...base,
           email: `b-${stamp}@example.com`,
-          token: `t-b-${stamp}`,
+          tokenHash: `t-b-${stamp}`,
           cabinetId: mine.id,
           invitedById: inviter.id,
           expiresAt: yesterday,
@@ -102,7 +102,7 @@ describe('getCabinetOverview', () => {
         {
           ...base,
           email: `c-${stamp}@example.com`,
-          token: `t-c-${stamp}`,
+          tokenHash: `t-c-${stamp}`,
           cabinetId: mine.id,
           invitedById: inviter.id,
           status: 'accepted',
@@ -110,7 +110,7 @@ describe('getCabinetOverview', () => {
         {
           ...base,
           email: `d-${stamp}@example.com`,
-          token: `t-d-${stamp}`,
+          tokenHash: `t-d-${stamp}`,
           cabinetId: other.id,
           invitedById: otherInviter.id,
         },
@@ -173,19 +173,19 @@ describe('getInvitations', () => {
 
     await prisma.invitation.createMany({
       data: [
-        { ...base, email: `p-${stamp}@example.com`, token: `g-p-${stamp}`, expiresAt: inOneDay },
-        { ...base, email: `e-${stamp}@example.com`, token: `g-e-${stamp}`, expiresAt: yesterday },
+        { ...base, email: `p-${stamp}@example.com`, tokenHash: `g-p-${stamp}`, expiresAt: inOneDay },
+        { ...base, email: `e-${stamp}@example.com`, tokenHash: `g-e-${stamp}`, expiresAt: yesterday },
         {
           ...base,
           email: `r-${stamp}@example.com`,
-          token: `g-r-${stamp}`,
+          tokenHash: `g-r-${stamp}`,
           expiresAt: inOneDay,
           status: 'revoked',
         },
         {
           role: 'GESTIONNAIRE_RH',
           email: `x-${stamp}@example.com`,
-          token: `g-x-${stamp}`,
+          tokenHash: `g-x-${stamp}`,
           expiresAt: inOneDay,
           cabinetId: other.id,
           invitedById: otherInviter.id,
@@ -203,7 +203,7 @@ describe('getInvitations', () => {
       [`r-${stamp}@example.com`]: 'revoked',
     });
     // Le jeton ne doit jamais sortir de la couche de lecture.
-    for (const row of rows) expect(row).not.toHaveProperty('token');
+    for (const row of rows) expect(row).not.toHaveProperty('tokenHash');
   });
 });
 

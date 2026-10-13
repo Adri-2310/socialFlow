@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { AcceptInvitationForm } from '@/components/invitations/accept-invitation-form';
 import { prisma } from '@/lib/prisma';
+import { hashInvitationToken } from '@/lib/invitations';
 
 export const metadata: Metadata = {
   title: 'Accepter une invitation — SocialFlow',
@@ -14,8 +15,11 @@ export default async function AcceptInvitationPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
-  const invitation = token ? await prisma.invitation.findUnique({ where: { token } }) : null;
-  const valid = !!invitation && invitation.status === 'pending' && invitation.expiresAt > new Date();
+  const invitation = token
+    ? await prisma.invitation.findUnique({ where: { tokenHash: hashInvitationToken(token) } })
+    : null;
+  const valid =
+    !!token && !!invitation && invitation.status === 'pending' && invitation.expiresAt > new Date();
   const cabinet = valid ? await prisma.cabinet.findUnique({ where: { id: invitation!.cabinetId } }) : null;
 
   return (
@@ -43,7 +47,7 @@ export default async function AcceptInvitationPage({
                 Créez votre compte Gestionnaire RH pour {cabinet.name}.
               </p>
               <div className="mt-6">
-                <AcceptInvitationForm token={invitation.token} email={invitation.email} />
+                <AcceptInvitationForm token={token!} email={invitation.email} />
               </div>
             </>
           ) : (

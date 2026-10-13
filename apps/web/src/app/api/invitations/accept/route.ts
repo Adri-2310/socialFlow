@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { hashInvitationToken } from '@/lib/invitations';
 
 // Cree le compte avec le role/cabinetId imposes par l'invitation, plutot que
 // de laisser le client les fournir (meme logique que additionalFields.role
@@ -17,7 +18,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 });
   }
 
-  const invitation = await prisma.invitation.findUnique({ where: { token } });
+  const invitation = await prisma.invitation.findUnique({
+    where: { tokenHash: hashInvitationToken(token) },
+  });
   if (!invitation || invitation.status !== 'pending' || invitation.expiresAt < new Date()) {
     return NextResponse.json({ error: 'INVALID_TOKEN' }, { status: 404 });
   }
@@ -58,6 +61,14 @@ export async function POST(request: Request) {
     prisma.invitation.update({
       where: { id: invitation.id },
       data: { status: 'accepted', acceptedAt: new Date() },
+    }),
+    prisma.auditLog.create({
+      data: {
+        action: 'INVITATION_ACCEPTED',
+        actorId: user.id,
+        cabinetId: invitation.cabinetId,
+        metadata: { invitationId: invitation.id, email: invitation.email },
+      },
     }),
     ...(phantomCabinetId && phantomCabinetId !== invitation.cabinetId
       ? [prisma.cabinet.delete({ where: { id: phantomCabinetId } })]

@@ -22,6 +22,9 @@ const { prisma } = await import('@/lib/prisma');
 const email = await import('@/lib/email');
 const { POST: createInvitation } = await import('@/app/api/invitations/route');
 const { POST: acceptInvitation } = await import('@/app/api/invitations/accept/route');
+const { POST: resendInvitation } = await import('@/app/api/invitations/[id]/resend/route');
+const { DELETE: revokeInvitation } = await import('@/app/api/invitations/[id]/route');
+const { hashInvitationToken } = await import('@/lib/invitations');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';
@@ -61,6 +64,14 @@ async function creerCabinetRH(label: string) {
   cj.apply(await auth.api.signUpEmail({ body: { name: 'Cabinet Test', email: mail, password: PASSWORD }, asResponse: true }));
   const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
   return { mail, cj, user };
+}
+
+/** Jeton en clair du dernier email d'invitation envoye a cette adresse (la base ne le stocke plus). */
+function lastTokenSentTo(address: string): string {
+  const calls = vi.mocked(email.sendGestionnaireInvitationEmail).mock.calls;
+  const call = [...calls].reverse().find(([to]) => to === address);
+  if (!call) throw new Error(`Aucun email d'invitation envoye a ${address}`);
+  return new URL(call[3]).searchParams.get('token') as string;
 }
 
 function requestJSON(url: string, body: unknown, cj?: ReturnType<typeof cookieJar>) {
@@ -118,6 +129,9 @@ describe('creation d une invitation', () => {
     expect(invitation.role).toBe('GESTIONNAIRE_RH');
     expect(invitation.cabinetId).toBe(user.cabinetId);
     expect(invitation.status).toBe('pending');
+    // C3 : seul le hash du jeton est en base, jamais le jeton lui-meme.
+    expect(invitation.tokenHash).toBe(hashInvitationToken(lastTokenSentTo(cibleEmail)));
+    expect(invitation.tokenHash).not.toBe(lastTokenSentTo(cibleEmail));
     expect(email.sendGestionnaireInvitationEmail).toHaveBeenCalledWith(
       cibleEmail,
       'Cabinet de Cabinet Test',
@@ -148,7 +162,7 @@ describe('acceptation d une invitation', () => {
 
     const res = await acceptInvitation(
       requestJSON(`${APP_URL}/api/invitations/accept`, {
-        token: invitation.token,
+        token: lastTokenSentTo(cibleEmail),
         name: 'Gestionnaire Test',
         password: PASSWORD,
       }),
@@ -186,7 +200,7 @@ describe('acceptation d une invitation', () => {
 
     const res = await acceptInvitation(
       requestJSON(`${APP_URL}/api/invitations/accept`, {
-        token: invitation.token,
+        token: lastTokenSentTo(cibleEmail),
         name: 'Gestionnaire Session',
         password: PASSWORD,
       }),
@@ -217,11 +231,172 @@ describe('acceptation d une invitation', () => {
 
     const expire = await acceptInvitation(
       requestJSON(`${APP_URL}/api/invitations/accept`, {
-        token: invitation.token,
+        token: lastTokenSentTo(cibleEmail),
         name: 'X',
         password: PASSWORD,
       }),
     );
     expect(expire.status).toBe(404);
+  });
+});
+
+function requestWith(method: 'POST' | 'DELETE', url: string, cj?: ReturnType<typeof cookieJar>) {
+  const headers: Record<string, string> = {};
+  const cookie = cj?.headers().get('cookie');
+  if (cookie) headers.cookie = cookie;
+  return new Request(url, { method, headers });
+}
+
+const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
+
+async function inviter(cj: ReturnType<typeof cookieJar>, label: string) {
+  const cible = testEmail(label);
+  await createInvitation(requestJSON(`${APP_URL}/api/invitations`, { email: cible }, cj));
+  const invitation = await prisma.invitation.findFirstOrThrow({ where: { email: cible } });
+  return { cible, invitation };
+}
+
+describe('renvoi d une invitation', () => {
+  const url = (id: string) => `${APP_URL}/api/invitations/${id}/resend`;
+
+  it('refuse sans session et a un role autre que Cabinet RH', async () => {
+    const { cj } = await creerCabinetRH('renvoi-proprietaire');
+    const { invitation } = await inviter(cj, 'renvoi-cible-roles');
+
+    const sans = await resendInvitation(requestWith('POST', url(invitation.id)), ctx(invitation.id));
+    expect(sans.status).toBe(401);
+
+    const { cj: autreCj, user } = await creerCabinetRH('renvoi-gestionnaire');
+    await prisma.user.update({ where: { id: user.id }, data: { role: 'GESTIONNAIRE_RH' } });
+    const refuse = await resendInvitation(requestWith('POST', url(invitation.id), autreCj), ctx(invitation.id));
+    expect(refuse.status).toBe(403);
+  });
+
+  it('renvoie 404 pour l invitation d un autre cabinet (isolation)', async () => {
+    const { cj: cabinetA } = await creerCabinetRH('renvoi-cabinet-a');
+    const { cj: cabinetB } = await creerCabinetRH('renvoi-cabinet-b');
+    const { invitation } = await inviter(cabinetA, 'renvoi-cible-isolation');
+    const avant = invitation.tokenHash;
+
+    const res = await resendInvitation(requestWith('POST', url(invitation.id), cabinetB), ctx(invitation.id));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: 'INVITATION_NOT_FOUND' });
+
+    const apres = await prisma.invitation.findUniqueOrThrow({ where: { id: invitation.id } });
+    expect(apres.tokenHash).toBe(avant);
+  });
+
+  it('genere un nouveau jeton, repousse l echeance, invalide l ancien lien et audite', async () => {
+    const { cj, user } = await creerCabinetRH('renvoi-ok');
+    const { cible, invitation } = await inviter(cj, 'renvoi-cible-ok');
+    const ancienJeton = lastTokenSentTo(cible);
+    await prisma.invitation.update({
+      where: { id: invitation.id },
+      data: { expiresAt: new Date(Date.now() - 60_000) },
+    });
+
+    const res = await resendInvitation(requestWith('POST', url(invitation.id), cj), ctx(invitation.id));
+    expect(res.status).toBe(200);
+
+    const apres = await prisma.invitation.findUniqueOrThrow({ where: { id: invitation.id } });
+    const nouveauJeton = lastTokenSentTo(cible);
+    expect(nouveauJeton).not.toBe(ancienJeton);
+    expect(apres.tokenHash).toBe(hashInvitationToken(nouveauJeton));
+    expect(apres.status).toBe('pending');
+    expect(apres.expiresAt.getTime()).toBeGreaterThan(Date.now());
+
+    const ancien = await acceptInvitation(
+      requestJSON(`${APP_URL}/api/invitations/accept`, { token: ancienJeton, name: 'X', password: PASSWORD }),
+    );
+    expect(ancien.status).toBe(404);
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'INVITATION_RESENT', cabinetId: user.cabinetId },
+    });
+    expect(audit.actorId).toBe(user.id);
+    expect(audit.metadata).toMatchObject({ invitationId: invitation.id, email: cible });
+  });
+
+  it('refuse une invitation acceptee ou revoquee', async () => {
+    const { cj } = await creerCabinetRH('renvoi-etats');
+    const { invitation: acceptee } = await inviter(cj, 'renvoi-acceptee');
+    const { invitation: revoquee } = await inviter(cj, 'renvoi-revoquee');
+    await prisma.invitation.update({ where: { id: acceptee.id }, data: { status: 'accepted' } });
+    await prisma.invitation.update({ where: { id: revoquee.id }, data: { status: 'revoked' } });
+
+    const a = await resendInvitation(requestWith('POST', url(acceptee.id), cj), ctx(acceptee.id));
+    expect(a.status).toBe(409);
+    expect(await a.json()).toEqual({ error: 'INVITATION_ALREADY_ACCEPTED' });
+
+    const r = await resendInvitation(requestWith('POST', url(revoquee.id), cj), ctx(revoquee.id));
+    expect(r.status).toBe(409);
+    expect(await r.json()).toEqual({ error: 'INVITATION_ALREADY_REVOKED' });
+  });
+});
+
+describe('revocation d une invitation', () => {
+  const url = (id: string) => `${APP_URL}/api/invitations/${id}`;
+
+  it('refuse sans session et a un role autre que Cabinet RH', async () => {
+    const { cj } = await creerCabinetRH('revoc-proprietaire');
+    const { invitation } = await inviter(cj, 'revoc-cible-roles');
+
+    const sans = await revokeInvitation(requestWith('DELETE', url(invitation.id)), ctx(invitation.id));
+    expect(sans.status).toBe(401);
+
+    const { cj: autreCj, user } = await creerCabinetRH('revoc-gestionnaire');
+    await prisma.user.update({ where: { id: user.id }, data: { role: 'GESTIONNAIRE_RH' } });
+    const refuse = await revokeInvitation(requestWith('DELETE', url(invitation.id), autreCj), ctx(invitation.id));
+    expect(refuse.status).toBe(403);
+  });
+
+  it('renvoie 404 pour l invitation d un autre cabinet (isolation)', async () => {
+    const { cj: cabinetA } = await creerCabinetRH('revoc-cabinet-a');
+    const { cj: cabinetB } = await creerCabinetRH('revoc-cabinet-b');
+    const { invitation } = await inviter(cabinetA, 'revoc-cible-isolation');
+
+    const res = await revokeInvitation(requestWith('DELETE', url(invitation.id), cabinetB), ctx(invitation.id));
+    expect(res.status).toBe(404);
+
+    const apres = await prisma.invitation.findUniqueOrThrow({ where: { id: invitation.id } });
+    expect(apres.status).toBe('pending');
+  });
+
+  it('revoque, rend le lien inutilisable et audite', async () => {
+    const { cj, user } = await creerCabinetRH('revoc-ok');
+    const { cible, invitation } = await inviter(cj, 'revoc-cible-ok');
+    const jeton = lastTokenSentTo(cible);
+
+    const res = await revokeInvitation(requestWith('DELETE', url(invitation.id), cj), ctx(invitation.id));
+    expect(res.status).toBe(200);
+
+    const apres = await prisma.invitation.findUniqueOrThrow({ where: { id: invitation.id } });
+    expect(apres.status).toBe('revoked');
+
+    const accept = await acceptInvitation(
+      requestJSON(`${APP_URL}/api/invitations/accept`, { token: jeton, name: 'X', password: PASSWORD }),
+    );
+    expect(accept.status).toBe(404);
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'INVITATION_REVOKED', cabinetId: user.cabinetId },
+    });
+    expect(audit.actorId).toBe(user.id);
+    expect(audit.metadata).toMatchObject({ invitationId: invitation.id, email: cible });
+  });
+
+  it('refuse une invitation deja acceptee ou deja revoquee', async () => {
+    const { cj } = await creerCabinetRH('revoc-etats');
+    const { invitation: acceptee } = await inviter(cj, 'revoc-acceptee');
+    await prisma.invitation.update({ where: { id: acceptee.id }, data: { status: 'accepted' } });
+    const a = await revokeInvitation(requestWith('DELETE', url(acceptee.id), cj), ctx(acceptee.id));
+    expect(a.status).toBe(409);
+    expect(await a.json()).toEqual({ error: 'INVITATION_ALREADY_ACCEPTED' });
+
+    const { invitation } = await inviter(cj, 'revoc-deja');
+    await revokeInvitation(requestWith('DELETE', url(invitation.id), cj), ctx(invitation.id));
+    const encore = await revokeInvitation(requestWith('DELETE', url(invitation.id), cj), ctx(invitation.id));
+    expect(encore.status).toBe(409);
+    expect(await encore.json()).toEqual({ error: 'INVITATION_ALREADY_REVOKED' });
   });
 });

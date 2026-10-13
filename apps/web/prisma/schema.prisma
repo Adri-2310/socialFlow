@@ -112,6 +112,8 @@ model AuditLog {
   cabinet      Cabinet? @relation(fields: [cabinetId], references: [id], onDelete: SetNull)
   targetUserId String?
   targetUser   User?    @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  // Contexte de l'action (ex. { invitationId, email }) ; jamais de donnee de paie.
+  metadata     Json?
   createdAt    DateTime @default(now())
 
   @@index([createdAt])
@@ -126,7 +128,9 @@ model Invitation {
   id          String    @id @default(cuid())
   email       String
   role        String
-  token       String    @unique
+  // sha256 (hex) du jeton envoye par email ; le jeton en clair n'est jamais
+  // stocke (voir lib/invitations.ts, C3).
+  tokenHash   String    @unique
   status      String    @default("pending") // pending | accepted | expired | revoked
   expiresAt   DateTime
   acceptedAt  DateTime?
@@ -137,7 +141,6 @@ model Invitation {
   invitedBy   User      @relation(fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@index([email])
-  @@index([token])
   @@map("invitation")
 }
 

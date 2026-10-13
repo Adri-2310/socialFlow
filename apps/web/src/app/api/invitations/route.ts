@@ -1,10 +1,9 @@
-import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
+import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
 
-const INVITATION_TTL_DAYS = 7;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Premiere iteration RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md
@@ -37,19 +36,30 @@ export async function POST(request: Request) {
 
   const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinetId } });
 
-  const token = crypto.randomBytes(32).toString('base64url');
-  await prisma.invitation.create({
-    data: {
-      email,
-      role: 'GESTIONNAIRE_RH',
-      token,
-      cabinetId: cabinet.id,
-      invitedById: session.user.id,
-      expiresAt: new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000),
-    },
+  const { token, tokenHash } = createInvitationToken();
+  // Invitation et audit dans la meme transaction (CONVENTIONS.md § 3).
+  await prisma.$transaction(async (tx) => {
+    const invitation = await tx.invitation.create({
+      data: {
+        email,
+        role: 'GESTIONNAIRE_RH',
+        tokenHash,
+        cabinetId: cabinet.id,
+        invitedById: session.user.id,
+        expiresAt: invitationExpiry(),
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'INVITATION_SENT',
+        actorId: session.user.id,
+        cabinetId: cabinet.id,
+        metadata: { invitationId: invitation.id, email, role: 'GESTIONNAIRE_RH' },
+      },
+    });
   });
 
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/invitations/accept?token=${token}`;
+  const url = invitationUrl(token);
   try {
     await sendGestionnaireInvitationEmail(email, cabinet.name, session.user.name, url);
   } catch (error) {
