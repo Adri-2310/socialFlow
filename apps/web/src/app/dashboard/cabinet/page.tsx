@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { OverviewCards } from '@/components/cabinet/overview-cards';
+import { QuotaUsage } from '@/components/cabinet/quota-usage';
+import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import { requireSession } from '@/lib/require-session';
 import { getCabinetOverview } from '@/lib/cabinet-data';
 
@@ -15,7 +17,10 @@ export default async function CabinetOverviewPage() {
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
 
-  const overview = await getCabinetOverview(user.cabinetId);
+  const [overview, quotas] = await Promise.all([
+    getCabinetOverview(user.cabinetId),
+    getCabinetQuotaUsage(user.cabinetId),
+  ]);
 
   return (
     <>
@@ -26,6 +31,7 @@ export default async function CabinetOverviewPage() {
         </p>
       </div>
       <OverviewCards data={overview} />
+      <QuotaUsage data={quotas} />
     </>
   );
 }

@@ -10,10 +10,20 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVITATION_ALREADY_PENDING: 'Une invitation est déjà en attente pour cette adresse.',
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à inviter un gestionnaire.",
+  QUOTA_EXCEEDED:
+    "Le quota d'utilisateurs de votre plan est atteint. Passez à un plan supérieur pour inviter davantage.",
 };
 
-export function InviteGestionnaire() {
+// `quota` (places utilisees / maximum du plan, D15) sert uniquement a
+// informer et a eviter un aller-retour inutile : le serveur reste seul juge
+// (403 QUOTA_EXCEEDED). Absent (ex. page de profil) = pas d'indication.
+export function InviteGestionnaire({
+  quota,
+}: {
+  quota?: { used: number; limit: number | null };
+}) {
   const router = useRouter();
+  const reached = !!quota && quota.limit !== null && quota.used >= quota.limit;
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -54,6 +64,14 @@ export function InviteGestionnaire() {
           <p className="text-sm font-semibold text-foreground">Inviter un gestionnaire RH</p>
           <p className="text-xs text-muted-foreground">
             Un email d&apos;invitation lui sera envoyé, valable 7 jours.
+            {quota && quota.limit !== null && (
+              <>
+                {' '}
+                <span className="whitespace-nowrap font-medium">
+                  {quota.used} / {quota.limit} utilisateurs
+                </span>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -65,6 +83,7 @@ export function InviteGestionnaire() {
             type="email"
             autoComplete="email"
             required
+            disabled={reached}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="gestionnaire@cabinet.be"
@@ -73,7 +92,7 @@ export function InviteGestionnaire() {
         </div>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || reached}
           className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -81,6 +100,9 @@ export function InviteGestionnaire() {
         </button>
       </form>
 
+      {reached && (
+        <p className="mt-2 text-sm text-destructive">{ERROR_MESSAGES.QUOTA_EXCEEDED}</p>
+      )}
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       {sent && <p className="mt-2 text-sm text-secondary">Invitation envoyée.</p>}
     </div>

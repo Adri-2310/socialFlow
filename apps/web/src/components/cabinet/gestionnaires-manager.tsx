@@ -36,14 +36,17 @@ export function GestionnairesManager({
   gestionnaires,
   invitations,
   archived,
+  userQuota,
 }: {
   gestionnaires: GestionnaireRow[];
   invitations: InvitationRow[];
   archived: ArchivedGestionnaireRow[];
+  // Places utilisees / maximum du plan (D15) ; absent = aucun quota connu.
+  userQuota?: { used: number; limit: number | null };
 }) {
   return (
     <div className="space-y-6">
-      <InviteGestionnaire />
+      <InviteGestionnaire quota={userQuota} />
 
       <section className="rounded-2xl border border-border bg-card">
         <header className="border-b border-border px-5 py-4">

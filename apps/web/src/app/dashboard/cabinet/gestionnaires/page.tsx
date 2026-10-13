@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { GestionnairesManager } from '@/components/cabinet/gestionnaires-manager';
 import { requireSession } from '@/lib/require-session';
+import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import {
   getArchivedGestionnaires,
   getGestionnaires,
@@ -19,10 +20,11 @@ export default async function GestionnairesPage() {
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
 
-  const [gestionnaires, invitations, archived] = await Promise.all([
+  const [gestionnaires, invitations, archived, quotas] = await Promise.all([
     getGestionnaires(user.cabinetId),
     getInvitations(user.cabinetId),
     getArchivedGestionnaires(user.cabinetId),
+    getCabinetQuotaUsage(user.cabinetId),
   ]);
 
   return (
@@ -30,6 +32,11 @@ export default async function GestionnairesPage() {
       gestionnaires={gestionnaires}
       invitations={invitations}
       archived={archived}
+      userQuota={
+        quotas.limits
+          ? { used: quotas.utilisateurs.used, limit: quotas.limits.maxUtilisateurs }
+          : undefined
+      }
     />
   );
 }
