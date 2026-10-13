@@ -51,7 +51,7 @@ flowchart LR
 | Intégrations | `apps/web/src/lib/integrations/` | Derrière une interface, avec une version simulée et une version réelle |
 | Tâches planifiées | `apps/web/src/app/api/cron/*` + `vercel.json` | Protégées par `CRON_SECRET`, idempotentes |
 
-Stockage de fichiers : non choisi à ce jour. Vercel Blob est le candidat naturel sur Vercel, à trancher lors du chantier Documents.
+Stockage de fichiers : **Vercel Blob** derrière `StorageGateway` (D54, `modules/stockage.md`).
 
 ## 4. Isolation des données (multi-tenant)
 

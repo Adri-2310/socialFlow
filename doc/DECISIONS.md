@@ -127,6 +127,9 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 
 - **D53.** Le Cabinet RH peut **corriger l'email de connexion** d'un gestionnaire de son cabinet (changement d'adresse professionnelle). L'adresse repasse à « non vérifiée » et un email de confirmation part vers la **nouvelle** adresse ; les sessions du gestionnaire sont coupées ; l'**ancienne** adresse est prévenue ; l'action est auditée. La connexion n'attend pas la confirmation (vérification « souple », comme à l'inscription). D7 s'applique : refus si l'adresse a déjà un compte ou une invitation en cours.
 
+### Stockage des fichiers (13/10/2026)
+- **D54.** Stockage des fichiers : **Vercel Blob** derrière une interface `StorageGateway` (implémentation en mémoire pour les tests), évolutif vers un stockage S3-compatible en production. Les métadonnées et le calcul du quota (D15) restent en base. Avatars et logos : redimensionnés en WebP, hors quota du plan. Documents et PDF de fiches : téléchargement toujours via une route serveur avec `authorize()` et audit, jamais de lien direct. Détail : `modules/stockage.md`.
+
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.
 - **D17.** Lecteurs : Adrien (référence) et toute personne ou outil qui implémente (règles précises, critères d'acceptation).

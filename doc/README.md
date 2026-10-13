@@ -32,6 +32,7 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 | [Calendrier et échéances](modules/calendrier-echeances.md) | Échéances légales et internes, rappels |
 | [Collaboration](modules/collaboration.md) | Demandes, messagerie, documents, notifications |
 | [Personnalisation](modules/personnalisation.md) | Branding, modèles d'emails, white-label |
+| [Stockage des fichiers](modules/stockage.md) | Vercel Blob, avatars, documents, quotas, téléchargement audité |
 | [Analytics et intelligence](modules/intelligence.md) | Tableaux de bord, anomalies, assistant (proposition) |
 
 ## Autres documents
@@ -61,4 +62,3 @@ Toute nouvelle décision s'ajoute dans `DECISIONS.md` (numéro suivant, date) **
 | 6 | Catégorie d'employeur pour les cotisations patronales | `modules/paie.md` § 8 |
 | 7 | Priorité, fournisseur et budget du module IA | `modules/intelligence.md` § 4 |
 | 8 | Taille maximale d'un document déposé | `modules/collaboration.md` § 3 |
-| 9 | Choix du stockage de fichiers (Vercel Blob ?) | `FONCTIONNEMENT.md` § 3 |
