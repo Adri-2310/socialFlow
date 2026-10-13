@@ -395,3 +395,49 @@ export async function sendGestionnaireAccessChangedEmail(
 
   if (error) throw new Error(error.message);
 }
+
+// D23, D57 : alerte de paiement echoue. `audience` choisit le texte : le
+// titulaire du cabinet (qui doit regulariser) ou un SuperAdmin (qui suit).
+export async function sendPaymentFailedEmail(
+  email: string,
+  name: string,
+  cabinetName: string,
+  graceDeadline: Date,
+  audience: 'cabinet' | 'admin',
+) {
+  const deadline = graceDeadline.toLocaleDateString('fr-BE', {
+    timeZone: 'Europe/Brussels',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const copy =
+    audience === 'cabinet'
+      ? {
+          subject: 'Le paiement de votre abonnement SocialFlow a échoué',
+          title: 'Le paiement de votre abonnement a échoué',
+          body: `Le dernier paiement de l'abonnement de ${cabinetName} n'a pas pu être prélevé. Votre cabinet reste pleinement utilisable jusqu'au ${deadline}. Passé cette date, il passera en lecture seule : vos clients pourront toujours consulter leurs fiches, mais plus rien ne pourra être produit. Régularisez votre abonnement avant cette échéance.`,
+        }
+      : {
+          subject: `Paiement échoué : ${cabinetName}`,
+          title: 'Un paiement d\'abonnement a échoué',
+          body: `Le paiement de l'abonnement du cabinet ${cabinetName} a échoué. Son délai de grâce court jusqu'au ${deadline} ; il passera ensuite en lecture seule sans régularisation.`,
+        };
+
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Facturation</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">${copy.title}</h1>
+    <p style="margin:0 0 12px; color:#475569;">Bonjour ${escapeHtml(name)},</p>
+    <p style="margin:0; color:#475569;">${escapeHtml(copy.body)}</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: copy.subject,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}

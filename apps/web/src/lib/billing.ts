@@ -44,3 +44,34 @@ export function trialDaysLeft(trialEndsAt: Date | null, now: Date = new Date()):
   const remaining = trialEndsAt.getTime() - now.getTime();
   return remaining <= 0 ? 0 : Math.ceil(remaining / DAY_MS);
 }
+
+// D57 : delai de grace apres un paiement echoue, avant le passage a IMPAYE
+// (lecture seule). Une seule reference pour le webhook, la tache quotidienne
+// et les textes affiches.
+export const GRACE_PERIOD_DAYS = 7;
+
+export function graceEndsAt(pastDueSince: Date): Date {
+  return new Date(pastDueSince.getTime() + GRACE_PERIOD_DAYS * DAY_MS);
+}
+
+// Statut d'abonnement Stripe -> etat local (D55). null = pas de changement
+// d'etat (statut inconnu ou sans effet : on n'invente rien).
+export function mapStripeSubscriptionStatus(status: string): BillingStatus | null {
+  switch (status) {
+    case 'trialing':
+      return 'ESSAI';
+    case 'active':
+      return 'ACTIF';
+    case 'past_due':
+      return 'DELAI_GRACE';
+    case 'unpaid':
+      return 'IMPAYE';
+    case 'canceled':
+      return 'RESILIE';
+    case 'incomplete':
+    case 'incomplete_expired':
+      return 'EN_ATTENTE_PAIEMENT';
+    default:
+      return null;
+  }
+}

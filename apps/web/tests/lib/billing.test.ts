@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   BILLING_STATUSES,
   BILLING_STATUS_LABELS,
+  GRACE_PERIOD_DAYS,
+  graceEndsAt,
+  mapStripeSubscriptionStatus,
   normalizeBillingPeriod,
   normalizeBillingStatus,
   trialDaysLeft,
@@ -42,5 +45,29 @@ describe('normalisation', () => {
     for (const status of BILLING_STATUSES) {
       expect(BILLING_STATUS_LABELS[status]).toBeTruthy();
     }
+  });
+});
+
+describe('delai de grace (D57)', () => {
+  it('dure 7 jours', () => {
+    expect(GRACE_PERIOD_DAYS).toBe(7);
+    const since = new Date('2026-10-14T08:00:00Z');
+    expect(graceEndsAt(since).toISOString()).toBe('2026-10-21T08:00:00.000Z');
+  });
+});
+
+describe('mapStripeSubscriptionStatus', () => {
+  it('traduit les statuts Stripe en etats locaux', () => {
+    expect(mapStripeSubscriptionStatus('trialing')).toBe('ESSAI');
+    expect(mapStripeSubscriptionStatus('active')).toBe('ACTIF');
+    expect(mapStripeSubscriptionStatus('past_due')).toBe('DELAI_GRACE');
+    expect(mapStripeSubscriptionStatus('unpaid')).toBe('IMPAYE');
+    expect(mapStripeSubscriptionStatus('canceled')).toBe('RESILIE');
+    expect(mapStripeSubscriptionStatus('incomplete')).toBe('EN_ATTENTE_PAIEMENT');
+  });
+
+  it('renvoie null pour un statut inconnu ou sans effet', () => {
+    expect(mapStripeSubscriptionStatus('paused')).toBeNull();
+    expect(mapStripeSubscriptionStatus('autre')).toBeNull();
   });
 });

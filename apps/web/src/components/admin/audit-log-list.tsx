@@ -63,6 +63,8 @@ function auditMessage(log: AuditLogEntry): string {
       return `Un plan tarifaire a été archivé par ${log.actorName ?? 'un administrateur'}.`;
     case 'PRICING_PLAN_RESTORED':
       return `Un plan tarifaire a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'BILLING_STATUS_CHANGED':
+      return `Abonnement de « ${cabinetName} » mis à jour par Stripe.`;
     case 'USER_EMAIL_CHANGED':
       return `L'email de « ${targetUserName} » a été modifié par ${log.actorName ?? 'un administrateur'}.`;
     case 'INVITATION_SENT':
