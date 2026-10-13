@@ -1,10 +1,17 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { CabinetAlerts } from '@/components/cabinet/alerts';
 import { OverviewCards } from '@/components/cabinet/overview-cards';
 import { QuotaUsage } from '@/components/cabinet/quota-usage';
+import { buildCabinetAlerts } from '@/lib/cabinet-alerts';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import { requireSession } from '@/lib/require-session';
-import { getCabinetOverview } from '@/lib/cabinet-data';
+import {
+  getArchivedGestionnaires,
+  getCabinetOverview,
+  getGestionnaires,
+  getInvitations,
+} from '@/lib/cabinet-data';
 
 export const metadata: Metadata = {
   title: "Vue d'ensemble — SocialFlow",
@@ -17,10 +24,15 @@ export default async function CabinetOverviewPage() {
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
 
-  const [overview, quotas] = await Promise.all([
+  const [overview, quotas, invitations, gestionnaires, archived] = await Promise.all([
     getCabinetOverview(user.cabinetId),
     getCabinetQuotaUsage(user.cabinetId),
+    getInvitations(user.cabinetId),
+    getGestionnaires(user.cabinetId),
+    getArchivedGestionnaires(user.cabinetId),
   ]);
+
+  const alerts = buildCabinetAlerts({ quotas, invitations, gestionnaires, archived });
 
   return (
     <>
@@ -30,6 +42,7 @@ export default async function CabinetOverviewPage() {
           Bienvenue, {user.name}. Voici l&apos;état de votre cabinet.
         </p>
       </div>
+      <CabinetAlerts alerts={alerts} />
       <OverviewCards data={overview} />
       <QuotaUsage data={quotas} />
     </>
