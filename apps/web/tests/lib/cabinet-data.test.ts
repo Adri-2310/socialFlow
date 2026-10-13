@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
-import { getCabinetOverview } from '@/lib/cabinet-data';
+import {
+  getCabinetOverview,
+  getGestionnaires,
+  getInvitations,
+  invitationDisplayStatus,
+} from '@/lib/cabinet-data';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 // Donnees creees directement via Prisma (pas via le flux d'inscription) :
@@ -130,5 +135,90 @@ describe('getCabinetOverview', () => {
     const overview = await getCabinetOverview(cabinet.id);
     expect(overview.subscription).toEqual({ planName: null, billingPeriod: null });
     expect(overview.gestionnaires.total).toBe(0);
+  });
+});
+
+describe('getGestionnaires', () => {
+  it('ne liste que les gestionnaires non archives de ce cabinet', async () => {
+    const mine = await createCabinet(`Cabinet G ${stamp}`);
+    const other = await createCabinet(`Cabinet H ${stamp}`);
+
+    await createUser({ cabinetId: mine.id, role: 'CABINET_RH' });
+    const actif = await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH' });
+    const suspendu = await createUser({
+      cabinetId: mine.id,
+      role: 'GESTIONNAIRE_RH',
+      status: 'suspendu',
+    });
+    await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH', deletedAt: new Date() });
+    await createUser({ cabinetId: other.id, role: 'GESTIONNAIRE_RH' });
+
+    const rows = await getGestionnaires(mine.id);
+
+    expect(rows.map((r) => r.id)).toEqual([actif.id, suspendu.id]);
+    expect(rows.map((r) => r.status)).toEqual(['actif', 'suspendu']);
+  });
+});
+
+describe('getInvitations', () => {
+  it('liste les invitations de ce cabinet avec leur statut affiche, sans jeton', async () => {
+    const mine = await createCabinet(`Cabinet I ${stamp}`);
+    const other = await createCabinet(`Cabinet J ${stamp}`);
+    const inviter = await createUser({ cabinetId: mine.id, role: 'CABINET_RH' });
+    const otherInviter = await createUser({ cabinetId: other.id, role: 'CABINET_RH' });
+
+    const inOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const base = { role: 'GESTIONNAIRE_RH', cabinetId: mine.id, invitedById: inviter.id };
+
+    await prisma.invitation.createMany({
+      data: [
+        { ...base, email: `p-${stamp}@example.com`, token: `g-p-${stamp}`, expiresAt: inOneDay },
+        { ...base, email: `e-${stamp}@example.com`, token: `g-e-${stamp}`, expiresAt: yesterday },
+        {
+          ...base,
+          email: `r-${stamp}@example.com`,
+          token: `g-r-${stamp}`,
+          expiresAt: inOneDay,
+          status: 'revoked',
+        },
+        {
+          role: 'GESTIONNAIRE_RH',
+          email: `x-${stamp}@example.com`,
+          token: `g-x-${stamp}`,
+          expiresAt: inOneDay,
+          cabinetId: other.id,
+          invitedById: otherInviter.id,
+        },
+      ],
+    });
+
+    const rows = await getInvitations(mine.id);
+    const byEmail = Object.fromEntries(rows.map((r) => [r.email, r.status]));
+
+    expect(rows).toHaveLength(3);
+    expect(byEmail).toEqual({
+      [`p-${stamp}@example.com`]: 'pending',
+      [`e-${stamp}@example.com`]: 'expired',
+      [`r-${stamp}@example.com`]: 'revoked',
+    });
+    // Le jeton ne doit jamais sortir de la couche de lecture.
+    for (const row of rows) expect(row).not.toHaveProperty('token');
+  });
+});
+
+describe('invitationDisplayStatus', () => {
+  const now = new Date('2026-10-13T12:00:00Z');
+  const future = new Date('2026-10-14T12:00:00Z');
+  const past = new Date('2026-10-12T12:00:00Z');
+
+  it('presente une invitation pending depassee comme expiree', () => {
+    expect(invitationDisplayStatus('pending', future, now)).toBe('pending');
+    expect(invitationDisplayStatus('pending', past, now)).toBe('expired');
+  });
+
+  it('conserve les statuts terminaux meme si la date n est pas depassee', () => {
+    expect(invitationDisplayStatus('accepted', future, now)).toBe('accepted');
+    expect(invitationDisplayStatus('revoked', future, now)).toBe('revoked');
   });
 });

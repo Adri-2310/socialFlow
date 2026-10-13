@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type SubmitEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Mail, UserPlus } from 'lucide-react';
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -12,6 +13,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export function InviteGestionnaire() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -38,6 +40,8 @@ export function InviteGestionnaire() {
 
     setSent(true);
     setEmail('');
+    // Rafraichit les donnees serveur de la page (liste des invitations).
+    router.refresh();
   }
 
   return (

@@ -44,8 +44,8 @@ const SHELL_CONFIG = {
     consoleLabel: 'Espace Cabinet RH',
     roleLabel: 'Cabinet RH',
     nav: [
-      { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard' },
-      { label: 'Gestionnaires', icon: Users },
+      { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard/cabinet' },
+      { label: 'Gestionnaires', icon: Users, href: '/dashboard/cabinet/gestionnaires' },
       { label: 'Entreprises', icon: Building2 },
       { label: 'Facturation', icon: CreditCard },
     ],

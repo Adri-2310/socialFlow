@@ -61,3 +61,70 @@ export async function getCabinetOverview(cabinetId: string): Promise<CabinetOver
     subscription: { planName: plan?.name ?? owner?.plan ?? null, billingPeriod },
   };
 }
+
+export type GestionnaireRow = {
+  id: string;
+  name: string;
+  email: string;
+  status: 'actif' | 'suspendu';
+  createdAt: Date;
+};
+
+// Gestionnaires non archives du cabinet (meme perimetre que les compteurs de
+// getCabinetOverview). Select explicite : rien d'autre que ce que la page
+// affiche ne sort de la couche de lecture.
+export async function getGestionnaires(cabinetId: string): Promise<GestionnaireRow[]> {
+  const rows = await prisma.user.findMany({
+    where: { cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: null },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, email: true, status: true, createdAt: true },
+  });
+
+  return rows.map((row) => ({
+    ...row,
+    status: row.status === 'suspendu' ? 'suspendu' : 'actif',
+  }));
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export type InvitationRow = {
+  id: string;
+  email: string;
+  status: InvitationStatus;
+  expiresAt: Date;
+  createdAt: Date;
+};
+
+// Statut affiche (roles/02 § 4.2) : en base, une invitation jamais acceptee
+// reste "pending" apres son echeance (aucune tache ne la fait passer a
+// "expired" pour l'instant) ; on la presente donc comme expiree des que la
+// date est depassee.
+export function invitationDisplayStatus(
+  status: string,
+  expiresAt: Date,
+  now: Date = new Date(),
+): InvitationStatus {
+  if (status === 'accepted' || status === 'revoked' || status === 'expired') return status;
+  return expiresAt.getTime() <= now.getTime() ? 'expired' : 'pending';
+}
+
+// Le jeton (Invitation.token) n'est volontairement jamais selectionne : il
+// n'a pas a quitter la base, il n'existe que dans l'email envoye (C3).
+export async function getInvitations(cabinetId: string): Promise<InvitationRow[]> {
+  const now = new Date();
+  const rows = await prisma.invitation.findMany({
+    where: { cabinetId, role: 'GESTIONNAIRE_RH' },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+    select: { id: true, email: true, status: true, expiresAt: true, createdAt: true },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    status: invitationDisplayStatus(row.status, row.expiresAt, now),
+    expiresAt: row.expiresAt,
+    createdAt: row.createdAt,
+  }));
+}

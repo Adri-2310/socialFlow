@@ -2,10 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { OverviewCards } from '@/components/cabinet/overview-cards';
 import { requireSession } from '@/lib/require-session';
-import { getCabinetOverview } from '@/lib/cabinet-data';
 
 export const metadata: Metadata = {
   title: 'Tableau de bord — SocialFlow',
@@ -17,7 +14,7 @@ export default async function DashboardPage() {
 
   // Chaque role a vocation a avoir son propre tableau de bord (voir
   // doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md section 7) : SuperAdmin sous
-  // /dashboard/admin, Cabinet RH ici meme (vue d'ensemble). Les autres roles
+  // /dashboard/admin, Cabinet RH sous /dashboard/cabinet. Les autres roles
   // atterrissent sur le message d'attente ci-dessous en attendant leur
   // propre passe - le contenu compte/securite commun a tous les roles vit
   // sur /profil.
@@ -26,21 +23,7 @@ export default async function DashboardPage() {
   }
 
   if (user.role === 'CABINET_RH' && user.cabinetId) {
-    const overview = await getCabinetOverview(user.cabinetId);
-
-    return (
-      <DashboardShell role="CABINET_RH" userName={user.name}>
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">
-            {overview.cabinetName}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Bienvenue, {user.name}. Voici l&apos;état de votre cabinet.
-          </p>
-        </div>
-        <OverviewCards data={overview} />
-      </DashboardShell>
-    );
+    redirect('/dashboard/cabinet');
   }
 
   return (
