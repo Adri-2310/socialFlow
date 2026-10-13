@@ -66,6 +66,12 @@ Format d'erreur unique : `{ "error": "CODE_EN_MAJUSCULES" }`, plus des champs op
 | 409 | `INVALID_TRANSITION` | Changement de statut non permis |
 | 409 | `<RESSOURCE>_ALREADY_<ETAT>`, `EMAIL_ALREADY_USED`, `INVITATION_ALREADY_PENDING` | Conflit d'état |
 | 409 | `GESTIONNAIRE_HAS_UNCOVERED_ENTREPRISES` | Désactivation impossible (D27) |
+| 404 | `INVITATION_NOT_FOUND`, `GESTIONNAIRE_NOT_FOUND` | Inexistant ou hors périmètre |
+| 409 | `INVITATION_ALREADY_ACCEPTED`, `INVITATION_ALREADY_REVOKED`, `GESTIONNAIRE_ALREADY_SUSPENDED`, `GESTIONNAIRE_ALREADY_ACTIVE` | Conflit d'état |
+| 403 | `SUSPENDED_BY_ADMIN` | Suspension posée par le SuperAdmin, non levable par le cabinet (D52) |
+| 403 | `RESTORE_NOT_ALLOWED` | Compte non retiré par le cabinet (auto-suppression, archivage SuperAdmin) (D52) |
+| 409 | `RESTORE_WINDOW_EXPIRED` | Délai de restauration de 30 jours dépassé (D52) |
+| 400 | `EMAIL_UNCHANGED` | Nouvelle adresse identique à l'actuelle (D53) |
 | 423 | `PRESTATIONS_LOCKED`, `CABINET_READ_ONLY` | Ressource verrouillée |
 | 502 | `EMAIL_SEND_FAILED`, `<INTEGRATION>_UNAVAILABLE` | Service externe en échec |
 

@@ -1,7 +1,7 @@
 # Rôle : Cabinet RH
 
-> Statut : **fondations construites** (inscription, création du cabinet, essai Stripe, invitation de gestionnaire) ; **portail en cours** (vue d'ensemble et page Gestionnaires dans le travail local non commité du 12/10).
-> Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D4, D15, D19, D23–D31.
+> Statut : **fondations construites** (inscription, création du cabinet, essai Stripe, invitation de gestionnaire) ; **portail en cours** : vue d'ensemble, gestion des gestionnaires et des invitations (13/10).
+> Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D4, D15, D19, D23–D31, D52.
 
 ## 1. Mission
 
@@ -16,7 +16,7 @@ Le Cabinet RH est le **client payant** de SocialFlow : un secrétariat social ou
 | Création | Auto-inscription publique sur `/register` uniquement (D19) |
 | Rattachement | `User.cabinetId` = son cabinet, posé par le serveur (jamais par le client) |
 | 2FA | Conseillée (bandeau d'incitation), non obligatoire (D20) |
-| Point d'entrée | `/dashboard/cabinet` (à créer ; aujourd'hui `/dashboard` affiche un écran d'attente) |
+| Point d'entrée | `/dashboard/cabinet` (`/dashboard` y redirige) |
 
 ## 3. Cycle de vie d'un cabinet
 
@@ -56,8 +56,10 @@ ESSAI (trialing) ─► fin d'essai : débit auto ─► ACTIF
 | Inviter | Email ; invitation `GESTIONNAIRE_RH` valable 7 jours ; refus si l'email a déjà un compte (D7) ou une invitation en cours ; **bloqué au-delà du quota `maxUtilisateurs`** (Cabinet RH + gestionnaires, § 9) |
 | Suivre les invitations | Liste : email, statut (en attente, acceptée, expirée, révoquée), date d'expiration ; actions **renvoyer** (nouveau jeton, nouvelle date) et **révoquer** |
 | Assigner | Associer un gestionnaire à une ou plusieurs entreprises (relation N:M) |
-| Désactiver | **Interdit tant qu'une entreprise lui est assignée sans autre gestionnaire** (D27). Effet : sessions coupées, connexion bloquée |
-| Réactiver | Réautorise la connexion (pas de réassignation automatique) |
+| Suspendre (D52) | Réversible. Sessions coupées, connexion refusée avec un message l'invitant à contacter son cabinet ; le gestionnaire est **prévenu par email**. **Interdit tant qu'une entreprise lui est assignée sans autre gestionnaire** (D27, à appliquer avec les entreprises) |
+| Réactiver (D52) | Réautorise la connexion, email au gestionnaire. Impossible pour une suspension posée par le SuperAdmin (`403 SUSPENDED_BY_ADMIN`) |
+| Retirer (archiver) | Compte archivé, sessions coupées, email au gestionnaire. **Restaurable par le Cabinet RH pendant 30 jours** (D52) ; purge à 90 jours |
+| Modifier l'email (D53) | Nouvelle adresse non vérifiée : confirmation par email, sessions coupées, ancienne adresse prévenue. Refus si l'adresse a déjà un compte ou une invitation (D7) |
 
 ### 4.3 Portefeuille — Entreprises clientes (D4)
 | Action | Règles |
@@ -103,10 +105,11 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | Essai Stripe 30 jours | `lib/stripe-trial.ts` | Customer + abonnement **sans moyen de paiement** |
 | Invitation de gestionnaire | `api/invitations`, `components/dashboard/invite-gestionnaire.tsx` | Jeton 7 jours, email via Resend |
 | Acceptation d'invitation | `api/invitations/accept`, `(auth)/invitations/accept` | Crée le compte par mot de passe, supprime le cabinet « fantôme » créé par le hook |
-| Vue d'ensemble du cabinet | `lib/cabinet-data.ts` (`getCabinetOverview`), `components/layout/dashboard-shell.tsx` | 🟡 En cours (non commité au 12/10) |
-| Page Gestionnaires | `dashboard/gestionnaires`, `components/cabinet/gestionnaires-manager.tsx` | 🟡 En cours : liste des gestionnaires et des invitations en attente |
-| Renvoyer / révoquer une invitation | `api/invitations/[id]/resend` (POST), `api/invitations/[id]` (DELETE) | 🟡 En cours |
-| Archiver un gestionnaire | `api/gestionnaires/[id]` (DELETE) | 🟡 En cours. ⚠️ Devra refuser l'archivage tant qu'une entreprise n'est couverte que par ce gestionnaire (D27), dès que les entreprises existeront |
+| Vue d'ensemble du cabinet | `dashboard/cabinet`, `lib/cabinet-data.ts` (`getCabinetOverview`), `components/layout/dashboard-shell.tsx` | ✅ |
+| Page Gestionnaires | `dashboard/cabinet/gestionnaires`, `components/cabinet/gestionnaires-manager.tsx` | ✅ Liste des gestionnaires et des invitations, avec actions |
+| Renvoyer / révoquer une invitation | `api/invitations/[id]/resend` (POST), `api/invitations/[id]` (DELETE) | ✅ Jeton haché (C3), audit |
+| Modifier l'email d'un gestionnaire | `api/gestionnaires/[id]/email` (POST), `components/cabinet/edit-email-dialog.tsx` | ✅ D53 |
+| Suspendre / réactiver / retirer / restaurer un gestionnaire | `api/gestionnaires/[id]` (PATCH, DELETE, PUT), `components/cabinet/gestionnaire-actions.tsx`, `gestionnaire-restore.tsx` | ✅ D52. ⚠️ Devra refuser l'action tant qu'une entreprise n'est couverte que par ce gestionnaire (D27), dès que les entreprises existeront |
 
 ## 7. Écarts à corriger (dette)
 
@@ -114,9 +117,9 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 |---|---|---|
 | C1 | Essai créé sans carte : Stripe ne pourra rien débiter (contraire à D25) | Remplacer `provisionStripeTrial` par une **session Stripe Checkout** (`mode: subscription`, `trial_period_days: 30`) ; le cabinet est activé par le webhook `checkout.session.completed` |
 | C2 | Plan stocké sur `User.plan` / `User.billingPeriod` | Déplacer sur `Cabinet` (`planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`) ; le plan appartient au cabinet, pas à une personne |
-| C3 | Jeton d'invitation stocké **en clair** | Stocker `sha256(token)` ; le jeton en clair n'existe que dans l'email |
+| C3 | ~~Jeton d'invitation stocké en clair~~ | Corrigé le 13/10 : `Invitation.tokenHash` = `sha256(token)` (voir `lib/invitations.ts`) |
 | C4 | Acceptation d'invitation : mot de passe uniquement | Proposer aussi Google/Microsoft (email du compte OAuth = email invité) |
-| C5 | ~~Pas de renvoi ni de révocation d'invitation~~ | En cours dans ton travail local (voir § 6) |
+| C5 | ~~Pas de renvoi ni de révocation d'invitation~~ | Corrigé le 13/10 (voir § 6) |
 | C6 | Acceptation via inscription + suppression du cabinet « fantôme » | Fragile : prévoir une création de compte dédiée aux invitations, sans passer par le hook d'auto-inscription |
 | C7 | Suspension = blocage total des connexions de tout le cabinet | Adapter à D29 : portails Entreprise et Collaborateur en lecture seule |
 | C8 | Échec Stripe silencieux à l'inscription (`catch(() => {})`) | Avec C1, l'inscription n'est finalisée qu'après Checkout ; journaliser toute erreur |

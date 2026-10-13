@@ -4,7 +4,7 @@
 > En cas de contradiction entre ce fichier et un autre document, ce fichier l'emporte.
 > Toute nouvelle décision s'ajoute ici, datée.
 
-Décisions prises par **Adrien Mertens**, au fil des séances d'analyse. Dernière mise à jour : 12/10/2026
+Décisions prises par **Adrien Mertens**, au fil des séances d'analyse. Dernière mise à jour : 13/10/2026
 
 ## Contexte
 
@@ -121,6 +121,11 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 ### Intégrations officielles (12/10/2026, suite)
 - **D50.** DIMONA, DmfA et C4 : **implémentation simulée**, construite à partir de la **documentation officielle publique** de la sécurité sociale (formats JSON, statuts, anomalies). Pas de demande d'accès au service réel pour le TFE. L'architecture reste prête pour une connexion réelle plus tard (interface `DeclarationGateway`). **Exact Online reste en connexion réelle** (app de test sur sa propre instance).
 - **D51.** **Mise à jour mensuelle automatique des données de référence** (codes d'anomalies et glossaires DIMONA, schémas DIMONA et DmfA, barèmes) : détection des nouvelles versions officielles, import en base dans des tables versionnées pour les formats lisibles, validation par le SuperAdmin pour les PDF et les barèmes (D22). Le site de la sécurité sociale interdisant les robots, les fichiers concernés sont téléchargés par un clic du SuperAdmin, puis importés automatiquement. **Réalisé en dernier** (chantier C9) : jusque-là, les données de référence sont saisies une première fois à partir de la documentation officielle.
+
+### Gestion des gestionnaires par le Cabinet RH (13/10/2026)
+- **D52.** Le Cabinet RH **suspend, réactive et archive** les gestionnaires de son cabinet. Suspension = réversible : accès coupé immédiatement (sessions révoquées), connexion refusée. L'utilisateur est **informé par email** (suspension, réactivation, archivage) et, s'il tente de se connecter pendant une suspension décidée par son cabinet, voit un **message explicite** l'invitant à contacter son cabinet (et non le support SocialFlow). Une suspension posée par le **SuperAdmin** ne peut être levée que par lui (`User.suspendedBy`) ; une suspension sans auteur enregistré est traitée comme celle du SuperAdmin. Un gestionnaire **retiré** (archivé) par son cabinet peut être **restauré par le Cabinet RH pendant 30 jours** ; passé ce délai, seul le SuperAdmin peut encore le restaurer, jusqu'à la purge (90 jours). Un compte supprimé par la personne elle-même (RGPD) ou archivé par le SuperAdmin n'est jamais restaurable par le cabinet (`User.deletedBy`). Précise D27 : le blocage « entreprise non couverte » s'ajoutera avec les entreprises (chantier C1).
+
+- **D53.** Le Cabinet RH peut **corriger l'email de connexion** d'un gestionnaire de son cabinet (changement d'adresse professionnelle). L'adresse repasse à « non vérifiée » et un email de confirmation part vers la **nouvelle** adresse ; les sessions du gestionnaire sont coupées ; l'**ancienne** adresse est prévenue ; l'action est auditée. La connexion n'attend pas la confirmation (vérification « souple », comme à l'inscription). D7 s'applique : refus si l'adresse a déjà un compte ou une invitation en cours.
 
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.
