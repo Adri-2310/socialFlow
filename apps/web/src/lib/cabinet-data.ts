@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import {
+  normalizeBillingPeriod,
+  normalizeBillingStatus,
+  type BillingStatus,
+} from '@/lib/billing';
+import {
   GESTIONNAIRE_RESTORE_WINDOW_DAYS,
   gestionnaireRestoreDeadline,
 } from '@/lib/gestionnaire-retention';
@@ -18,14 +23,31 @@ export type CabinetOverview = {
   cabinetName: string;
   gestionnaires: { total: number; actifs: number; suspendus: number };
   pendingInvitations: number;
-  subscription: { planName: string | null; billingPeriod: 'monthly' | 'yearly' | null };
+  subscription: {
+    planName: string | null;
+    billingPeriod: 'monthly' | 'yearly' | null;
+    // D55 : etat d'abonnement du cabinet et ses echeances.
+    status: BillingStatus;
+    trialEndsAt: Date | null;
+    currentPeriodEnd: Date | null;
+  };
 };
 
 export async function getCabinetOverview(cabinetId: string): Promise<CabinetOverview> {
   const now = new Date();
 
-  const [cabinet, gestionnaires, pendingInvitations, owner] = await Promise.all([
-    prisma.cabinet.findUniqueOrThrow({ where: { id: cabinetId }, select: { name: true } }),
+  const [cabinet, gestionnaires, pendingInvitations] = await Promise.all([
+    prisma.cabinet.findUniqueOrThrow({
+      where: { id: cabinetId },
+      select: {
+        name: true,
+        planId: true,
+        billingPeriod: true,
+        billingStatus: true,
+        trialEndsAt: true,
+        currentPeriodEnd: true,
+      },
+    }),
     prisma.user.groupBy({
       by: ['status'],
       where: { cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: null },
@@ -33,11 +55,6 @@ export async function getCabinetOverview(cabinetId: string): Promise<CabinetOver
     }),
     prisma.invitation.count({
       where: { cabinetId, status: 'pending', expiresAt: { gt: now } },
-    }),
-    prisma.user.findFirst({
-      where: { cabinetId, role: 'CABINET_RH', deletedAt: null },
-      orderBy: { createdAt: 'asc' },
-      select: { plan: true, billingPeriod: true },
     }),
   ]);
 
@@ -49,20 +66,24 @@ export async function getCabinetOverview(cabinetId: string): Promise<CabinetOver
   // Le nom affiche vient de PricingPlan (modifiable depuis la configuration
   // SuperAdmin) plutot que d'un libelle fige ; repli sur l'identifiant si le
   // plan a ete supprime depuis.
-  const plan = owner?.plan
-    ? await prisma.pricingPlan.findUnique({ where: { planId: owner.plan }, select: { name: true } })
+  const plan = cabinet.planId
+    ? await prisma.pricingPlan.findUnique({
+        where: { planId: cabinet.planId },
+        select: { name: true },
+      })
     : null;
-
-  const billingPeriod =
-    owner?.billingPeriod === 'monthly' || owner?.billingPeriod === 'yearly'
-      ? owner.billingPeriod
-      : null;
 
   return {
     cabinetName: cabinet.name,
     gestionnaires: { total: actifs + suspendus, actifs, suspendus },
     pendingInvitations,
-    subscription: { planName: plan?.name ?? owner?.plan ?? null, billingPeriod },
+    subscription: {
+      planName: plan?.name ?? cabinet.planId ?? null,
+      billingPeriod: normalizeBillingPeriod(cabinet.billingPeriod),
+      status: normalizeBillingStatus(cabinet.billingStatus),
+      trialEndsAt: cabinet.trialEndsAt,
+      currentPeriodEnd: cabinet.currentPeriodEnd,
+    },
   };
 }
 

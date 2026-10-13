@@ -8,8 +8,8 @@ const stamp = Date.now();
 const cabinetIds: string[] = [];
 const planIds: string[] = [];
 
-async function createCabinet(name: string) {
-  const cabinet = await prisma.cabinet.create({ data: { name } });
+async function createCabinet(name: string, planId: string | null = null) {
+  const cabinet = await prisma.cabinet.create({ data: { name, planId } });
   cabinetIds.push(cabinet.id);
   return cabinet;
 }
@@ -70,16 +70,16 @@ describe('regles pures', () => {
 });
 
 describe('getCabinetQuotaUsage', () => {
-  it('lit les limites du plan du titulaire et compte les utilisateurs du cabinet', async () => {
+  it('lit les limites du plan du cabinet et compte les gestionnaires, sans le titulaire', async () => {
     const planId = await createPlan({
       maxEntreprises: 25,
       maxUtilisateurs: 5,
       maxStorageMb: 5120,
     });
-    const mine = await createCabinet(`Cabinet quota A ${stamp}`);
+    const mine = await createCabinet(`Cabinet quota A ${stamp}`, planId);
     const other = await createCabinet(`Cabinet quota B ${stamp}`);
 
-    const owner = await createUser({ cabinetId: mine.id, role: 'CABINET_RH', plan: planId });
+    const owner = await createUser({ cabinetId: mine.id, role: 'CABINET_RH' });
     await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH' });
     await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH', status: 'suspendu' });
     // Archive : ne compte plus.
@@ -108,15 +108,16 @@ describe('getCabinetQuotaUsage', () => {
     const usage = await getCabinetQuotaUsage(mine.id);
 
     expect(usage.limits).toEqual({ maxEntreprises: 25, maxUtilisateurs: 5, maxStorageMb: 5120 });
-    expect(usage.utilisateurs).toEqual({ members: 3, pendingInvitations: 1, used: 4 });
+    // D56 : 2 gestionnaires (actif + suspendu), le titulaire ne compte pas.
+    expect(usage.utilisateurs).toEqual({ members: 2, pendingInvitations: 1, used: 3 });
     expect(usage.entreprises.used).toBe(0);
     expect(usage.storageMb.used).toBe(0);
   });
 
   it('renvoie des limites nulles pour un plan illimite', async () => {
     const planId = await createPlan({});
-    const cabinet = await createCabinet(`Cabinet quota C ${stamp}`);
-    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH', plan: planId });
+    const cabinet = await createCabinet(`Cabinet quota C ${stamp}`, planId);
+    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH' });
 
     const usage = await getCabinetQuotaUsage(cabinet.id);
     expect(usage.limits).toEqual({
@@ -132,20 +133,16 @@ describe('getCabinetQuotaUsage', () => {
     await createUser({ cabinetId: sansPlan.id, role: 'CABINET_RH' });
     expect((await getCabinetQuotaUsage(sansPlan.id)).limits).toBeNull();
 
-    const planInconnu = await createCabinet(`Cabinet quota E ${stamp}`);
-    await createUser({
-      cabinetId: planInconnu.id,
-      role: 'CABINET_RH',
-      plan: `plan-supprime-${stamp}`,
-    });
+    const planInconnu = await createCabinet(`Cabinet quota E ${stamp}`, `plan-supprime-${stamp}`);
+    await createUser({ cabinetId: planInconnu.id, role: 'CABINET_RH' });
     expect((await getCabinetQuotaUsage(planInconnu.id)).limits).toBeNull();
   });
 
   it('continue d appliquer un plan archive', async () => {
     const planId = await createPlan({ maxUtilisateurs: 2 });
     await prisma.pricingPlan.update({ where: { planId }, data: { archivedAt: new Date() } });
-    const cabinet = await createCabinet(`Cabinet quota F ${stamp}`);
-    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH', plan: planId });
+    const cabinet = await createCabinet(`Cabinet quota F ${stamp}`, planId);
+    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH' });
 
     const usage = await getCabinetQuotaUsage(cabinet.id);
     expect(usage.limits?.maxUtilisateurs).toBe(2);

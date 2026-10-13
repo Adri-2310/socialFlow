@@ -32,7 +32,16 @@ export default async function CabinetOverviewPage() {
     getArchivedGestionnaires(user.cabinetId),
   ]);
 
-  const alerts = buildCabinetAlerts({ quotas, invitations, gestionnaires, archived });
+  const alerts = buildCabinetAlerts({
+    quotas,
+    invitations,
+    gestionnaires,
+    archived,
+    subscription: {
+      status: overview.subscription.status,
+      trialEndsAt: overview.subscription.trialEndsAt,
+    },
+  });
 
   return (
     <>

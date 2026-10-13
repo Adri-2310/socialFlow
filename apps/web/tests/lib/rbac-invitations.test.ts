@@ -164,10 +164,11 @@ describe('quota d utilisateurs du plan (D15)', () => {
 
   it('bloque une invitation qui depasserait le quota, en comptant les invitations en attente', async () => {
     const { cj, user } = await creerCabinetRH('quota-bloque');
-    // Titulaire = 1 place ; une seule invitation possible avec un plan a 2.
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { plan: await creerPlan('bloque', 2) },
+    // D56 : le titulaire ne compte pas ; un plan a 1 gestionnaire n'autorise
+    // qu'une seule invitation.
+    await prisma.cabinet.update({
+      where: { id: user.cabinetId! },
+      data: { planId: await creerPlan('bloque', 1) },
     });
 
     const premier = await createInvitation(
@@ -182,16 +183,16 @@ describe('quota d utilisateurs du plan (D15)', () => {
     expect(await second.json()).toEqual({
       error: 'QUOTA_EXCEEDED',
       quota: 'maxUtilisateurs',
-      limit: 2,
-      used: 2,
+      limit: 1,
+      used: 1,
     });
   });
 
   it('libere la place quand l invitation est revoquee', async () => {
     const { cj, user } = await creerCabinetRH('quota-revoque');
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { plan: await creerPlan('revoque', 2) },
+    await prisma.cabinet.update({
+      where: { id: user.cabinetId! },
+      data: { planId: await creerPlan('revoque', 1) },
     });
     const { invitation } = await inviter(cj, 'quota-revoque-cible');
     expect(
@@ -215,9 +216,9 @@ describe('quota d utilisateurs du plan (D15)', () => {
 
   it('n applique aucune limite a un plan illimite ni a un cabinet sans plan', async () => {
     const { cj, user } = await creerCabinetRH('quota-illimite');
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { plan: await creerPlan('illimite', null) },
+    await prisma.cabinet.update({
+      where: { id: user.cabinetId! },
+      data: { planId: await creerPlan('illimite', null) },
     });
     for (const label of ['quota-i1', 'quota-i2', 'quota-i3']) {
       const res = await createInvitation(

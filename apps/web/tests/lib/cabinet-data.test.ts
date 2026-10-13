@@ -15,8 +15,16 @@ import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 const stamp = Date.now();
 const cabinetIds: string[] = [];
 
-async function createCabinet(name: string) {
-  const cabinet = await prisma.cabinet.create({ data: { name } });
+async function createCabinet(
+  name: string,
+  data: {
+    planId?: string | null;
+    billingPeriod?: string | null;
+    billingStatus?: string;
+    trialEndsAt?: Date | null;
+  } = {},
+) {
+  const cabinet = await prisma.cabinet.create({ data: { name, ...data } });
   cabinetIds.push(cabinet.id);
   return cabinet;
 }
@@ -52,15 +60,14 @@ afterAll(async () => {
 
 describe('getCabinetOverview', () => {
   it('compte les gestionnaires du cabinet sans ceux des autres ni les archives', async () => {
-    const mine = await createCabinet(`Cabinet A ${stamp}`);
+    const mine = await createCabinet(`Cabinet A ${stamp}`, {
+      planId: 'starter',
+      billingPeriod: 'monthly',
+      billingStatus: 'ACTIF',
+    });
     const other = await createCabinet(`Cabinet B ${stamp}`);
 
-    await createUser({
-      cabinetId: mine.id,
-      role: 'CABINET_RH',
-      plan: 'starter',
-      billingPeriod: 'monthly',
-    });
+    await createUser({ cabinetId: mine.id, role: 'CABINET_RH' });
     await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH' });
     await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH', status: 'suspendu' });
     await createUser({ cabinetId: mine.id, role: 'GESTIONNAIRE_RH', deletedAt: new Date() });
@@ -71,6 +78,7 @@ describe('getCabinetOverview', () => {
     expect(overview.cabinetName).toBe(`Cabinet A ${stamp}`);
     expect(overview.gestionnaires).toEqual({ total: 2, actifs: 1, suspendus: 1 });
     expect(overview.subscription.billingPeriod).toBe('monthly');
+    expect(overview.subscription.status).toBe('ACTIF');
     // Nom issu de PricingPlan s'il existe, sinon repli sur l'identifiant.
     expect(overview.subscription.planName?.toLowerCase()).toBe('starter');
   });
@@ -125,18 +133,46 @@ describe('getCabinetOverview', () => {
   });
 
   it('resout le nom du plan depuis PricingPlan, avec repli sur l identifiant', async () => {
-    const cabinet = await createCabinet(`Cabinet E ${stamp}`);
-    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH', plan: `plan-inconnu-${stamp}` });
+    const cabinet = await createCabinet(`Cabinet E ${stamp}`, { planId: `plan-inconnu-${stamp}` });
+    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH' });
 
     const overview = await getCabinetOverview(cabinet.id);
     expect(overview.subscription.planName).toBe(`plan-inconnu-${stamp}`);
+  });
+
+  it('lit l etat d essai et sa date de fin sur le cabinet', async () => {
+    const trialEndsAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    const cabinet = await createCabinet(`Cabinet essai ${stamp}`, {
+      planId: 'starter',
+      billingStatus: 'ESSAI',
+      trialEndsAt,
+    });
+    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH' });
+
+    const overview = await getCabinetOverview(cabinet.id);
+    expect(overview.subscription.status).toBe('ESSAI');
+    expect(overview.subscription.trialEndsAt?.getTime()).toBe(trialEndsAt.getTime());
+  });
+
+  it('ne tient pas compte du plan figurant sur l utilisateur (D55)', async () => {
+    const cabinet = await createCabinet(`Cabinet sans plan ${stamp}`);
+    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH', plan: 'enterprise' });
+
+    const overview = await getCabinetOverview(cabinet.id);
+    expect(overview.subscription.planName).toBeNull();
   });
 
   it('renvoie un abonnement vide pour un cabinet sans titulaire', async () => {
     const cabinet = await createCabinet(`Cabinet F ${stamp}`);
 
     const overview = await getCabinetOverview(cabinet.id);
-    expect(overview.subscription).toEqual({ planName: null, billingPeriod: null });
+    expect(overview.subscription).toEqual({
+      planName: null,
+      billingPeriod: null,
+      status: 'EN_ATTENTE_PAIEMENT',
+      trialEndsAt: null,
+      currentPeriodEnd: null,
+    });
     expect(overview.gestionnaires.total).toBe(0);
   });
 });

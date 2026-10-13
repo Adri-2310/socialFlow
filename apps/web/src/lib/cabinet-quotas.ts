@@ -13,7 +13,8 @@ export type QuotaKey = keyof PlanQuotas;
 export type CabinetQuotaUsage = {
   // null : cabinet sans plan connu, aucun quota applique (voir resolvePlanQuotas).
   limits: PlanQuotas | null;
-  // Utilisateurs du cabinet = Cabinet RH + gestionnaires non archives
+  // D56 : le quota "utilisateurs" (maxUtilisateurs) ne compte que les
+  // gestionnaires non archives, le titulaire (Cabinet RH) n'y figure pas
   // (suspendus compris : ils gardent leur place). Les invitations en attente
   // reservent une place, sinon un cabinet pourrait en envoyer sans limite et
   // depasser son quota des qu'elles sont acceptees.
@@ -45,21 +46,19 @@ export function quotaPercent(used: number, limit: number | null): number {
   return Math.min(100, Math.round((used / limit) * 100));
 }
 
-// Le plan du cabinet est celui de son titulaire (User.plan, dette C2 : il
-// migrera sur Cabinet). Un plan archive continue de s'appliquer a ceux qui
+// Le plan est celui du cabinet (Cabinet.planId, D55). Un plan archive continue de s'appliquer a ceux qui
 // l'ont deja. Sans plan connu (compte cree sans plan, plan supprime), aucun
 // quota n'est applique plutot que de bloquer un cabinet sur une valeur
 // inventee.
 async function resolvePlanQuotas(cabinetId: string): Promise<PlanQuotas | null> {
-  const owner = await prisma.user.findFirst({
-    where: { cabinetId, role: 'CABINET_RH', deletedAt: null },
-    orderBy: { createdAt: 'asc' },
-    select: { plan: true },
+  const cabinet = await prisma.cabinet.findUnique({
+    where: { id: cabinetId },
+    select: { planId: true },
   });
-  if (!owner?.plan) return null;
+  if (!cabinet?.planId) return null;
 
   const plan = await prisma.pricingPlan.findUnique({
-    where: { planId: owner.plan },
+    where: { planId: cabinet.planId },
     select: { maxEntreprises: true, maxUtilisateurs: true, maxStorageMb: true },
   });
   return plan ?? null;
@@ -69,11 +68,7 @@ export async function getCabinetQuotaUsage(cabinetId: string): Promise<CabinetQu
   const [limits, members, pendingInvitations] = await Promise.all([
     resolvePlanQuotas(cabinetId),
     prisma.user.count({
-      where: {
-        cabinetId,
-        role: { in: ['CABINET_RH', 'GESTIONNAIRE_RH'] },
-        deletedAt: null,
-      },
+      where: { cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: null },
     }),
     prisma.invitation.count({
       where: {

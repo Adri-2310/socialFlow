@@ -23,10 +23,13 @@ export const metadata: Metadata = {
 export default async function ProfilPage() {
   const { user } = await requireSession();
 
-  const [plan, cabinet] = await Promise.all([
-    user.plan ? prisma.pricingPlan.findUnique({ where: { planId: user.plan } }) : null,
-    user.cabinetId ? prisma.cabinet.findUnique({ where: { id: user.cabinetId } }) : null,
-  ]);
+  // D55 : la formule et la periode appartiennent au cabinet, pas a la personne.
+  const cabinet = user.cabinetId
+    ? await prisma.cabinet.findUnique({ where: { id: user.cabinetId } })
+    : null;
+  const plan = cabinet?.planId
+    ? await prisma.pricingPlan.findUnique({ where: { planId: cabinet.planId } })
+    : null;
 
   const memberSince = new Intl.DateTimeFormat('fr-BE', {
     day: 'numeric',
@@ -77,8 +80,8 @@ export default async function ProfilPage() {
               <div className="flex justify-between border-b border-border/60 pb-3">
                 <dt className="text-muted-foreground">Facturation</dt>
                 <dd className="font-medium text-foreground">
-                  {user.billingPeriod
-                    ? (BILLING_LABELS[user.billingPeriod] ?? user.billingPeriod)
+                  {cabinet?.billingPeriod
+                    ? (BILLING_LABELS[cabinet.billingPeriod] ?? cabinet.billingPeriod)
                     : '—'}
                 </dd>
               </div>

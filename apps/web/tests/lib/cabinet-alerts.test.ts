@@ -70,7 +70,7 @@ describe('buildCabinetAlerts', () => {
     expect(atteint[0]).toMatchObject({
       id: 'quota-utilisateurs-atteint',
       level: 'danger',
-      title: "Quota d'utilisateurs atteint",
+      title: 'Quota de gestionnaires atteint',
       description: 'Vous utilisez 10 sur 10. Passez à un plan supérieur pour en ajouter.',
     });
 
@@ -141,6 +141,34 @@ describe('buildCabinetAlerts', () => {
       archived: [archived({ restorableUntil: new Date(now.getTime() - day) })],
     });
     expect(passe).toEqual([]);
+  });
+
+  it('previent quand l essai se termine dans 7 jours ou moins', () => {
+    const dans = (jours: number) => new Date(now.getTime() + jours * day);
+
+    const proche = build({ subscription: { status: 'ESSAI', trialEndsAt: dans(3) } });
+    expect(proche[0]).toMatchObject({
+      id: 'essai-bientot-termine',
+      level: 'warning',
+      title: 'Votre période d’essai se termine dans 3 jours',
+    });
+
+    const aujourdhui = build({
+      subscription: { status: 'ESSAI', trialEndsAt: new Date(now.getTime() + 3_600_000) },
+    });
+    expect(aujourdhui[0].title).toBe('Votre période d’essai se termine dans 1 jour');
+
+    expect(build({ subscription: { status: 'ESSAI', trialEndsAt: dans(20) } })).toEqual([]);
+    expect(build({ subscription: { status: 'ACTIF', trialEndsAt: null } })).toEqual([]);
+  });
+
+  it('signale un paiement en echec, une suspension pour impaye et une resiliation', () => {
+    const level = (status: 'DELAI_GRACE' | 'IMPAYE' | 'RESILIE') =>
+      build({ subscription: { status, trialEndsAt: null } })[0];
+
+    expect(level('DELAI_GRACE')).toMatchObject({ id: 'paiement-echec', level: 'danger' });
+    expect(level('IMPAYE')).toMatchObject({ id: 'suspendu-impaye', level: 'danger' });
+    expect(level('RESILIE')).toMatchObject({ id: 'abonnement-resilie', level: 'warning' });
   });
 
   it('suggere d inviter un premier gestionnaire seulement si rien n est en cours', () => {

@@ -3,6 +3,7 @@ import type {
   GestionnaireRow,
   InvitationRow,
 } from '@/lib/cabinet-data';
+import { trialDaysLeft, type BillingStatus } from '@/lib/billing';
 import {
   formatStorageMb,
   isQuotaReached,
@@ -31,6 +32,8 @@ export type CabinetAlertsInput = {
   invitations: InvitationRow[];
   gestionnaires: GestionnaireRow[];
   archived: ArchivedGestionnaireRow[];
+  // Etat d'abonnement du cabinet (D55) ; absent = pas d'alerte de facturation.
+  subscription?: { status: BillingStatus; trialEndsAt: Date | null };
   now?: Date;
 };
 
@@ -39,6 +42,8 @@ const GESTIONNAIRES_HREF = '/dashboard/cabinet/gestionnaires';
 const QUOTA_WARNING_PERCENT = 80;
 // Une restauration qui expire dans ce delai merite d'etre signalee.
 const RESTORE_WARNING_DAYS = 7;
+// Fin d'essai signalee a partir de ce nombre de jours restants.
+const TRIAL_WARNING_DAYS = 7;
 
 const LEVEL_ORDER: Record<AlertLevel, number> = { danger: 0, warning: 1, info: 2 };
 
@@ -54,7 +59,7 @@ function quotaAlerts(quotas: CabinetQuotaUsage): CabinetAlert[] {
   const rows = [
     {
       key: 'utilisateurs',
-      label: "d'utilisateurs",
+      label: 'de gestionnaires',
       used: quotas.utilisateurs.used,
       limit: limits.maxUtilisateurs,
       format: String,
@@ -108,9 +113,77 @@ function quotaAlerts(quotas: CabinetQuotaUsage): CabinetAlert[] {
   });
 }
 
+function subscriptionAlerts(
+  subscription: NonNullable<CabinetAlertsInput['subscription']>,
+  now: Date,
+): CabinetAlert[] {
+  switch (subscription.status) {
+    case 'ESSAI': {
+      const days = trialDaysLeft(subscription.trialEndsAt, now);
+      if (days === null || days > TRIAL_WARNING_DAYS) return [];
+      return [
+        {
+          id: 'essai-bientot-termine',
+          level: 'warning',
+          title:
+            days === 0
+              ? 'Votre période d’essai se termine aujourd’hui'
+              : `Votre période d’essai se termine dans ${plural(days, 'jour')}`,
+          description: subscription.trialEndsAt
+            ? `Fin de l'essai le ${formatDate(subscription.trialEndsAt)}.`
+            : 'Votre abonnement démarre à la fin de l’essai.',
+        },
+      ];
+    }
+    case 'DELAI_GRACE':
+      return [
+        {
+          id: 'paiement-echec',
+          level: 'danger',
+          title: 'Paiement en échec',
+          description:
+            'Régularisez votre abonnement avant la fin du délai de grâce pour éviter la suspension de votre cabinet.',
+        },
+      ];
+    case 'IMPAYE':
+      return [
+        {
+          id: 'suspendu-impaye',
+          level: 'danger',
+          title: 'Cabinet suspendu pour impayé',
+          description:
+            'Vos clients conservent un accès en lecture seule. Régularisez votre abonnement pour reprendre la production.',
+        },
+      ];
+    case 'RESILIE':
+      return [
+        {
+          id: 'abonnement-resilie',
+          level: 'warning',
+          title: 'Abonnement résilié',
+          description: 'Votre cabinet est en lecture seule ; pensez à exporter vos données.',
+        },
+      ];
+    case 'EN_ATTENTE_PAIEMENT':
+      return [
+        {
+          id: 'attente-paiement',
+          level: 'info',
+          title: 'Abonnement en attente de paiement',
+          description: 'Finalisez votre abonnement pour activer votre cabinet.',
+        },
+      ];
+    default:
+      return [];
+  }
+}
+
 export function buildCabinetAlerts(input: CabinetAlertsInput): CabinetAlert[] {
   const now = input.now ?? new Date();
-  const alerts: CabinetAlert[] = [...quotaAlerts(input.quotas)];
+  const alerts: CabinetAlert[] = [
+    ...(input.subscription ? subscriptionAlerts(input.subscription, now) : []),
+    ...quotaAlerts(input.quotas),
+  ];
 
   const expired = input.invitations.filter((i) => i.status === 'expired');
   if (expired.length > 0) {

@@ -1,5 +1,6 @@
 import { Users, MailPlus, Building2, CreditCard } from 'lucide-react';
 import type { CabinetOverview } from '@/lib/cabinet-data';
+import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing';
 
 const PERIOD_LABELS = { monthly: 'Facturation mensuelle', yearly: 'Facturation annuelle' } as const;
 
@@ -8,6 +9,7 @@ const PERIOD_LABELS = { monthly: 'Facturation mensuelle', yearly: 'Facturation a
 // principe que MonitoringSummary cote SuperAdmin.
 export function OverviewCards({ data }: { data: CabinetOverview }) {
   const { gestionnaires, pendingInvitations, subscription } = data;
+  const daysLeft = subscription.status === 'ESSAI' ? trialDaysLeft(subscription.trialEndsAt) : null;
 
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -58,6 +60,10 @@ export function OverviewCards({ data }: { data: CabinetOverview }) {
         </p>
         <p className="text-sm text-muted-foreground">
           {subscription.billingPeriod ? PERIOD_LABELS[subscription.billingPeriod] : 'Abonnement'}
+        </p>
+        <p className="mt-1 text-xs font-medium text-muted-foreground">
+          {BILLING_STATUS_LABELS[subscription.status]}
+          {daysLeft !== null && ` · ${daysLeft === 0 ? 'se termine aujourd’hui' : `J-${daysLeft}`}`}
         </p>
       </div>
     </section>

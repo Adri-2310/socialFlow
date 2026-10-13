@@ -11,7 +11,6 @@ export async function getCabinets() {
   const cabinets = await prisma.cabinet.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
-      users: { where: { role: 'CABINET_RH' }, select: { plan: true } },
       _count: { select: { users: { where: { role: 'GESTIONNAIRE_RH' } } } },
     },
   });
@@ -19,7 +18,7 @@ export async function getCabinets() {
     id: c.id,
     name: c.name,
     status: c.status,
-    plan: c.users[0]?.plan ?? null,
+    plan: c.planId,
     gestionnaireCount: c._count.users,
     createdAt: c.createdAt.toISOString(),
     deletedAt: c.deletedAt?.toISOString() ?? null,

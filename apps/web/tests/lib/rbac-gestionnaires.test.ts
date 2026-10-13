@@ -523,13 +523,13 @@ describe('restauration d un gestionnaire retire (D52)', () => {
     const { cj, user: titulaire } = await creerCabinetRH('rest-quota');
     const planId = `vitest-quota-rest-${Date.now()}`;
     await prisma.pricingPlan.create({
-      data: { planId, name: planId, description: 'plan de test', features: ['test'], maxUtilisateurs: 2 },
+      data: { planId, name: planId, description: 'plan de test', features: ['test'], maxUtilisateurs: 1 },
     });
-    await prisma.user.update({ where: { id: titulaire.id }, data: { plan: planId } });
+    await prisma.cabinet.update({ where: { id: titulaire.cabinetId! }, data: { planId } });
 
     const { user: retire } = await creerGestionnaire(titulaire.cabinetId!, 'rest-quota-retire');
     await del(retire.id, cj);
-    // Une place est reprise par un autre gestionnaire : titulaire + lui = 2/2.
+    // Une place est reprise par un autre gestionnaire : 1/1 (le titulaire ne compte pas, D56).
     await creerGestionnaire(titulaire.cabinetId!, 'rest-quota-autre');
 
     const res = await put(retire.id, cj);
@@ -537,8 +537,8 @@ describe('restauration d un gestionnaire retire (D52)', () => {
     expect(await res.json()).toEqual({
       error: 'QUOTA_EXCEEDED',
       quota: 'maxUtilisateurs',
-      limit: 2,
-      used: 2,
+      limit: 1,
+      used: 1,
     });
 
     const apres = await prisma.user.findUniqueOrThrow({ where: { id: retire.id } });
