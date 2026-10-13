@@ -48,6 +48,7 @@ const SHELL_CONFIG = {
       { label: 'Gestionnaires', icon: Users, href: '/dashboard/cabinet/gestionnaires' },
       { label: 'Entreprises', icon: Building2 },
       { label: 'Facturation', icon: CreditCard },
+      { label: "Journal d'audit", icon: ScrollText, href: '/dashboard/cabinet/audit' },
     ],
   },
 } satisfies Record<string, ShellConfig>;
