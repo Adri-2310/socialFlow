@@ -62,7 +62,7 @@ export function GestionnaireRestore({
         )}
         Restaurer
       </button>
-      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive">{error}</p>}
+      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>}
     </div>
   );
 }

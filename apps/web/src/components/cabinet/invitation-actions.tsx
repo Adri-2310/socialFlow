@@ -80,14 +80,14 @@ export function InvitationActions({
             onClick={() => setConfirmRevoke(true)}
             disabled={busy !== null}
             aria-label={`Révoquer l'invitation de ${email}`}
-            className="flex items-center gap-1.5 rounded-lg border border-input min-h-10 px-3 py-2 sm:min-h-0 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-lg border border-input min-h-10 px-3 py-2 sm:min-h-0 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-destructive-text transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Ban className="h-3.5 w-3.5" />
             Révoquer
           </button>
         )}
       </div>
-      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive">{error}</p>}
+      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>}
 
       {confirmRevoke && (
         <ConfirmDialog

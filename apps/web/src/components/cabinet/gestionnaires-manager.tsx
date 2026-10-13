@@ -72,7 +72,7 @@ export function GestionnairesManager({
                     className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
                       g.status === 'actif'
                         ? 'bg-secondary/10 text-secondary'
-                        : 'bg-destructive/10 text-destructive'
+                        : 'bg-destructive/10 text-destructive-text'
                     }`}
                   >
                     {g.status === 'actif' ? 'Actif' : 'Suspendu'}

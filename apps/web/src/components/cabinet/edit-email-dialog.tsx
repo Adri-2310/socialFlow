@@ -107,7 +107,7 @@ export function EditEmailDialog({
           className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground sm:text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
         />
 
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+        {error && <p className="mt-2 text-sm text-destructive-text">{error}</p>}
         {warning && <p className="mt-2 text-sm text-muted-foreground">{warning}</p>}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">

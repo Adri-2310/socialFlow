@@ -116,7 +116,7 @@ export function GestionnaireActions({
           onClick={() => setConfirm('archive')}
           disabled={busy !== null}
           aria-label={`Retirer ${name}`}
-          className={`${buttonClass} text-destructive hover:bg-destructive/10`}
+          className={`${buttonClass} text-destructive-text hover:bg-destructive/10`}
         >
           <UserMinus className="h-3.5 w-3.5" />
           Retirer
@@ -127,7 +127,7 @@ export function GestionnaireActions({
           Suspendu par l&apos;administration SocialFlow.
         </p>
       )}
-      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive">{error}</p>}
+      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>}
 
       {editingEmail && (
         <EditEmailDialog

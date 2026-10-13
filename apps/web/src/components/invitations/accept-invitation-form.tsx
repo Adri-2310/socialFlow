@@ -129,7 +129,7 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
         />
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
 
       <button
         type="submit"

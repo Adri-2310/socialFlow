@@ -101,9 +101,9 @@ export function InviteGestionnaire({
       </form>
 
       {reached && (
-        <p className="mt-2 text-sm text-destructive">{ERROR_MESSAGES.QUOTA_EXCEEDED}</p>
+        <p className="mt-2 text-sm text-destructive-text">{ERROR_MESSAGES.QUOTA_EXCEEDED}</p>
       )}
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-2 text-sm text-destructive-text">{error}</p>}
       {sent && <p className="mt-2 text-sm text-secondary">Invitation envoyée.</p>}
     </div>
   );

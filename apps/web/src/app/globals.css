@@ -19,6 +19,8 @@
   --accent-foreground: #4f46e5;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+  /* Texte d'erreur : contraste AA sur fond clair (6,5:1 sur blanc). */
+  --destructive-text: #b91c1c;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #4f46e5;
@@ -74,6 +76,8 @@
   --accent-foreground: #00c49f;
   --destructive: #7f1d1d;
   --destructive-foreground: #ffffff;
+  /* Texte d'erreur : --destructive est trop sombre comme couleur de texte. */
+  --destructive-text: #f87171;
   --border: #1e293b;
   --input: #1e293b;
   --ring: #5f62ec;
@@ -127,6 +131,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-text: var(--destructive-text);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

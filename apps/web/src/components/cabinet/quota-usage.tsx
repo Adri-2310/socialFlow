@@ -55,7 +55,7 @@ function QuotaRow({
       )}
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       {reached && (
-        <p className="mt-1 text-xs font-medium text-destructive">
+        <p className="mt-1 text-xs font-medium text-destructive-text">
           Quota atteint : passez à un plan supérieur pour en ajouter.
         </p>
       )}
