@@ -216,6 +216,10 @@ export type PlanConfigRow = {
   badge: string | null;
   features: string[];
   sortOrder: number;
+  // Quotas (D15) ; null = illimite. maxStorageMb en Mo.
+  maxEntreprises: number | null;
+  maxUtilisateurs: number | null;
+  maxStorageMb: number | null;
   archivedAt: string | null;
   stripe: {
     productId: string | null;
@@ -261,6 +265,9 @@ export async function getPricingPlansConfig(): Promise<PlanConfigRow[]> {
       planId: plan.planId,
       name: plan.name,
       description: plan.description,
+      maxEntreprises: plan.maxEntreprises,
+      maxUtilisateurs: plan.maxUtilisateurs,
+      maxStorageMb: plan.maxStorageMb,
       monthlyPrice: plan.monthlyPrice,
       yearlyPrice: plan.yearlyPrice,
       custom: plan.custom,

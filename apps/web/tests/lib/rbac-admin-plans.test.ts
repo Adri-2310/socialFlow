@@ -183,6 +183,60 @@ describe('PATCH /api/admin/plans/[id]', () => {
     expect(res.status).toBe(400);
   });
 
+  it('refuse un quota negatif ou non entier', async () => {
+    const { cj } = await creerSuperAdmin('plan-quota-invalide');
+    const plan = await creerPlanTest('quota-invalide');
+
+    expect((await patch(plan.id, { ...VALID_BODY, maxUtilisateurs: -1 }, cj)).status).toBe(400);
+    expect((await patch(plan.id, { ...VALID_BODY, maxStorageMb: 1.5 }, cj)).status).toBe(400);
+    expect((await patch(plan.id, { ...VALID_BODY, maxEntreprises: '25' }, cj)).status).toBe(400);
+  });
+
+  it('enregistre les quotas (D15), null = illimite, absent = inchange', async () => {
+    const { cj } = await creerSuperAdmin('plan-quota-ok');
+    const plan = await creerPlanTest('quota-ok');
+
+    const fixe = await patch(
+      plan.id,
+      {
+        ...VALID_BODY,
+        monthlyPrice: plan.monthlyPrice,
+        yearlyPrice: plan.yearlyPrice,
+        maxEntreprises: 25,
+        maxUtilisateurs: 3,
+        maxStorageMb: 5120,
+      },
+      cj,
+    );
+    expect(fixe.status).toBe(200);
+    const apres = await prisma.pricingPlan.findUniqueOrThrow({ where: { id: plan.id } });
+    expect([apres.maxEntreprises, apres.maxUtilisateurs, apres.maxStorageMb]).toEqual([25, 3, 5120]);
+
+    // Champs absents : valeurs conservees.
+    await patch(
+      plan.id,
+      { ...VALID_BODY, monthlyPrice: plan.monthlyPrice, yearlyPrice: plan.yearlyPrice },
+      cj,
+    );
+    const inchange = await prisma.pricingPlan.findUniqueOrThrow({ where: { id: plan.id } });
+    expect(inchange.maxUtilisateurs).toBe(3);
+
+    // null explicite : illimite.
+    await patch(
+      plan.id,
+      {
+        ...VALID_BODY,
+        monthlyPrice: plan.monthlyPrice,
+        yearlyPrice: plan.yearlyPrice,
+        maxUtilisateurs: null,
+      },
+      cj,
+    );
+    const illimite = await prisma.pricingPlan.findUniqueOrThrow({ where: { id: plan.id } });
+    expect(illimite.maxUtilisateurs).toBeNull();
+    expect(illimite.maxEntreprises).toBe(25);
+  });
+
   it('refuse un plan inexistant', async () => {
     const { cj } = await creerSuperAdmin('plan-inexistant');
     const res = await patch('id-qui-n-existe-pas', VALID_BODY, cj);

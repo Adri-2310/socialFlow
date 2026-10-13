@@ -12,7 +12,14 @@ type PlanUpdateBody = {
   highlighted: boolean;
   sortOrder: number;
   features: string[];
+  // Quotas (D15) : null = illimite, absent = inchange.
+  maxEntreprises?: number | null;
+  maxUtilisateurs?: number | null;
+  maxStorageMb?: number | null;
 };
+
+const isQuota = (v: unknown) =>
+  v === undefined || v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0);
 
 function parseBody(body: unknown): PlanUpdateBody | null {
   if (!body || typeof body !== 'object') return null;
@@ -25,6 +32,9 @@ function parseBody(body: unknown): PlanUpdateBody | null {
   if (b.badge !== null && typeof b.badge !== 'string') return null;
   if (typeof b.highlighted !== 'boolean') return null;
   if (typeof b.sortOrder !== 'number') return null;
+  if (!isQuota(b.maxEntreprises) || !isQuota(b.maxUtilisateurs) || !isQuota(b.maxStorageMb)) {
+    return null;
+  }
   if (!Array.isArray(b.features) || !b.features.every((f) => typeof f === 'string')) return null;
 
   const features = (b.features as string[]).map((f) => f.trim()).filter(Boolean);
@@ -39,6 +49,9 @@ function parseBody(body: unknown): PlanUpdateBody | null {
     highlighted: b.highlighted,
     sortOrder: b.sortOrder,
     features,
+    maxEntreprises: b.maxEntreprises as number | null | undefined,
+    maxUtilisateurs: b.maxUtilisateurs as number | null | undefined,
+    maxStorageMb: b.maxStorageMb as number | null | undefined,
   };
 }
 

@@ -21,6 +21,10 @@ type FormState = {
   highlighted: boolean;
   sortOrder: string;
   features: string;
+  // Quotas (D15) : champ vide = illimite. Stockage saisi en Go.
+  maxEntreprises: string;
+  maxUtilisateurs: string;
+  maxStorageGb: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -32,6 +36,9 @@ const EMPTY_FORM: FormState = {
   highlighted: false,
   sortOrder: '0',
   features: '',
+  maxEntreprises: '',
+  maxUtilisateurs: '',
+  maxStorageGb: '',
 };
 
 function toFormState(plan: PlanConfigRow): FormState {
@@ -44,6 +51,9 @@ function toFormState(plan: PlanConfigRow): FormState {
     highlighted: plan.highlighted,
     sortOrder: String(plan.sortOrder),
     features: plan.features.join('\n'),
+    maxEntreprises: plan.maxEntreprises === null ? '' : String(plan.maxEntreprises),
+    maxUtilisateurs: plan.maxUtilisateurs === null ? '' : String(plan.maxUtilisateurs),
+    maxStorageGb: plan.maxStorageMb === null ? '' : String(plan.maxStorageMb / 1024),
   };
 }
 
@@ -57,6 +67,9 @@ function formToBody(form: FormState) {
     highlighted: form.highlighted,
     sortOrder: Number(form.sortOrder),
     features: form.features.split('\n'),
+    maxEntreprises: form.maxEntreprises === '' ? null : Number(form.maxEntreprises),
+    maxUtilisateurs: form.maxUtilisateurs === '' ? null : Number(form.maxUtilisateurs),
+    maxStorageMb: form.maxStorageGb === '' ? null : Math.round(Number(form.maxStorageGb) * 1024),
   };
 }
 
@@ -148,6 +161,45 @@ function PlanFormFields({
             type="number"
             value={form.sortOrder}
             onChange={(e) => onChange({ sortOrder: e.target.value })}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="text-sm">
+          <span className="mb-1 block font-medium text-foreground">Entreprises clientes (max)</span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={form.maxEntreprises}
+            onChange={(e) => onChange({ maxEntreprises: e.target.value })}
+            placeholder="Illimité"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block font-medium text-foreground">Utilisateurs du cabinet (max)</span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={form.maxUtilisateurs}
+            onChange={(e) => onChange({ maxUtilisateurs: e.target.value })}
+            placeholder="Illimité"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block font-medium text-foreground">Stockage (Go)</span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={form.maxStorageGb}
+            onChange={(e) => onChange({ maxStorageGb: e.target.value })}
+            placeholder="Illimité"
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
           />
         </label>
