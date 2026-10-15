@@ -70,6 +70,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | 03:00 | `/api/cron/purge-deleted-accounts` | Purge définitive des comptes archivés depuis plus de 90 jours |
 | 04:00 | `/api/cron/purge-deleted-cabinets` | Purge définitive des cabinets archivés depuis plus de 90 jours |
 | 05:00 | `/api/cron/purge-expired-sessions` | Suppression des sessions expirées |
+| 06:00 | `/api/cron/suspend-overdue-cabinets` | Passage en `IMPAYE` (lecture seule) des cabinets dont le délai de grâce de 7 jours est écoulé (D57) |
 
 ## 5. Ce que le SuperAdmin ne peut pas faire (par décision)
 
@@ -86,7 +87,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | A3 | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
 | A4 | **Modifier un cabinet** (D19) | Fiche cabinet : nom, coordonnées, et changement de plan **uniquement via Stripe** (le plan local suit l'abonnement, jamais l'inverse). Audit `CABINET_UPDATED` avec avant/après |
 | A5 | **Quotas par plan** (D15) | `PricingPlan` + `maxEntreprises`, `maxUtilisateurs`, `maxStorageMb` (`null` = illimité) et droits `integrations`, `whiteLabel`, éditables dans Configuration ; valeurs de départ = cahier des charges client (D34) |
-| A6 | **Webhook Stripe + délai de grâce** (D23, D57) | Voir § 6.1. ✅ Webhook `api/webhooks/stripe` (signature, idempotence, ordre des événements, plan repris du prix) ; 🟡 tâche quotidienne de fin de délai et blocage en lecture seule à construire |
+| A6 | **Webhook Stripe + délai de grâce** (D23, D57) | Voir § 6.1. ✅ Webhook `api/webhooks/stripe` (signature, idempotence, ordre des événements, plan repris du prix) ; ✅ tâche quotidienne `api/cron/suspend-overdue-cabinets` (fin du délai de 7 jours → `IMPAYE`, emails au titulaire et aux SuperAdmins) ; 🟡 refus des écritures en lecture seule (`423`) à construire |
 | A7 | **Barèmes automatiques** (D22) | Voir § 6.2 |
 | A8 | **Notifications in-app** | Modèle `Notification` (destinataire, type, message, lien, lu/non lu) + cloche dans l'en-tête, partagé par tous les rôles |
 | A9 | Journal d'audit | Filtres (action, acteur, cabinet, période), export CSV ; ajout `ipAddress`, `userAgent`, `metadata Json` |
@@ -99,7 +100,7 @@ Inscription ─► essai 30 j (trialing) ─► 1er paiement ─► actif
                                           │ échec
                                           ▼
                                past_due : délai de grâce 7 j
-                    (Stripe relance la carte, emails à J0 et J5)
+                    (Stripe relance la carte ; email au titulaire et aux SuperAdmins à J0)
                           │ paiement OK          │ fin du délai
                           ▼                      ▼
                         actif         cabinet suspendu (status = 'suspendu',
