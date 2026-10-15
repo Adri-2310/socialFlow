@@ -17,7 +17,6 @@ const PLANS: PlanConfigRow[] = [
     description: 'Pour les petits cabinets.',
     monthlyPrice: 150,
     yearlyPrice: 120,
-    custom: false,
     highlighted: false,
     badge: null,
     features: ['Feature A', 'Feature B'],
@@ -42,7 +41,6 @@ const PLANS: PlanConfigRow[] = [
     description: 'Pour les grands secretariats.',
     monthlyPrice: null,
     yearlyPrice: null,
-    custom: false,
     highlighted: true,
     badge: 'Le plus choisi',
     features: ['Feature C'],
@@ -69,7 +67,6 @@ const ARCHIVED_PLAN: PlanConfigRow = {
   description: 'Ancien plan retire.',
   monthlyPrice: 50,
   yearlyPrice: 40,
-  custom: false,
   highlighted: false,
   badge: null,
   features: ['Feature D'],
@@ -106,9 +103,15 @@ describe('PlansConfig - affichage', () => {
     expect(screen.getByText('Désynchronisé de Stripe')).toBeInTheDocument();
   });
 
-  it('affiche "Sur devis" quand le plan n a pas de prix mensuel', () => {
+  it('affiche "Prix non défini" quand le plan n a pas de prix mensuel', () => {
     render(<PlansConfig plans={PLANS} />);
-    expect(screen.getByText('Sur devis')).toBeInTheDocument();
+    expect(screen.getByText('Prix non défini')).toBeInTheDocument();
+  });
+
+  it('affiche les quotas du plan, "illimité" quand la limite est vide (D15)', () => {
+    render(<PlansConfig plans={PLANS} />);
+    expect(screen.getAllByText(/Entreprises illimitées/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Gestionnaires illimités/).length).toBeGreaterThan(0);
   });
 });
 

@@ -14,7 +14,6 @@ export type Plan = {
   description: string;
   monthlyPrice: number | null;
   yearlyPrice: number | null;
-  custom: boolean;
   highlighted: boolean;
   badge: string | null;
   features: string[];

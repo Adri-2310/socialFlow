@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
 import type { Plan } from '@/lib/plans';
+import { planPriceDisplay } from '@/lib/plan-price-display';
 
 export function Pricing({ plans }: { plans: Plan[] }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
@@ -49,25 +50,29 @@ export function Pricing({ plans }: { plans: Plan[] }) {
               )}
               <h3 className="font-semibold text-foreground">{plan.name}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-              {plan.custom ? (
-                <p className="mt-6 text-4xl font-extrabold text-foreground">Sur devis</p>
-              ) : (
-                <p className="mt-6">
-                  <span className="text-4xl font-extrabold text-foreground">
-                    {billing === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
+              <p className="mt-6">
+                <span className="text-4xl font-extrabold text-foreground">
+                  {planPriceDisplay(plan, billing).amount}
+                </span>
+                <span className="text-muted-foreground">
+                  {' '}
+                  {planPriceDisplay(plan, billing).unit}
+                </span>
+                {planPriceDisplay(plan, billing).note && (
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {planPriceDisplay(plan, billing).note}
                   </span>
-                  <span className="text-muted-foreground"> €/mois</span>
-                </p>
-              )}
+                )}
+              </p>
               <Link
-                href={plan.custom ? '#contact' : `/register?plan=${plan.id}`}
+                href={`/register?plan=${plan.id}`}
                 className={`mt-6 block rounded-xl py-2.5 text-center text-sm font-semibold transition ${
                   plan.highlighted
                     ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:opacity-90'
                     : 'border border-border text-foreground hover:bg-muted'
                 }`}
               >
-                {plan.custom ? 'Nous contacter' : "Démarrer l'essai"}
+                Démarrer l&apos;essai
               </Link>
               <ul className="mt-6 space-y-3 text-sm text-foreground">
                 {plan.features.map((feature) => (

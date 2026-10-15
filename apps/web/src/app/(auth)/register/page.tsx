@@ -16,7 +16,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ plan?: string }>;
 }) {
   const [{ plan }, allPlans] = await Promise.all([searchParams, getPricingPlans()]);
-  const trialPlans = allPlans.filter((p) => !p.custom);
+  const trialPlans = allPlans;
 
   const initialPlanId: PlanId | null =
     isPlanId(plan) && trialPlans.some((p) => p.id === plan) ? plan : null;

@@ -436,7 +436,7 @@ describe('getPricingPlansConfig', () => {
     stripePricesList.mockResolvedValue({
       data: [
         { id: 'price_starter_m', metadata: { planId: 'starter', billingPeriod: 'monthly' }, unit_amount: 15000 },
-        { id: 'price_starter_y', metadata: { planId: 'starter', billingPeriod: 'yearly' }, unit_amount: 12000 },
+        { id: 'price_starter_y', metadata: { planId: 'starter', billingPeriod: 'yearly' }, unit_amount: 144000 },
       ],
     });
 
@@ -454,7 +454,7 @@ describe('getPricingPlansConfig', () => {
     stripePricesList.mockResolvedValue({
       data: [
         { id: 'price_pro_m', metadata: { planId: 'pro', billingPeriod: 'monthly' }, unit_amount: 30000 },
-        { id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' }, unit_amount: 24000 },
+        { id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' }, unit_amount: 288000 },
       ],
     });
 

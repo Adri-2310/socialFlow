@@ -39,7 +39,7 @@ const categories = [
       {
         question: 'Puis-je essayer SocialFlow gratuitement ?',
         answer:
-          'Oui, un essai de 30 jours sans carte bancaire vous donne accès à toutes les fonctionnalités du plan Pro.',
+          'Oui, un essai de 30 jours, sans débit avant son terme, vous donne accès à toutes les fonctionnalités du plan Pro.',
       },
       {
         question: 'Puis-je changer de plan à tout moment ?',

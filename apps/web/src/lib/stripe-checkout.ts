@@ -2,6 +2,7 @@ import type Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 import { normalizeBillingPeriod, normalizeBillingStatus } from '@/lib/billing';
+import { ensureStripePrice, expectedAmountCents } from '@/lib/stripe-prices';
 import { applySubscriptionState } from '@/lib/stripe-webhook';
 
 // Stripe Checkout avec carte et essai de 30 jours (D25, D32, C1). Remplace
@@ -21,15 +22,6 @@ export type CheckoutError =
   | 'CHECKOUT_FAILED';
 
 export type CheckoutResult = { ok: true; url: string } | { ok: false; error: CheckoutError };
-
-async function findPriceId(planId: string, billingPeriod: 'monthly' | 'yearly') {
-  const prices = await stripe.prices.list({ limit: 100, active: true });
-  return (
-    prices.data.find(
-      (p) => p.metadata.planId === planId && p.metadata.billingPeriod === billingPeriod,
-    )?.id ?? null
-  );
-}
 
 export async function createCheckoutSession(
   cabinetId: string,
@@ -56,10 +48,14 @@ export async function createCheckoutSession(
   }
 
   const billingPeriod = normalizeBillingPeriod(cabinet.billingPeriod) ?? 'monthly';
-  const priceId = await findPriceId(cabinet.planId, billingPeriod);
-  if (!priceId) return { ok: false, error: 'PRICE_NOT_FOUND' };
 
   try {
+    // Le prix vient de la base : le Price Stripe est recale dessus juste avant
+    // le paiement, jamais l'inverse (D58).
+    const price = await ensureStripePrice(cabinet.planId, billingPeriod);
+    if (!price.ok) return { ok: false, error: 'PRICE_NOT_FOUND' };
+    const priceId = price.priceId;
+
     // Client cree avant la session : l'abonnement et ses evenements portent
     // ainsi un client deja relie au cabinet (webhook, portail).
     let customerId = cabinet.stripeCustomerId;
@@ -88,10 +84,11 @@ export async function createCheckoutSession(
       },
       metadata: { cabinetId },
       locale: 'fr',
-      // Retour : confirmation immediate cote serveur (sans attendre le
-      // webhook), puis tableau de bord ; annulation : ecran de reprise (D32).
-      success_url: `${appUrl}/dashboard/cabinet?paiement=ok&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/dashboard/cabinet?paiement=annule`,
+      // Retour : l'ecran de paiement confirme la session cote serveur (sans
+      // attendre le webhook) puis envoie vers le tableau de bord ;
+      // annulation : meme ecran, avec la possibilite de reprendre (D32).
+      success_url: `${appUrl}/dashboard/cabinet/paiement?retour=ok&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/dashboard/cabinet/paiement?retour=annule`,
     });
 
     if (!session.url) return { ok: false, error: 'CHECKOUT_FAILED' };
@@ -145,4 +142,39 @@ export async function confirmCheckoutSession(
     console.error('Echec de la confirmation du Checkout', error);
     return { ok: false, error: 'CHECKOUT_FAILED' };
   }
+}
+
+export type CheckoutSummary = {
+  planName: string;
+  billingPeriod: 'monthly' | 'yearly';
+  // Montant facture (EUR) a chaque periode, tel que defini en base : le prix
+  // mensuel, ou en annuel 12 fois le prix mensuel equivalent (D58). C'est
+  // exactement le montant que le Price Stripe recale portera au paiement.
+  amount: number | null;
+  currency: string;
+};
+
+// Ce que verra le client avant de payer : le plan du cabinet et le prix lu en
+// base. Aucun appel a Stripe : l'ecran reste correct meme si Stripe est
+// injoignable.
+export async function getCheckoutSummary(cabinetId: string): Promise<CheckoutSummary | null> {
+  const cabinet = await prisma.cabinet.findUnique({
+    where: { id: cabinetId },
+    select: { planId: true, billingPeriod: true },
+  });
+  if (!cabinet?.planId) return null;
+
+  const plan = await prisma.pricingPlan.findUnique({
+    where: { planId: cabinet.planId },
+    select: { name: true, monthlyPrice: true, yearlyPrice: true },
+  });
+  const billingPeriod = normalizeBillingPeriod(cabinet.billingPeriod) ?? 'monthly';
+  const cents = plan ? expectedAmountCents(plan, billingPeriod) : null;
+
+  return {
+    planName: plan?.name ?? cabinet.planId,
+    billingPeriod,
+    amount: cents === null ? null : cents / 100,
+    currency: 'EUR',
+  };
 }

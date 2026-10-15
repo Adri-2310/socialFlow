@@ -6,6 +6,12 @@ import { Loader2, CheckCircle2, AlertTriangle, Pencil, Plus, Archive, ArchiveRes
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { PlanConfigRow } from '@/lib/admin-data';
 
+// D15, D34 : une limite vide (null) signifie "illimite", pas "non renseignee".
+function quotaLabel(value: number | null, noun: string): string {
+  if (value === null) return `${noun.charAt(0).toUpperCase()}${noun.slice(1)}s illimité${noun === 'entreprise' ? 'e' : ''}s`;
+  return `${value} ${noun}${value > 1 ? 's' : ''}`;
+}
+
 const AMOUNT_FORMATTER = new Intl.NumberFormat('fr-BE', {
   style: 'currency',
   currency: 'EUR',
@@ -144,7 +150,7 @@ function PlanFormFields({
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Prix annuel (EUR)</span>
+          <span className="mb-1 block font-medium text-foreground">Prix mensuel en facturation annuelle (EUR)</span>
           <input
             type="number"
             min={0}
@@ -467,10 +473,19 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
             {!isEditing && (
               <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
                 <span className="text-foreground">
-                  {plan.monthlyPrice !== null ? `${AMOUNT_FORMATTER.format(plan.monthlyPrice)} / mois` : 'Sur devis'}
+                  {plan.monthlyPrice !== null ? `${AMOUNT_FORMATTER.format(plan.monthlyPrice)} / mois` : 'Prix non défini'}
                 </span>
                 <span className="text-muted-foreground">
-                  {plan.yearlyPrice !== null ? `${AMOUNT_FORMATTER.format(plan.yearlyPrice)} / an` : '—'}
+                  {plan.yearlyPrice !== null
+                    ? `${AMOUNT_FORMATTER.format(plan.yearlyPrice * 12)} / an (soit ${AMOUNT_FORMATTER.format(plan.yearlyPrice)} / mois)`
+                    : '—'}
+                </span>
+                <span className="basis-full text-muted-foreground">
+                  {quotaLabel(plan.maxEntreprises, 'entreprise')} ·{' '}
+                  {quotaLabel(plan.maxUtilisateurs, 'gestionnaire')} ·{' '}
+                  {plan.maxStorageMb === null
+                    ? 'Stockage illimité'
+                    : `${plan.maxStorageMb / 1024} Go de stockage`}
                 </span>
                 {isArchived ? (
                   <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

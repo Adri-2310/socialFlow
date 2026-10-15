@@ -8,7 +8,7 @@ import { getPricingPlans } from '@/lib/pricing';
 export const metadata: Metadata = {
   title: 'Tarifs — SocialFlow',
   description:
-    "Un prix simple, par cabinet. Découvrez les offres Starter, Pro et Enterprise de SocialFlow, sans engagement et sans carte bancaire pour l'essai.",
+    "Un prix simple, par cabinet. Découvrez les offres Starter, Pro et Enterprise de SocialFlow, sans engagement, avec 30 jours d'essai gratuit.",
 };
 
 // Les prix viennent de la base : rendu dynamique pour refleter un changement sans redeploiement.
@@ -24,7 +24,7 @@ export default async function TarifsPage() {
         <PageHero
           eyebrow="Tarifs"
           title="Un prix simple, par cabinet"
-          description="Sans engagement, sans carte bancaire pour l'essai. Choisissez la formule adaptée à la taille de votre cabinet."
+          description="Sans engagement, 30 jours d'essai gratuit (carte demandée, débitée à la fin de l'essai). Choisissez la formule adaptée à la taille de votre cabinet."
         />
         <Pricing plans={plans} />
       </main>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
+import { stripeUnitAmountCents } from '@/lib/billing';
 
 type PlanUpdateBody = {
   name: string;
@@ -88,7 +89,9 @@ async function syncStripePrice(
   await stripe.prices.create({
     product: product.id,
     currency: 'eur',
-    unit_amount: Math.round(newAmount * 100),
+    // D58 : prix mensuel equivalent ; en annuel, Stripe facture 12 fois ce
+    // montant une fois par an.
+    unit_amount: stripeUnitAmountCents(newAmount, billingPeriod),
     recurring: { interval },
     metadata: { planId, billingPeriod },
   });

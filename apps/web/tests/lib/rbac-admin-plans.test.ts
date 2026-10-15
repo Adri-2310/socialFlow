@@ -290,6 +290,34 @@ describe('PATCH /api/admin/plans/[id]', () => {
     expect(updated.monthlyPrice).toBe(200);
   });
 
+  it('facture le prix annuel 12 fois le prix mensuel equivalent, une fois par an (D58)', async () => {
+    const { cj } = await creerSuperAdmin('plan-changement-prix-annuel');
+    const plan = await creerPlanTest('changement-prix-annuel');
+
+    stripePricesList.mockResolvedValue({
+      data: [
+        {
+          id: 'price_annuel_ancien',
+          metadata: { planId: plan.planId, billingPeriod: 'yearly' },
+          unit_amount: 96000,
+        },
+      ],
+    });
+    stripeProductsList.mockResolvedValue({ data: [{ id: 'prod_test', metadata: { planId: plan.planId } }] });
+
+    const res = await patch(plan.id, { ...VALID_BODY, monthlyPrice: plan.monthlyPrice, yearlyPrice: 100 }, cj);
+    expect(res.status).toBe(200);
+
+    expect(stripePricesUpdate).toHaveBeenCalledWith('price_annuel_ancien', { active: false });
+    expect(stripePricesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        unit_amount: 120000,
+        recurring: { interval: 'year' },
+        metadata: { planId: plan.planId, billingPeriod: 'yearly' },
+      }),
+    );
+  });
+
   it('archive le Price Stripe existant sans en creer un nouveau quand le plan passe "sur devis"', async () => {
     const { cj } = await creerSuperAdmin('plan-passage-sur-devis');
     const plan = await creerPlanTest('passage-sur-devis');
@@ -397,7 +425,8 @@ describe('POST /api/admin/plans', () => {
     expect(stripePricesCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         product: 'prod_nouveau',
-        unit_amount: 4000,
+        // D58 : 40 EUR par mois en annuel = 480 EUR factures une fois par an.
+        unit_amount: 48000,
         recurring: { interval: 'year' },
         metadata: { planId: VALID_CREATE_BODY.planId, billingPeriod: 'yearly' },
       }),

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import type { BillingPeriod, Plan, PlanId } from '@/lib/plans';
+import { planPriceDisplay } from '@/lib/plan-price-display';
 
 export function PlanSelect({
   plans,
@@ -74,9 +75,16 @@ export function PlanSelect({
             </div>
             <div className="shrink-0 text-right">
               <p className="text-2xl font-extrabold text-foreground">
-                {billing === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
-                <span className="text-xs font-medium text-muted-foreground">€/mois</span>
+                {planPriceDisplay(plan, billing).amount}
+                <span className="text-xs font-medium text-muted-foreground">
+                  {planPriceDisplay(plan, billing).unit}
+                </span>
               </p>
+              {planPriceDisplay(plan, billing).note && (
+                <p className="text-xs text-muted-foreground">
+                  {planPriceDisplay(plan, billing).note}
+                </p>
+              )}
             </div>
           </button>
         ))}

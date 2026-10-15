@@ -46,7 +46,7 @@ export function Hero() {
           </div>
           <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-secondary" /> Sans carte bancaire
+              <Check className="h-4 w-4 text-secondary" /> Sans frais pendant 30 jours
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Check className="h-4 w-4 text-secondary" /> Support en FR &amp; NL

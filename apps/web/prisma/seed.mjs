@@ -17,7 +17,6 @@ const plans = [
     // avec le badge "Annuel -20%" affiche dans l'UI.
     monthlyPrice: 150,
     yearlyPrice: 120,
-    custom: false,
     highlighted: false,
     badge: null,
     features: [
@@ -38,7 +37,6 @@ const plans = [
     description: 'Pour les cabinets en croissance.',
     monthlyPrice: 300,
     yearlyPrice: 240,
-    custom: false,
     highlighted: true,
     badge: 'Le plus choisi',
     features: [
@@ -60,7 +58,6 @@ const plans = [
     description: 'Pour les grands secrétariats sociaux.',
     monthlyPrice: 750,
     yearlyPrice: 600,
-    custom: false,
     highlighted: false,
     badge: null,
     features: [

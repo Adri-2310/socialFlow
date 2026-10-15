@@ -216,7 +216,6 @@ model PricingPlan {
   description  String
   monthlyPrice Int?
   yearlyPrice  Int?
-  custom       Boolean   @default(false)
   highlighted  Boolean   @default(false)
   badge        String?
   features     String[]

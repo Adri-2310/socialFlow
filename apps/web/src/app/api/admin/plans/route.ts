@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
+import { stripeUnitAmountCents } from '@/lib/billing';
 
 type PlanCreateBody = {
   planId: string;
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
       await stripe.prices.create({
         product: product.id,
         currency: 'eur',
-        unit_amount: Math.round(body.monthlyPrice * 100),
+        unit_amount: stripeUnitAmountCents(body.monthlyPrice, 'monthly'),
         recurring: { interval: 'month' },
         metadata: { planId: body.planId, billingPeriod: 'monthly' },
       });
@@ -101,7 +102,8 @@ export async function POST(request: Request) {
       await stripe.prices.create({
         product: product.id,
         currency: 'eur',
-        unit_amount: Math.round(body.yearlyPrice * 100),
+        // D58 : prix mensuel equivalent, facture une fois par an (x12).
+        unit_amount: stripeUnitAmountCents(body.yearlyPrice, 'yearly'),
         recurring: { interval: 'year' },
         metadata: { planId: body.planId, billingPeriod: 'yearly' },
       });

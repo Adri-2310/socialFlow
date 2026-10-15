@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
+import { monthlyEquivalentFromStripe } from '@/lib/billing';
 import type { CabinetRow } from '@/components/admin/cabinets-table';
 import type { UserRow } from '@/components/admin/users-table';
 import type { AuditLogEntry } from '@/components/admin/audit-log-list';
@@ -210,7 +211,6 @@ export type PlanConfigRow = {
   description: string;
   monthlyPrice: number | null;
   yearlyPrice: number | null;
-  custom: boolean;
   highlighted: boolean;
   badge: string | null;
   features: string[];
@@ -256,8 +256,16 @@ export async function getPricingPlansConfig(): Promise<PlanConfigRow[]> {
     const yearlyPrice =
       prices.data.find((p) => p.metadata.planId === plan.planId && p.metadata.billingPeriod === 'yearly') ?? null;
 
-    const monthlyPriceAmount = monthlyPrice ? (monthlyPrice.unit_amount ?? 0) / 100 : null;
-    const yearlyPriceAmount = yearlyPrice ? (yearlyPrice.unit_amount ?? 0) / 100 : null;
+    // D58 : montants ramenes au prix mensuel equivalent, comme les prix du
+    // plan (le Price annuel facture 12 fois ce montant).
+    const monthlyPriceAmount = monthlyPrice
+      ? monthlyEquivalentFromStripe(monthlyPrice.unit_amount ?? 0, 'monthly')
+      : null;
+    const yearlyPriceAmount = yearlyPrice
+      ? monthlyEquivalentFromStripe(yearlyPrice.unit_amount ?? 0, 'yearly')
+      : null;
+    const sameAmount = (a: number | null, b: number | null) =>
+      a === b || (a !== null && b !== null && Math.abs(a - b) < 0.005);
 
     return {
       id: plan.id,
@@ -269,7 +277,6 @@ export async function getPricingPlansConfig(): Promise<PlanConfigRow[]> {
       maxStorageMb: plan.maxStorageMb,
       monthlyPrice: plan.monthlyPrice,
       yearlyPrice: plan.yearlyPrice,
-      custom: plan.custom,
       highlighted: plan.highlighted,
       badge: plan.badge,
       features: plan.features,
@@ -282,7 +289,9 @@ export async function getPricingPlansConfig(): Promise<PlanConfigRow[]> {
         yearlyPriceId: yearlyPrice?.id ?? null,
         yearlyPriceAmount,
       },
-      inSync: plan.monthlyPrice === monthlyPriceAmount && plan.yearlyPrice === yearlyPriceAmount,
+      inSync:
+        sameAmount(plan.monthlyPrice, monthlyPriceAmount) &&
+        sameAmount(plan.yearlyPrice, yearlyPriceAmount),
     };
   });
 }

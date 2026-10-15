@@ -155,7 +155,7 @@ export const auth = betterAuth({
         // Format seulement : les plans etant geres dynamiquement (voir
         // PricingPlan, /dashboard/admin/configuration), un enum fige ici
         // rejetterait tout plan cree apres coup. La vraie validation - le
-        // plan existe, n'est pas archive, n'est pas "sur devis" - se fait
+        // plan existe, n'est pas archive - se fait
         // dans hooks.before ci-dessous pour /sign-up/email et /update-user,
         // les deux seuls chemins qui ecrivent ce champ.
         validator: { input: z.string().trim().min(1).max(100) },
@@ -461,7 +461,7 @@ export const auth = betterAuth({
         const requestedPlan = (ctx.body as { plan?: string } | undefined)?.plan;
         if (requestedPlan !== undefined) {
           const validPlan = await prisma.pricingPlan.findFirst({
-            where: { planId: requestedPlan, archivedAt: null, custom: false },
+            where: { planId: requestedPlan, archivedAt: null },
             select: { id: true },
           });
           if (!validPlan) {
