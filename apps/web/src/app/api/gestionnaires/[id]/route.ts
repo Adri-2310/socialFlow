@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { sendGestionnaireAccessChangedEmail, type GestionnaireAccessChange } from '@/lib/email';
 import { gestionnaireRestoreDeadline } from '@/lib/gestionnaire-retention';
 import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
@@ -31,11 +32,8 @@ async function notify(
   change: GestionnaireAccessChange,
 ) {
   try {
-    const cabinet = await prisma.cabinet.findUniqueOrThrow({
-      where: { id: cabinetId },
-      select: { name: true },
-    });
-    await sendGestionnaireAccessChangedEmail(target.email, target.name, cabinet.name, change);
+    const brand = await getCabinetEmailBrand(cabinetId);
+    await sendGestionnaireAccessChangedEmail(target.email, target.name, brand, change);
   } catch (error) {
     console.error("Echec de l'envoi de l'email de changement d'acces", error);
   }

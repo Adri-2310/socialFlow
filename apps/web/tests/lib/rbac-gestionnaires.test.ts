@@ -195,7 +195,7 @@ describe('suspension d un gestionnaire (D52)', () => {
     expect(email.sendGestionnaireAccessChangedEmail).toHaveBeenCalledWith(
       mail,
       'Gestionnaire Test',
-      'Cabinet de Cabinet Gestion Test',
+      expect.objectContaining({ name: 'Cabinet de Cabinet Gestion Test' }),
       'suspended',
     );
 
@@ -237,7 +237,7 @@ describe('suspension d un gestionnaire (D52)', () => {
     expect(email.sendGestionnaireAccessChangedEmail).toHaveBeenCalledWith(
       mail,
       'Gestionnaire Test',
-      'Cabinet de Cabinet Gestion Test',
+      expect.objectContaining({ name: 'Cabinet de Cabinet Gestion Test' }),
       'reactivated',
     );
 
@@ -322,7 +322,7 @@ describe('archivage d un gestionnaire (D52)', () => {
     expect(email.sendGestionnaireAccessChangedEmail).toHaveBeenCalledWith(
       mail,
       'Gestionnaire Test',
-      'Cabinet de Cabinet Gestion Test',
+      expect.objectContaining({ name: 'Cabinet de Cabinet Gestion Test' }),
       'archived',
     );
 
@@ -413,7 +413,7 @@ describe('modification de l email d un gestionnaire (D53)', () => {
     expect(email.sendGestionnaireAccessChangedEmail).toHaveBeenCalledWith(
       ancienne,
       'Gestionnaire Test',
-      'Cabinet de Cabinet Gestion Test',
+      expect.objectContaining({ name: 'Cabinet de Cabinet Gestion Test' }),
       'email_changed',
     );
 
@@ -470,7 +470,7 @@ describe('restauration d un gestionnaire retire (D52)', () => {
     expect(email.sendGestionnaireAccessChangedEmail).toHaveBeenCalledWith(
       mail,
       'Gestionnaire Test',
-      'Cabinet de Cabinet Gestion Test',
+      expect.objectContaining({ name: 'Cabinet de Cabinet Gestion Test' }),
       'restored',
     );
 

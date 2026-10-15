@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
 
@@ -38,11 +39,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'EMAIL_ALREADY_USED' }, { status: 409 });
   }
 
-  const cabinet = await prisma.cabinet.findUniqueOrThrow({
-    where: { id: cabinetId },
-    select: { name: true },
-  });
-
   const { token, tokenHash } = createInvitationToken();
   const expiresAt = invitationExpiry();
 
@@ -69,9 +65,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
+    const brand = await getCabinetEmailBrand(cabinetId);
     await sendGestionnaireInvitationEmail(
       invitation.email,
-      cabinet.name,
+      brand,
       session.user.name,
       invitationUrl(token),
     );

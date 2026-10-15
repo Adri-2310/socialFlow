@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { sendGestionnaireAccessChangedEmail } from '@/lib/email';
 
 // D53 : le Cabinet RH corrige l'adresse de connexion d'un de ses
@@ -92,16 +93,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const cabinet = await prisma.cabinet.findUniqueOrThrow({
-      where: { id: cabinetId },
-      select: { name: true },
-    });
-    await sendGestionnaireAccessChangedEmail(
-      previousEmail,
-      target.name,
-      cabinet.name,
-      'email_changed',
-    );
+    const brand = await getCabinetEmailBrand(cabinetId);
+    await sendGestionnaireAccessChangedEmail(previousEmail, target.name, brand, 'email_changed');
   } catch (error) {
     console.error("Echec de la notification a l'ancienne adresse", error);
   }

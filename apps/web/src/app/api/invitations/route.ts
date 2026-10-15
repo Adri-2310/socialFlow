@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
 import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
 
   const url = invitationUrl(token);
   try {
-    await sendGestionnaireInvitationEmail(email, cabinet.name, session.user.name, url);
+    const brand = await getCabinetEmailBrand(cabinet.id);
+    await sendGestionnaireInvitationEmail(email, brand, session.user.name, url);
   } catch (error) {
     // L'invitation existe deja en base a ce stade (token valide 7 jours) :
     // un echec d'envoi (Resend indisponible, etc.) ne doit pas faire

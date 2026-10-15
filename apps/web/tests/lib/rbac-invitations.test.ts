@@ -135,7 +135,7 @@ describe('creation d une invitation', () => {
     expect(invitation.tokenHash).not.toBe(lastTokenSentTo(cibleEmail));
     expect(email.sendGestionnaireInvitationEmail).toHaveBeenCalledWith(
       cibleEmail,
-      'Cabinet de Cabinet Test',
+      expect.objectContaining({ name: 'Cabinet de Cabinet Test' }),
       'Cabinet Test',
       expect.stringContaining('/invitations/accept?token='),
     );
