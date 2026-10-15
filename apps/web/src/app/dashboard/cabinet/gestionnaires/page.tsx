@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { GestionnairesManager } from '@/components/cabinet/gestionnaires-manager';
 import { requireSession } from '@/lib/require-session';
+import { requirePaidCabinet } from '@/lib/cabinet-access';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import {
   getArchivedGestionnaires,
@@ -20,6 +21,7 @@ export default async function GestionnairesPage() {
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
+  await requirePaidCabinet(user.cabinetId);
 
   const [gestionnaires, invitations, archived, selfDeleted, quotas] = await Promise.all([
     getGestionnaires(user.cabinetId),

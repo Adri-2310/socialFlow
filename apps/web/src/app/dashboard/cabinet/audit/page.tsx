@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { CabinetAuditLog } from '@/components/cabinet/audit-log';
 import { requireSession } from '@/lib/require-session';
+import { requirePaidCabinet } from '@/lib/cabinet-access';
 import {
   getCabinetAuditLog,
   getCabinetAuditUsers,
@@ -32,6 +33,7 @@ export default async function CabinetAuditPage({
   // multi-tenant, FONCTIONNEMENT.md § 4) : les parametres ne servent qu'a
   // filtrer a l'interieur de ce cabinet.
   if (!user.cabinetId) redirect('/dashboard');
+  await requirePaidCabinet(user.cabinetId);
 
   const params = await searchParams;
   const filters: CabinetAuditFilters = {

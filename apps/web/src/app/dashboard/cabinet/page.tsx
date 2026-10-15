@@ -6,6 +6,7 @@ import { QuotaUsage } from '@/components/cabinet/quota-usage';
 import { buildCabinetAlerts } from '@/lib/cabinet-alerts';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import { requireSession } from '@/lib/require-session';
+import { requirePaidCabinet } from '@/lib/cabinet-access';
 import {
   getArchivedGestionnaires,
   getCabinetOverview,
@@ -23,6 +24,8 @@ export default async function CabinetOverviewPage() {
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');
+  // D32 : rien d'autre que l'ecran de paiement tant que le Checkout n'est pas fait.
+  await requirePaidCabinet(user.cabinetId);
 
   const [overview, quotas, invitations, gestionnaires, archived] = await Promise.all([
     getCabinetOverview(user.cabinetId),
