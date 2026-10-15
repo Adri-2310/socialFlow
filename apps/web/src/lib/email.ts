@@ -441,3 +441,40 @@ export async function sendPaymentFailedEmail(
 
   if (error) throw new Error(error.message);
 }
+
+// D23, D57 : fin du delai de grace, le cabinet passe en lecture seule.
+export async function sendPaymentSuspensionEmail(
+  email: string,
+  name: string,
+  cabinetName: string,
+  audience: 'cabinet' | 'admin',
+) {
+  const copy =
+    audience === 'cabinet'
+      ? {
+          subject: 'Votre cabinet SocialFlow est passé en lecture seule',
+          title: 'Votre cabinet est passé en lecture seule',
+          body: `Le paiement de l'abonnement de ${cabinetName} n'a pas été régularisé dans le délai de grâce. Votre cabinet est désormais en lecture seule : vous et vos clients pouvez consulter les fiches déjà envoyées, mais plus rien ne peut être produit ni modifié. Régularisez votre abonnement pour reprendre l'activité.`,
+        }
+      : {
+          subject: `Cabinet en lecture seule pour impayé : ${cabinetName}`,
+          title: 'Un cabinet est passé en lecture seule',
+          body: `Le délai de grâce du cabinet ${cabinetName} est écoulé sans régularisation : il est passé en lecture seule pour impayé. Une suspension manuelle éventuelle n'est pas modifiée.`,
+        };
+
+  const html = emailShell(`
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#6d28d9;">Facturation</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">${copy.title}</h1>
+    <p style="margin:0 0 12px; color:#475569;">Bonjour ${escapeHtml(name)},</p>
+    <p style="margin:0; color:#475569;">${escapeHtml(copy.body)}</p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL as string,
+    to: email,
+    subject: copy.subject,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
