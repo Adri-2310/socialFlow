@@ -83,3 +83,20 @@ export function isReadOnlyBillingStatus(status: string | null | undefined): bool
   const normalized = normalizeBillingStatus(status);
   return normalized === 'IMPAYE' || normalized === 'RESILIE';
 }
+
+// D58 : un prix de plan est saisi et affiche EN EUR PAR MOIS, quelle que soit
+// la periodicite. En facturation annuelle il s'agit du montant mensuel
+// equivalent (avec la remise annuelle) : Stripe facture une fois par an
+// 12 fois ce montant. Une seule paire de fonctions pour que la creation des
+// prix, leur comparaison et l'affichage ne divergent plus.
+export const MONTHS_PER_YEAR = 12;
+
+// Montant, en centimes, du Price Stripe pour un prix mensuel saisi.
+export function stripeUnitAmountCents(monthlyEquivalent: number, period: 'monthly' | 'yearly') {
+  return Math.round(monthlyEquivalent * 100 * (period === 'yearly' ? MONTHS_PER_YEAR : 1));
+}
+
+// Inverse : prix mensuel equivalent d'un Price Stripe (centimes).
+export function monthlyEquivalentFromStripe(unitAmountCents: number, period: 'monthly' | 'yearly') {
+  return unitAmountCents / 100 / (period === 'yearly' ? MONTHS_PER_YEAR : 1);
+}

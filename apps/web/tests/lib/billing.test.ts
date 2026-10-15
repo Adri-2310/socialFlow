@@ -5,6 +5,8 @@ import {
   GRACE_PERIOD_DAYS,
   graceEndsAt,
   isReadOnlyBillingStatus,
+  monthlyEquivalentFromStripe,
+  stripeUnitAmountCents,
   mapStripeSubscriptionStatus,
   normalizeBillingPeriod,
   normalizeBillingStatus,
@@ -85,5 +87,24 @@ describe('isReadOnlyBillingStatus (D29)', () => {
   it('ne bloque pas sur une valeur inconnue ou absente', () => {
     expect(isReadOnlyBillingStatus('QUELQUE_CHOSE')).toBe(false);
     expect(isReadOnlyBillingStatus(null)).toBe(false);
+  });
+});
+
+describe('prix annuel (D58)', () => {
+  it('facture 12 fois le prix mensuel equivalent en annuel, 1 fois en mensuel', () => {
+    expect(stripeUnitAmountCents(150, 'monthly')).toBe(15000);
+    expect(stripeUnitAmountCents(120, 'yearly')).toBe(144000);
+    expect(stripeUnitAmountCents(99.5, 'yearly')).toBe(119400);
+  });
+
+  it('retrouve le prix mensuel equivalent depuis le montant Stripe', () => {
+    expect(monthlyEquivalentFromStripe(15000, 'monthly')).toBe(150);
+    expect(monthlyEquivalentFromStripe(144000, 'yearly')).toBe(120);
+  });
+
+  it('est reversible', () => {
+    for (const price of [40, 120, 240, 600]) {
+      expect(monthlyEquivalentFromStripe(stripeUnitAmountCents(price, 'yearly'), 'yearly')).toBe(price);
+    }
   });
 });
