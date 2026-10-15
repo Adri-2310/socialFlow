@@ -10,7 +10,7 @@ import {
 } from '@/lib/cabinet-audit';
 
 export const metadata: Metadata = {
-  title: "Journal d'audit — SocialFlow",
+  title: "Journal d'audit",
   description: "Actions réalisées dans votre cabinet.",
 };
 

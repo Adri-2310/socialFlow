@@ -12,7 +12,7 @@ import {
 } from '@/lib/cabinet-data';
 
 export const metadata: Metadata = {
-  title: 'Gestionnaires — SocialFlow',
+  title: 'Gestionnaires',
   description: 'Équipe et invitations de votre cabinet.',
 };
 

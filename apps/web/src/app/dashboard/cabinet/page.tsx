@@ -15,7 +15,7 @@ import {
 } from '@/lib/cabinet-data';
 
 export const metadata: Metadata = {
-  title: "Vue d'ensemble — SocialFlow",
+  title: "Vue d'ensemble",
   description: "État de votre cabinet : équipe, invitations et abonnement.",
 };
 

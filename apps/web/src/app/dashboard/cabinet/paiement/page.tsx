@@ -11,7 +11,7 @@ import {
 } from '@/lib/stripe-checkout';
 
 export const metadata: Metadata = {
-  title: 'Finaliser mon abonnement — SocialFlow',
+  title: 'Finaliser mon abonnement',
   description: 'Démarrez votre essai gratuit pour accéder à votre espace.',
 };
 

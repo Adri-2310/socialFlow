@@ -10,7 +10,7 @@ import { getPlanChangeOptions } from '@/lib/plan-change';
 import { requireSession } from '@/lib/require-session';
 
 export const metadata: Metadata = {
-  title: 'Mon abonnement — SocialFlow',
+  title: 'Mon abonnement',
   description: 'Votre abonnement, votre carte, vos factures et vos quotas.',
 };
 
