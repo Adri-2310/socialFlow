@@ -168,33 +168,43 @@ async function planFromSubscription(
 const fromUnix = (value: number | null | undefined): Date | null =>
   typeof value === 'number' ? new Date(value * 1000) : null;
 
+// Applique l'etat d'un abonnement Stripe a son cabinet. Partage entre le
+// webhook (customer.subscription.created/updated) et la confirmation d'un
+// Checkout au retour du client : le meme code, donc le meme resultat quel que
+// soit le premier arrive. Renvoie false si aucun cabinet ne correspond.
+export async function applySubscriptionState(
+  subscription: Stripe.Subscription,
+  eventAt: Date,
+  eventType: string,
+): Promise<boolean> {
+  const cabinetId = await findCabinetId(subscription.customer, subscription.metadata?.cabinetId);
+  if (!cabinetId) return false;
+
+  const mapped = mapStripeSubscriptionStatus(subscription.status);
+  if (!mapped) return true;
+  const plan = await planFromSubscription(subscription);
+
+  const result = await applyBillingUpdate(cabinetId, eventAt, eventType, {
+    // Une resiliation deja actee ne doit pas etre annulee par un evenement
+    // tardif de statut "actif".
+    status: (current) => (current === 'RESILIE' && mapped !== 'RESILIE' ? null : mapped),
+    trialEndsAt: fromUnix(subscription.trial_end),
+    currentPeriodEnd: fromUnix(subscription.items?.data?.[0]?.current_period_end),
+    ...plan,
+  });
+  if (result?.changed && result.current === 'DELAI_GRACE' && result.pastDueSince) {
+    await notifyPaymentFailed(cabinetId, result.pastDueSince);
+  }
+  return true;
+}
+
 async function handleEvent(event: Stripe.Event): Promise<void> {
   const eventAt = new Date(event.created * 1000);
 
   switch (event.type) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
-      const subscription = event.data.object;
-      const cabinetId = await findCabinetId(subscription.customer, subscription.metadata?.cabinetId);
-      if (!cabinetId) return;
-
-      const mapped = mapStripeSubscriptionStatus(subscription.status);
-      if (!mapped) return;
-      const plan = await planFromSubscription(subscription);
-
-      // Un abonnement "actif" n'a plus de fin d'essai a afficher : on garde
-      // la valeur de Stripe (null une fois l'essai termine).
-      const result = await applyBillingUpdate(cabinetId, eventAt, event.type, {
-        // Une resiliation deja actee ne doit pas etre annulee par un
-        // evenement tardif de statut "actif".
-        status: (current) => (current === 'RESILIE' && mapped !== 'RESILIE' ? null : mapped),
-        trialEndsAt: fromUnix(subscription.trial_end),
-        currentPeriodEnd: fromUnix(subscription.items?.data?.[0]?.current_period_end),
-        ...plan,
-      });
-      if (result?.changed && result.current === 'DELAI_GRACE' && result.pastDueSince) {
-        await notifyPaymentFailed(cabinetId, result.pastDueSince);
-      }
+      await applySubscriptionState(event.data.object, eventAt, event.type);
       return;
     }
 

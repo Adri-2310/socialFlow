@@ -5,7 +5,6 @@ import { deleteSessionCookie } from 'better-auth/cookies';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { provisionStripeTrial } from '@/lib/stripe-trial';
 import {
   sendMagicLinkEmail,
   sendOTPEmail,
@@ -515,13 +514,9 @@ export const auth = betterAuth({
             data: { action: 'CABINET_CREATED', actorId: newUser.id, cabinetId: cabinet.id },
           });
 
-          if (validatedPlan) {
-            // Best-effort : un souci Stripe ne doit pas faire echouer une
-            // inscription par ailleurs reussie. Cabinet.stripeCustomerId
-            // reste alors simplement null, comme un cabinet qui n'a pas
-            // encore de plan.
-            await provisionStripeTrial(cabinet.id, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
-          }
+          // D25, D32 : l'abonnement n'est plus cree ici. Le cabinet reste
+          // "en attente de paiement" jusqu'au Stripe Checkout (carte
+          // obligatoire, essai de 30 jours), voir lib/stripe-checkout.ts.
         }
         return;
       }
@@ -535,13 +530,10 @@ export const auth = betterAuth({
         // quotas plus eleves sans payer (le changement de plan passe par le
         // portail Stripe, D25).
         if (cabinetId && sessionUser?.role === 'CABINET_RH') {
-          const { count } = await prisma.cabinet.updateMany({
+          await prisma.cabinet.updateMany({
             where: { id: cabinetId, planId: null },
             data: { planId: validatedPlan.planId, billingPeriod: validatedPlan.billingPeriod },
           });
-          if (count > 0) {
-            await provisionStripeTrial(cabinetId, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
-          }
         }
       }
 

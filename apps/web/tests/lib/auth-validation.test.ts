@@ -286,7 +286,7 @@ describe('profil : champs acceptes et refuses', () => {
     expect(cabinet.billingPeriod).toBe('monthly');
   });
 
-  it("provisionne un essai Stripe des l'inscription quand un plan valide est fourni", async () => {
+  it("ne cree plus d'essai Stripe sans carte a l'inscription (D25) : le cabinet attend le Checkout", async () => {
     stripePricesList.mockResolvedValue({
       data: [{ id: 'price_starter_m', metadata: { planId: 'starter', billingPeriod: 'monthly' } }],
     });
@@ -298,17 +298,18 @@ describe('profil : champs acceptes et refuses', () => {
     });
     expect(res.status).toBe(200);
 
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(stripeCustomersCreate).toHaveBeenCalledWith(expect.objectContaining({ metadata: { cabinetId: user.cabinetId } }));
-    expect(stripeSubscriptionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ items: [{ price: 'price_starter_m' }], trial_period_days: 30 }),
-    );
+    expect(stripeCustomersCreate).not.toHaveBeenCalled();
+    expect(stripeSubscriptionsCreate).not.toHaveBeenCalled();
 
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
-    expect(cabinet.stripeCustomerId).toMatch(/^cus_test_\d+$/);
+    expect(cabinet.planId).toBe('starter');
+    expect(cabinet.billingPeriod).toBe('monthly');
+    expect(cabinet.billingStatus).toBe('EN_ATTENTE_PAIEMENT');
+    expect(cabinet.stripeCustomerId).toBeNull();
   });
 
-  it("provisionne un essai Stripe lors de la finalisation du plan apres une inscription OAuth (update-user)", async () => {
+  it("pose le plan sans creer d'abonnement lors de la finalisation apres une inscription OAuth (update-user)", async () => {
     stripePricesList.mockResolvedValue({
       data: [{ id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' } }],
     });
@@ -325,9 +326,9 @@ describe('profil : champs acceptes et refuses', () => {
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
-    expect(cabinet.stripeCustomerId).toMatch(/^cus_test_\d+$/);
-    expect(stripeSubscriptionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ items: [{ price: 'price_pro_y' }] }),
-    );
+    expect(cabinet.planId).toBe('pro');
+    expect(cabinet.billingPeriod).toBe('yearly');
+    expect(cabinet.billingStatus).toBe('EN_ATTENTE_PAIEMENT');
+    expect(stripeSubscriptionsCreate).not.toHaveBeenCalled();
   });
 });
