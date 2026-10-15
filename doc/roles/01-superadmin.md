@@ -56,7 +56,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 
 ### 4.3 Plans tarifaires — `api/admin/plans`
 - Création, modification, archivage et restauration d'un `PricingPlan` (identifiant `[a-z0-9-]`, nom, description, prix mensuel et annuel en entiers, badge, mise en avant, ordre, au moins une fonctionnalité).
-- Les prix sont répercutés dans Stripe (Product/Price) ; l'inscription n'accepte que les plans existants, non archivés et non « sur devis ».
+- Les prix sont répercutés dans Stripe (Product/Price) ; l'inscription n'accepte que les plans existants, non archivés.
 - Audit : `PRICING_PLAN_CREATED | UPDATED | ARCHIVED | RESTORED`.
 
 ### 4.4 Données affichées

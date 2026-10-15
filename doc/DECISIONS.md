@@ -84,7 +84,7 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 - **D33.** Le Cabinet RH personnalise le **nom affiché**, le logo et les couleurs : ses gestionnaires, ses entreprises et leurs salariés doivent reconnaître leur cabinet.
 
 ### Plans et tarifs (12/10/2026)
-- **D34.** `PRD_CLIENT.md` est le **cahier des charges du client**, base du programme. Les **prix et le nombre de fonctionnalités par plan ne se modifient pas** ; seuls de petits ajustements sont permis.
+- **D34.** `PRD_CLIENT.md` est le **cahier des charges du client**, base du programme. Les **prix et le nombre de fonctionnalités par plan ne se modifient pas** (3 plans à prix fixe, aucun « sur devis » : champ `custom` supprimé) ; seuls de petits ajustements sont permis.
 
 | Plan | Prix / mois | Entreprises clientes | Utilisateurs cabinet | Stockage | Fonctionnalités |
 |---|---|---|---|---|---|
@@ -137,6 +137,8 @@ Conséquence : les mentions de JWT 1 h / refresh 24 h, Coolify, MinIO, Upstash e
 
 ### Facturation : impayés (14/10/2026)
 - **D57.** Paiement échoué : **délai de grâce de 7 jours** (remplace les 14 jours proposés avec D23). Pendant le délai, tout fonctionne avec une alerte visible ; à l'échéance le cabinet passe à `IMPAYE` (lecture seule, D29) **sans toucher à `Cabinet.status`**, que seul le SuperAdmin modifie : un paiement ne lève jamais une suspension manuelle. L'état d'abonnement suit Stripe par **webhook** (signature vérifiée, événements dédupliqués, ordre des événements respecté) et une tâche quotidienne applique la fin du délai. Le **titulaire et les SuperAdmins** sont prévenus par email (D23) ; la cloche in-app viendra avec A8.
+
+- **D58.** Prix annuel : un plan se paie **à la période choisie** (mensuel : chaque mois ; annuel : une fois par an). Le prix « annuel » d'un plan est un **montant mensuel équivalent** (remise de -20 %, D34) : le client est facturé **12 fois ce montant, une fois par an** (Starter annuel : 120 € par mois, soit 1 440 € par an). La page tarifs et l'écran de paiement affichent le montant réellement facturé. Corrige un écart où Stripe facturait 120 € par an. **La base de données est la seule source du prix** (`PricingPlan.monthlyPrice` / `yearlyPrice`) : l'affichage la lit, et Stripe en est dérivé — au moment du paiement, le Price Stripe du plan est recalé sur la base (créé s'il manque, remplacé si le montant diffère). Les abonnements en cours gardent leur ancien Price.
 
 ### Documentation
 - **D16.** Documentation dans le dépôt (`doc/`) + copie dans le projet claude.ai « TFE ». Anciens documents déplacés dans `doc/archive/`, la nouvelle doc fait foi.
