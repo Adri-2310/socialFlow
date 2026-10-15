@@ -2,53 +2,87 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { AcceptInvitationForm } from '@/components/invitations/accept-invitation-form';
-import { prisma } from '@/lib/prisma';
-import { hashInvitationToken } from '@/lib/invitations';
+import { buildThemeCss } from '@/lib/branding-rules';
+import { getInvitationPreview } from '@/lib/invitation-preview';
 
-export const metadata: Metadata = {
-  title: 'Accepter une invitation — SocialFlow',
-};
+type SearchParams = Promise<{ token?: string }>;
+
+// Onglet au nom du cabinet qui invite (D33) : seulement pour un jeton valide.
+// Un jeton inconnu, expire ou deja utilise garde le titre par defaut, sans rien
+// reveler d'un cabinet.
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const { token } = await searchParams;
+  const preview = await getInvitationPreview(token);
+  if (!preview) return { title: 'Accepter une invitation — SocialFlow' };
+
+  return {
+    title: `Rejoindre ${preview.brandName}`,
+    applicationName: preview.brandName,
+    robots: { index: false, follow: false },
+    ...(preview.logoUrl ? { icons: { icon: preview.logoUrl, shortcut: preview.logoUrl } } : {}),
+  };
+}
 
 export default async function AcceptInvitationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: SearchParams;
 }) {
   const { token } = await searchParams;
-  const invitation = token
-    ? await prisma.invitation.findUnique({ where: { tokenHash: hashInvitationToken(token) } })
-    : null;
-  const valid =
-    !!token && !!invitation && invitation.status === 'pending' && invitation.expiresAt > new Date();
-  const cabinet = valid ? await prisma.cabinet.findUnique({ where: { id: invitation!.cabinetId } }) : null;
+  const preview = await getInvitationPreview(token);
+  const theme = preview ? buildThemeCss(preview) : null;
 
   return (
     <div className="flex min-h-screen">
+      {/* Couleurs du cabinet (D33) : valeurs #rrggbb validees a l'enregistrement,
+          jamais du texte libre. */}
+      {theme && <style dangerouslySetInnerHTML={{ __html: theme }} />}
+
       <AuthBrandPanel
         title={
-          <>
-            Rejoignez votre
-            <br />
-            cabinet sur SocialFlow.
-          </>
+          preview ? (
+            <>Rejoignez l&apos;équipe de {preview.brandName}.</>
+          ) : (
+            <>
+              Rejoignez votre
+              <br />
+              cabinet sur SocialFlow.
+            </>
+          )
         }
         description="Créez votre compte pour accéder aux dossiers qui vous sont assignés."
         quote="« Nous avons divisé par deux le temps de traitement de nos paies. » — Payroll BXL"
+        brand={
+          preview
+            ? {
+                name: preview.brandName,
+                primaryColor: preview.primaryColor,
+                logoUrl: preview.logoUrl,
+              }
+            : undefined
+        }
       />
 
       <main className="flex w-full flex-col items-center justify-center px-4 py-10 sm:px-6 lg:w-1/2">
         <div className="w-full max-w-md">
-          {valid && invitation && cabinet ? (
+          {preview && token ? (
             <>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Rejoindre {cabinet.name}
+                Rejoindre {preview.brandName}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Créez votre compte Gestionnaire RH pour {cabinet.name}.
+                Créez votre compte gestionnaire RH pour {preview.brandName}.
               </p>
               <div className="mt-6">
-                <AcceptInvitationForm token={token!} email={invitation.email} />
+                <AcceptInvitationForm token={token} email={preview.email} />
               </div>
+              <p className="mt-8 text-center text-xs text-muted-foreground">
+                Propulsé par SocialFlow
+              </p>
             </>
           ) : (
             <div className="text-center">

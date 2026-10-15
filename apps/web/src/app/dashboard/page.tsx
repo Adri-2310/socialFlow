@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { requireSession } from '@/lib/require-session';
+import { roleDisplayLabel } from '@/lib/role-labels';
 
 export const metadata: Metadata = {
   title: 'Tableau de bord — SocialFlow',
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <AppHeader userName={user.name} roleLabel={user.role ?? ''} />
+      <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} />
       <main>
         <section className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">

@@ -6,6 +6,7 @@ import { DeleteAccount } from '@/components/auth/delete-account';
 import { InviteGestionnaire } from '@/components/dashboard/invite-gestionnaire';
 import { AppHeader } from '@/components/layout/app-header';
 import { requireSession } from '@/lib/require-session';
+import { roleDisplayLabel } from '@/lib/role-labels';
 import { prisma } from '@/lib/prisma';
 
 const BILLING_LABELS: Record<string, string> = {
@@ -39,7 +40,7 @@ export default async function ProfilPage() {
 
   return (
     <>
-      <AppHeader userName={user.name} roleLabel={user.role ?? ''} />
+      <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} />
       <main>
         <section className="mx-auto max-w-2xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-border/60 bg-card/60 p-8 shadow-xl backdrop-blur-xl">
