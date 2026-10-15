@@ -21,6 +21,7 @@ export const CABINET_AUDIT_ACTIONS = {
   PAYMENT_METHOD_UPDATED: 'Carte bancaire modifiée',
   PLAN_CHANGE_SCHEDULED: 'Changement de plan programmé',
   PLAN_CHANGE_CANCELLED: 'Changement de plan annulé',
+  CABINET_SETTINGS_UPDATED: 'Paramètres du cabinet modifiés',
 } as const;
 
 export type CabinetAuditAction = keyof typeof CABINET_AUDIT_ACTIONS;
@@ -80,6 +81,8 @@ export function describeAuditEntry(input: AuditMessageInput): string {
       return "Un changement de plan a été programmé en fin de période";
     case 'PLAN_CHANGE_CANCELLED':
       return "Le changement de plan programmé a été annulé";
+    case 'CABINET_SETTINGS_UPDATED':
+      return 'Les paramètres du cabinet ont été modifiés';
     default:
       return input.action;
   }

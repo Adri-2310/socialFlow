@@ -73,6 +73,8 @@ function auditMessage(log: AuditLogEntry): string {
       return `« ${cabinetName} » : changement de plan programmé par ${log.actorName ?? 'le titulaire'}.`;
     case 'PLAN_CHANGE_CANCELLED':
       return `« ${cabinetName} » : changement de plan annulé par ${log.actorName ?? 'le titulaire'}.`;
+    case 'CABINET_SETTINGS_UPDATED':
+      return `« ${cabinetName} » : paramètres modifiés par ${log.actorName ?? 'le titulaire'}.`;
     case 'BILLING_STATUS_CHANGED':
       return `Abonnement de « ${cabinetName} » mis à jour par Stripe.`;
     case 'USER_EMAIL_CHANGED':

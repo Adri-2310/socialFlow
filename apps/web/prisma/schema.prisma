@@ -113,6 +113,16 @@ model Cabinet {
   // Resiliation programmee en fin de periode (D59) : le cabinet garde l'acces
   // jusqu'a currentPeriodEnd. Suit Stripe par webhook, jamais l'inverse.
   cancelAtPeriodEnd Boolean     @default(false)
+  // Identite du cabinet (D30), affichee a ses clients. name = raison sociale.
+  // Tous facultatifs sauf la raison sociale : le n° de TVA est stocke au
+  // format canonique BE0XXX.XXX.XXX (voir lib/cabinet-identity.ts).
+  vatNumber        String?
+  addressLine      String?
+  postalCode       String?
+  city             String?
+  country          String       @default("BE")
+  contactEmail     String?
+  contactPhone     String?
   billingEventAt   DateTime?
   users            User[]
   invitations      Invitation[]
