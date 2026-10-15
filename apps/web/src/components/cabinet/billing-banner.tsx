@@ -1,5 +1,6 @@
 import { AlertOctagon, AlertTriangle, Lock } from 'lucide-react';
 import type { BillingStatus } from '@/lib/billing';
+import Link from 'next/link';
 
 type Props = {
   status: BillingStatus;
@@ -19,6 +20,7 @@ export function BillingBanner({ status, graceEndsAt }: Props) {
         tone="warning"
         icon={<AlertTriangle className="h-5 w-5" />}
         title="Paiement en échec"
+        action
         description={
           graceEndsAt
             ? `Régularisez votre abonnement avant le ${formatDate(graceEndsAt)} pour éviter le passage de votre cabinet en lecture seule.`
@@ -34,6 +36,7 @@ export function BillingBanner({ status, graceEndsAt }: Props) {
         tone="danger"
         icon={<AlertOctagon className="h-5 w-5" />}
         title="Cabinet en lecture seule pour impayé"
+        action
         description="Vous pouvez consulter vos données, mais plus rien ne peut être modifié. Vos clients gardent l'accès à leurs fiches. Régularisez votre abonnement pour reprendre l'activité."
       />
     );
@@ -58,11 +61,14 @@ function Banner({
   icon,
   title,
   description,
+  action,
 }: {
   tone: 'warning' | 'danger';
   icon: React.ReactNode;
   title: string;
   description: string;
+  // Lien vers la page Facturation, pour regulariser.
+  action?: boolean;
 }) {
   const styles =
     tone === 'danger'
@@ -75,6 +81,14 @@ function Banner({
       <div className="min-w-0">
         <p className="text-sm font-semibold">{title}</p>
         <p className="text-sm text-foreground/80">{description}</p>
+        {action && (
+          <Link
+            href="/dashboard/cabinet/facturation"
+            className="mt-2 inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+          >
+            Mettre à jour ma carte
+          </Link>
+        )}
       </div>
     </div>
   );

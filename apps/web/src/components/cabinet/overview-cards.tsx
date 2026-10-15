@@ -1,6 +1,7 @@
 import { Users, MailPlus, Building2, CreditCard } from 'lucide-react';
 import type { CabinetOverview } from '@/lib/cabinet-data';
 import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing';
+import Link from 'next/link';
 
 const PERIOD_LABELS = { monthly: 'Facturation mensuelle', yearly: 'Facturation annuelle' } as const;
 
@@ -65,6 +66,14 @@ export function OverviewCards({ data }: { data: CabinetOverview }) {
           {BILLING_STATUS_LABELS[subscription.status]}
           {daysLeft !== null && ` · ${daysLeft === 0 ? 'se termine aujourd’hui' : `J-${daysLeft}`}`}
         </p>
+        {subscription.status !== 'EN_ATTENTE_PAIEMENT' && (
+          <Link
+            href="/dashboard/cabinet/facturation"
+            className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
+          >
+            Gérer mon abonnement
+          </Link>
+        )}
       </div>
     </section>
   );

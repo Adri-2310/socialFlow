@@ -47,7 +47,7 @@ const SHELL_CONFIG = {
       { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard/cabinet' },
       { label: 'Gestionnaires', icon: Users, href: '/dashboard/cabinet/gestionnaires' },
       { label: 'Entreprises', icon: Building2 },
-      { label: 'Facturation', icon: CreditCard },
+      { label: 'Facturation', icon: CreditCard, href: '/dashboard/cabinet/facturation' },
       { label: "Journal d'audit", icon: ScrollText, href: '/dashboard/cabinet/audit' },
     ],
   },

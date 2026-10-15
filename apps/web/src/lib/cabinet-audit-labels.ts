@@ -16,6 +16,9 @@ export const CABINET_AUDIT_ACTIONS = {
   USER_ARCHIVED: 'Gestionnaire retiré',
   USER_RESTORED: 'Gestionnaire restauré',
   USER_EMAIL_CHANGED: 'Email modifié',
+  SUBSCRIPTION_CANCEL_SCHEDULED: 'Résiliation programmée',
+  SUBSCRIPTION_CANCEL_REVERTED: 'Résiliation annulée',
+  PAYMENT_METHOD_UPDATED: 'Carte bancaire modifiée',
 } as const;
 
 export type CabinetAuditAction = keyof typeof CABINET_AUDIT_ACTIONS;
@@ -65,6 +68,12 @@ export function describeAuditEntry(input: AuditMessageInput): string {
       return input.previousEmail && input.newEmail
         ? `L'email de ${target} a été modifié (${input.previousEmail} → ${input.newEmail})`
         : `L'email de ${target} a été modifié`;
+    case 'SUBSCRIPTION_CANCEL_SCHEDULED':
+      return "La résiliation de l'abonnement a été programmée en fin de période";
+    case 'SUBSCRIPTION_CANCEL_REVERTED':
+      return "La résiliation de l'abonnement a été annulée";
+    case 'PAYMENT_METHOD_UPDATED':
+      return 'La carte bancaire de l’abonnement a été modifiée';
     default:
       return input.action;
   }

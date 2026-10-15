@@ -63,6 +63,12 @@ function auditMessage(log: AuditLogEntry): string {
       return `Un plan tarifaire a été archivé par ${log.actorName ?? 'un administrateur'}.`;
     case 'PRICING_PLAN_RESTORED':
       return `Un plan tarifaire a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'SUBSCRIPTION_CANCEL_SCHEDULED':
+      return `« ${cabinetName} » : résiliation programmée par ${log.actorName ?? 'le titulaire'}.`;
+    case 'SUBSCRIPTION_CANCEL_REVERTED':
+      return `« ${cabinetName} » : résiliation annulée par ${log.actorName ?? 'le titulaire'}.`;
+    case 'PAYMENT_METHOD_UPDATED':
+      return `« ${cabinetName} » : carte bancaire modifiée par ${log.actorName ?? 'le titulaire'}.`;
     case 'BILLING_STATUS_CHANGED':
       return `Abonnement de « ${cabinetName} » mis à jour par Stripe.`;
     case 'USER_EMAIL_CHANGED':
