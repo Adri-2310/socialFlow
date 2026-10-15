@@ -2,6 +2,7 @@ import type Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 import { applySubscriptionState } from '@/lib/stripe-webhook';
+import { getPendingPlanChange, type PendingPlanChange } from '@/lib/plan-change';
 
 // Gestion de l'abonnement depuis l'application (D59) : pas de portail client
 // Stripe. SocialFlow pilote lui-meme la resiliation et la reprise ; seule la
@@ -239,6 +240,8 @@ export type InvoiceRow = {
 export type BillingExtras = {
   card: PaymentMethodSummary | null;
   invoices: InvoiceRow[];
+  // D60 : changement de plan programme en fin de periode, s'il y en a un.
+  pendingChange: PendingPlanChange | null;
   // false quand Stripe est injoignable : la page s'affiche sans ces blocs.
   available: boolean;
 };
@@ -247,13 +250,16 @@ export type BillingExtras = {
 // donnee de carte ni de facture n'est dupliquee en base.
 export async function getBillingExtras(cabinetId: string): Promise<BillingExtras> {
   const cabinet = await loadCabinet(cabinetId);
-  if (!cabinet?.stripeCustomerId) return { card: null, invoices: [], available: true };
+  if (!cabinet?.stripeCustomerId) {
+    return { card: null, invoices: [], pendingChange: null, available: true };
+  }
   const customerId = cabinet.stripeCustomerId;
 
   try {
-    const [customer, invoices] = await Promise.all([
+    const [customer, invoices, pendingChange] = await Promise.all([
       stripe.customers.retrieve(customerId, { expand: ['invoice_settings.default_payment_method'] }),
       stripe.invoices.list({ customer: customerId, limit: 24 }),
+      getPendingPlanChange(customerId),
     ]);
 
     let card: PaymentMethodSummary | null = null;
@@ -271,6 +277,7 @@ export async function getBillingExtras(cabinetId: string): Promise<BillingExtras
 
     return {
       card,
+      pendingChange,
       available: true,
       invoices: invoices.data
         // Les brouillons ne sont pas des factures pour le client.
@@ -287,6 +294,6 @@ export async function getBillingExtras(cabinetId: string): Promise<BillingExtras
     };
   } catch (error) {
     console.error('Echec de la lecture de la carte et des factures', error);
-    return { card: null, invoices: [], available: false };
+    return { card: null, invoices: [], pendingChange: null, available: false };
   }
 }

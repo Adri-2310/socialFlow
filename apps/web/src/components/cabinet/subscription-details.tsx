@@ -4,9 +4,11 @@ import {
   CardUpdateButton,
   ResumeSubscriptionButton,
 } from '@/components/cabinet/subscription-actions';
+import { PlanChange } from '@/components/cabinet/plan-change';
 import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing';
 import type { CabinetSubscriptionDetails } from '@/lib/cabinet-billing';
 import type { BillingExtras } from '@/lib/cabinet-subscription';
+import type { PlanChangeOptions } from '@/lib/plan-change';
 
 // Retour de la saisie de carte chez Stripe (voir la page Facturation).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;
@@ -94,10 +96,12 @@ const STATUS_TONE: Record<string, string> = {
 export function SubscriptionDetails({
   data,
   extras,
+  planChange,
   flash = null,
 }: {
   data: CabinetSubscriptionDetails;
   extras: BillingExtras;
+  planChange: PlanChangeOptions;
   flash?: CardFlash;
 }) {
   // L'acces dure jusqu'a la fin de la periode en cours (D59).
@@ -291,12 +295,11 @@ export function SubscriptionDetails({
         </section>
       )}
 
-      <section className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
-        <p className="font-semibold text-foreground">Changer de plan ou de périodicité</p>
-        <p className="mt-1">
-          Bientôt disponible ici, avec la vérification de vos quotas avant tout changement.
-        </p>
-      </section>
+      <PlanChange
+        options={planChange}
+        pending={extras.pendingChange}
+        effectiveAtLabel={accessEndLabel}
+      />
     </div>
   );
 }

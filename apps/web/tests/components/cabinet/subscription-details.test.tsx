@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { SubscriptionDetails } from '@/components/cabinet/subscription-details';
 import type { CabinetSubscriptionDetails } from '@/lib/cabinet-billing';
 import type { BillingExtras } from '@/lib/cabinet-subscription';
+import type { PlanChangeOptions } from '@/lib/plan-change';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -33,15 +34,24 @@ const extras: BillingExtras = {
       pdfUrl: 'https://pay.stripe.com/invoice/in_1/pdf',
     },
   ],
+  pendingChange: null,
   available: true,
+};
+
+const planChange: PlanChangeOptions = {
+  currentPlanId: 'pro',
+  currentPeriod: 'monthly',
+  canChange: true,
+  reason: null,
+  plans: [],
 };
 
 describe('SubscriptionDetails', () => {
   it('affiche le plan, la periode et le montant mensuel', () => {
-    render(<SubscriptionDetails data={base} extras={extras} />);
+    render(<SubscriptionDetails data={base} extras={extras} planChange={planChange} />);
 
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
-    expect(screen.getByText('Mensuelle')).toBeInTheDocument();
+    expect(screen.getAllByText('Mensuelle').length).toBeGreaterThan(0);
     expect(screen.getByText(/300\s?€ par mois/)).toBeInTheDocument();
     expect(screen.getByText('Actif')).toBeInTheDocument();
     expect(screen.getByText(/Prochain paiement de .*300.* le 5 décembre 2026/)).toBeInTheDocument();
@@ -52,10 +62,11 @@ describe('SubscriptionDetails', () => {
       <SubscriptionDetails
         data={{ ...base, billingPeriod: 'yearly', amountCents: 720000, monthlyEquivalentCents: 60000 }}
         extras={extras}
+        planChange={planChange}
       />,
     );
 
-    expect(screen.getByText('Annuelle')).toBeInTheDocument();
+    expect(screen.getAllByText('Annuelle').length).toBeGreaterThan(0);
     expect(screen.getByText(/7\s?200\s?€ par an/)).toBeInTheDocument();
     expect(screen.getByText(/soit 600\s?€ par mois, facturé une fois par an/)).toBeInTheDocument();
   });
@@ -65,6 +76,7 @@ describe('SubscriptionDetails', () => {
       <SubscriptionDetails
         data={{ ...base, status: 'ESSAI', trialEndsAt: new Date(Date.now() + 10 * 86_400_000) }}
         extras={extras}
+        planChange={planChange}
       />,
     );
 
@@ -77,6 +89,7 @@ describe('SubscriptionDetails', () => {
       <SubscriptionDetails
         data={{ ...base, status: 'DELAI_GRACE', graceEndsAt: new Date('2026-10-20T10:00:00Z') }}
         extras={extras}
+        planChange={planChange}
       />,
     );
 
@@ -87,20 +100,20 @@ describe('SubscriptionDetails', () => {
     ['IMPAYE', /lecture seule pour impayé/],
     ['RESILIE', /Abonnement résilié/],
   ] as const)('explique l etat %s, sans proposer de resilier', (status, text) => {
-    render(<SubscriptionDetails data={{ ...base, status }} extras={extras} />);
+    render(<SubscriptionDetails data={{ ...base, status }} extras={extras} planChange={planChange} />);
     expect(screen.getByText(text)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Résilier mon abonnement/ })).not.toBeInTheDocument();
   });
 
   it('propose de resilier un abonnement actif', () => {
-    render(<SubscriptionDetails data={base} extras={extras} />);
+    render(<SubscriptionDetails data={base} extras={extras} planChange={planChange} />);
 
     expect(screen.getByRole('button', { name: 'Résilier mon abonnement' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).not.toBeInTheDocument();
   });
 
   it('resiliation programmee : date de fin d acces et bouton de reprise (D59)', () => {
-    render(<SubscriptionDetails data={{ ...base, cancelAtPeriodEnd: true }} extras={extras} />);
+    render(<SubscriptionDetails data={{ ...base, cancelAtPeriodEnd: true }} extras={extras} planChange={planChange} />);
 
     expect(screen.getByText(/Résiliation programmée : vous gardez l’accès jusqu’au 5 décembre 2026/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reprendre mon abonnement' })).toBeInTheDocument();
@@ -108,7 +121,7 @@ describe('SubscriptionDetails', () => {
   });
 
   it('affiche la carte enregistree, sans jamais proposer de la supprimer', () => {
-    render(<SubscriptionDetails data={base} extras={extras} />);
+    render(<SubscriptionDetails data={base} extras={extras} planChange={planChange} />);
 
     expect(screen.getByText(/4242/)).toBeInTheDocument();
     expect(screen.getByText(/expire 03\/2034/)).toBeInTheDocument();
@@ -117,14 +130,14 @@ describe('SubscriptionDetails', () => {
   });
 
   it('propose d ajouter une carte quand il n y en a aucune', () => {
-    render(<SubscriptionDetails data={base} extras={{ ...extras, card: null }} />);
+    render(<SubscriptionDetails data={base} extras={{ ...extras, card: null }} planChange={planChange} />);
 
     expect(screen.getByText('Aucune carte enregistrée.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ajouter une carte' })).toBeInTheDocument();
   });
 
   it('liste les factures avec leur PDF', () => {
-    render(<SubscriptionDetails data={base} extras={extras} />);
+    render(<SubscriptionDetails data={base} extras={extras} planChange={planChange} />);
 
     expect(screen.getByText('ABCD-0001')).toBeInTheDocument();
     expect(screen.getByText('Payée')).toBeInTheDocument();
@@ -136,21 +149,22 @@ describe('SubscriptionDetails', () => {
 
   it('indique quand il n y a aucune facture ou que Stripe est injoignable', () => {
     const { rerender } = render(
-      <SubscriptionDetails data={base} extras={{ ...extras, invoices: [] }} />,
+      <SubscriptionDetails data={base} extras={{ ...extras, invoices: [] }} planChange={planChange} />,
     );
     expect(screen.getByText(/Aucune facture pour le moment/)).toBeInTheDocument();
 
     rerender(
       <SubscriptionDetails
         data={base}
-        extras={{ card: null, invoices: [], available: false }}
+        extras={{ card: null, invoices: [], pendingChange: null, available: false }}
+        planChange={planChange}
       />,
     );
     expect(screen.getByText(/factures sont momentanément indisponibles/)).toBeInTheDocument();
   });
 
   it('affiche le retour de la saisie de carte', () => {
-    render(<SubscriptionDetails data={base} extras={extras} flash="ok" />);
+    render(<SubscriptionDetails data={base} extras={extras} planChange={planChange} flash="ok" />);
     expect(screen.getByRole('status')).toHaveTextContent('Votre carte bancaire a été mise à jour');
   });
 
@@ -166,6 +180,7 @@ describe('SubscriptionDetails', () => {
           amountCents: null,
         }}
         extras={extras}
+        planChange={planChange}
       />,
     );
 

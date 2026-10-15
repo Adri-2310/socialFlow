@@ -6,6 +6,7 @@ import { requirePaidCabinet } from '@/lib/cabinet-access';
 import { getCabinetSubscriptionDetails } from '@/lib/cabinet-billing';
 import { confirmCardUpdate, getBillingExtras } from '@/lib/cabinet-subscription';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
+import { getPlanChangeOptions } from '@/lib/plan-change';
 import { requireSession } from '@/lib/require-session';
 
 export const metadata: Metadata = {
@@ -45,10 +46,11 @@ export default async function CabinetBillingPage({
     flash = result.ok ? 'ok' : 'erreur';
   }
 
-  const [subscription, quotas, extras] = await Promise.all([
+  const [subscription, quotas, extras, planChange] = await Promise.all([
     getCabinetSubscriptionDetails(user.cabinetId),
     getCabinetQuotaUsage(user.cabinetId),
     getBillingExtras(user.cabinetId),
+    getPlanChangeOptions(user.cabinetId),
   ]);
 
   return (
@@ -59,7 +61,12 @@ export default async function CabinetBillingPage({
           Votre abonnement, votre carte, vos factures et vos quotas.
         </p>
       </div>
-      <SubscriptionDetails data={subscription} extras={extras} flash={flash} />
+      <SubscriptionDetails
+        data={subscription}
+        extras={extras}
+        planChange={planChange}
+        flash={flash}
+      />
       <QuotaUsage data={quotas} />
     </>
   );
