@@ -72,7 +72,7 @@ Format d'erreur unique : `{ "error": "CODE_EN_MAJUSCULES" }`, plus des champs op
 | 403 | `RESTORE_NOT_ALLOWED` | Compte non retiré par le cabinet (auto-suppression, archivage SuperAdmin) (D52) |
 | 409 | `RESTORE_WINDOW_EXPIRED` | Délai de restauration de 30 jours dépassé (D52) |
 | 400 | `EMAIL_UNCHANGED` | Nouvelle adresse identique à l'actuelle (D53) |
-| 423 | `PRESTATIONS_LOCKED`, `CABINET_READ_ONLY` | Ressource verrouillée |
+| 423 | `PRESTATIONS_LOCKED`, `CABINET_READ_ONLY` | Ressource verrouillée ; `CABINET_READ_ONLY` : cabinet en impaye ou resilie (D29). Toute route d'ecriture d'un role rattache a un cabinet passe `writable: true` a `requireApiSession` |
 | 502 | `EMAIL_SEND_FAILED`, `<INTEGRATION>_UNAVAILABLE` | Service externe en échec |
 
 Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED`, `USER_ARCHIVED`, `CANNOT_SUSPEND_SUPER_ADMIN`, `INVALID_STATUS`, etc.
