@@ -123,6 +123,15 @@ model Cabinet {
   country          String       @default("BE")
   contactEmail     String?
   contactPhone     String?
+  // Branding (D33, D62) : nom affiche et couleurs #rrggbb. null = valeurs par
+  // defaut de SocialFlow.
+  displayName      String?
+  primaryColor     String?
+  secondaryColor   String?
+  // Logo (D33, D62) : image publique stockee hors base (Vercel Blob). logoPath
+  // sert a la supprimer quand le logo est remplace ou retire.
+  logoUrl          String?
+  logoPath         String?
   billingEventAt   DateTime?
   users            User[]
   invitations      Invitation[]

@@ -59,10 +59,17 @@ export type ShellRole = keyof typeof SHELL_CONFIG;
 export function DashboardShell({
   role,
   userName,
+  brandName,
+  logoUrl,
   children,
 }: {
   role: ShellRole;
   userName: string;
+  // Nom affiche du cabinet (D33) : remplace "SocialFlow" dans la sidebar.
+  // Absent = identite SocialFlow (console SuperAdmin, cabinet sans nom).
+  brandName?: string | null;
+  // Logo du cabinet (D33) : remplace le logo SocialFlow. URL publique (Blob).
+  logoUrl?: string | null;
   children: ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -78,18 +85,40 @@ export function DashboardShell({
         }`}
       >
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
-          <Image
-            src="/logo-simple.png"
-            alt="SocialFlow"
-            width={36}
-            height={36}
-            className="rounded-xl"
-          />
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- URL externe (Blob), taille fixe
+            <img
+              src={logoUrl}
+              alt={brandName ?? 'Logo du cabinet'}
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-xl object-contain"
+            />
+          ) : (
+            <Image
+              src="/logo-simple.png"
+              alt="SocialFlow"
+              width={36}
+              height={36}
+              className="rounded-xl"
+            />
+          )}
           <div>
-            <p className="text-sm font-bold leading-none text-sidebar-foreground">
-              Social<span className="text-primary dark:text-indigo-400">Flow</span>
-            </p>
-            <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
+            {brandName ? (
+              <>
+                <p className="max-w-[9.5rem] truncate text-sm font-bold leading-none text-sidebar-foreground">
+                  {brandName}
+                </p>
+                <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold leading-none text-sidebar-foreground">
+                  Social<span className="text-primary dark:text-indigo-400">Flow</span>
+                </p>
+                <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
+              </>
+            )}
           </div>
         </div>
         <nav className="space-y-1 p-3 text-sm">
@@ -122,6 +151,11 @@ export function DashboardShell({
             ),
           )}
         </nav>
+        {brandName && (
+          <p className="absolute inset-x-0 bottom-0 border-t border-sidebar-border px-5 py-3 text-[11px] text-muted-foreground">
+            Propulsé par SocialFlow
+          </p>
+        )}
       </aside>
 
       {mobileOpen && (
