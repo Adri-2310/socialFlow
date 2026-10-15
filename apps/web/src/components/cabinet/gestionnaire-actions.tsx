@@ -12,6 +12,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   GESTIONNAIRE_NOT_FOUND: 'Ce gestionnaire est introuvable.',
+  CABINET_READ_ONLY:
+    'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
   GESTIONNAIRE_ALREADY_SUSPENDED: 'Ce gestionnaire est déjà suspendu.',
   GESTIONNAIRE_ALREADY_ACTIVE: 'Ce gestionnaire est déjà actif.',
   SUSPENDED_BY_ADMIN:

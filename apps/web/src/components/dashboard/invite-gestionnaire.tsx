@@ -9,6 +9,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email.',
   INVITATION_ALREADY_PENDING: 'Une invitation est déjà en attente pour cette adresse.',
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
+  CABINET_READ_ONLY:
+    'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
   FORBIDDEN: "Vous n'êtes pas autorisé à inviter un gestionnaire.",
   QUOTA_EXCEEDED:
     "Le quota de gestionnaires de votre plan est atteint. Passez à un plan supérieur pour inviter davantage.",

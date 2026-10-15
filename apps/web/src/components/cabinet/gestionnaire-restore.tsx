@@ -8,6 +8,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   GESTIONNAIRE_NOT_FOUND: 'Ce gestionnaire est introuvable.',
+  CABINET_READ_ONLY:
+    'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
   QUOTA_EXCEEDED:
     "Le quota de gestionnaires de votre plan est atteint : libérez une place ou passez à un plan supérieur.",
   RESTORE_NOT_ALLOWED: "Ce compte ne peut pas être restauré par le cabinet.",

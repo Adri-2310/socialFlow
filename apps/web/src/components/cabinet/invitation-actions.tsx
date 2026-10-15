@@ -10,6 +10,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   INVITATION_NOT_FOUND: 'Cette invitation est introuvable.',
+  CABINET_READ_ONLY:
+    'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
   INVITATION_ALREADY_ACCEPTED: 'Cette invitation a déjà été acceptée.',
   INVITATION_ALREADY_REVOKED: 'Cette invitation a déjà été révoquée.',
   EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email.',

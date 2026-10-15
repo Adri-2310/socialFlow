@@ -12,6 +12,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email.',
   INVITATION_ALREADY_PENDING: 'Une invitation est déjà en attente pour cette adresse.',
   GESTIONNAIRE_NOT_FOUND: 'Ce gestionnaire est introuvable.',
+  CABINET_READ_ONLY:
+    'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
 };
 
 // Modification de l'adresse de connexion d'un gestionnaire (D53). Le serveur
