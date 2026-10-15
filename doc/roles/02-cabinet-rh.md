@@ -120,14 +120,14 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 
 | # | Problème | Correction |
 |---|---|---|
-| C1 | Essai créé sans carte : Stripe ne pourra rien débiter (contraire à D25) | Remplacer `provisionStripeTrial` par une **session Stripe Checkout** (`mode: subscription`, `trial_period_days: 30`) ; le cabinet est activé par le webhook `checkout.session.completed` |
+| C1 | ~~Essai créé sans carte~~ | 🟡 Partiellement corrigé le 15/10 : `provisionStripeTrial` supprimé ; `POST /api/billing/checkout` crée une **session Stripe Checkout** (`mode: subscription`, carte obligatoire, `trial_period_days: 30`) et `POST /api/billing/checkout/confirm` applique l'abonnement au retour, sans attendre le webhook. **Reste** : écran « reprendre le paiement » (D32) et blocage tant qu'aucun paiement n'est fait, puis suppression de `User.plan` / `User.billingPeriod` |
 | C2 | ~~Plan stocké sur `User.plan` / `User.billingPeriod`~~ | Corrigé le 14/10 (D55) : `Cabinet.planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`. `User.plan` n'est plus lu ; les colonnes seront supprimées avec Stripe Checkout (C1). Reste : transitions par webhook et blocage `423` (chantier C0) |
 | C3 | ~~Jeton d'invitation stocké en clair~~ | Corrigé le 13/10 : `Invitation.tokenHash` = `sha256(token)` (voir `lib/invitations.ts`) |
 | C4 | Acceptation d'invitation : mot de passe uniquement | Proposer aussi Google/Microsoft (email du compte OAuth = email invité) |
 | C5 | ~~Pas de renvoi ni de révocation d'invitation~~ | Corrigé le 13/10 (voir § 6) |
 | C6 | Acceptation via inscription + suppression du cabinet « fantôme » | Fragile : prévoir une création de compte dédiée aux invitations, sans passer par le hook d'auto-inscription |
 | C7 | Suspension = blocage total des connexions de tout le cabinet | Adapter à D29 : portails Entreprise et Collaborateur en lecture seule |
-| C8 | Échec Stripe silencieux à l'inscription (`catch(() => {})`) | Avec C1, l'inscription n'est finalisée qu'après Checkout ; journaliser toute erreur |
+| C8 | ~~Échec Stripe silencieux à l'inscription (`catch(() => {})`)~~ | Corrigé avec C1 : l'inscription ne contacte plus Stripe ; les échecs de Checkout sont journalisés et renvoyés (`CHECKOUT_FAILED`, `PRICE_NOT_FOUND`) |
 
 ## 8. Critères d'acceptation
 
