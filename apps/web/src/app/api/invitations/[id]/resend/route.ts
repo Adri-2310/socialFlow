@@ -8,7 +8,7 @@ import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/in
 // jeton et nouvelle date d'expiration ; l'ancien lien cesse de fonctionner
 // puisque seul le hash du jeton courant est conserve (C3).
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;

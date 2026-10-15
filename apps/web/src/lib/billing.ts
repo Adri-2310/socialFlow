@@ -75,3 +75,11 @@ export function mapStripeSubscriptionStatus(status: string): BillingStatus | nul
       return null;
   }
 }
+
+// D29, PERMISSIONS.md "Etats bloquants" : un cabinet en impaye ou resilie est
+// en lecture seule (toute ecriture -> 423 CABINET_READ_ONLY). Le delai de
+// grace, lui, laisse tout fonctionner avec une alerte.
+export function isReadOnlyBillingStatus(status: string | null | undefined): boolean {
+  const normalized = normalizeBillingStatus(status);
+  return normalized === 'IMPAYE' || normalized === 'RESILIE';
+}

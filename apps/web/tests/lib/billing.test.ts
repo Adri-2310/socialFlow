@@ -4,6 +4,7 @@ import {
   BILLING_STATUS_LABELS,
   GRACE_PERIOD_DAYS,
   graceEndsAt,
+  isReadOnlyBillingStatus,
   mapStripeSubscriptionStatus,
   normalizeBillingPeriod,
   normalizeBillingStatus,
@@ -69,5 +70,20 @@ describe('mapStripeSubscriptionStatus', () => {
   it('renvoie null pour un statut inconnu ou sans effet', () => {
     expect(mapStripeSubscriptionStatus('paused')).toBeNull();
     expect(mapStripeSubscriptionStatus('autre')).toBeNull();
+  });
+});
+
+describe('isReadOnlyBillingStatus (D29)', () => {
+  it('est en lecture seule en impaye et en resiliation uniquement', () => {
+    expect(isReadOnlyBillingStatus('IMPAYE')).toBe(true);
+    expect(isReadOnlyBillingStatus('RESILIE')).toBe(true);
+    for (const status of ['ESSAI', 'ACTIF', 'DELAI_GRACE', 'EN_ATTENTE_PAIEMENT']) {
+      expect(isReadOnlyBillingStatus(status)).toBe(false);
+    }
+  });
+
+  it('ne bloque pas sur une valeur inconnue ou absente', () => {
+    expect(isReadOnlyBillingStatus('QUELQUE_CHOSE')).toBe(false);
+    expect(isReadOnlyBillingStatus(null)).toBe(false);
   });
 });

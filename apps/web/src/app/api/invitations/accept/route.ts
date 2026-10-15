@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hashInvitationToken } from '@/lib/invitations';
+import { isReadOnlyBillingStatus } from '@/lib/billing';
 
 // Cree le compte avec le role/cabinetId imposes par l'invitation, plutot que
 // de laisser le client les fournir (meme logique que additionalFields.role
@@ -26,6 +27,11 @@ export async function POST(request: Request) {
   }
 
   const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: invitation.cabinetId } });
+
+  // D29 : un cabinet en lecture seule ne peut pas accueillir de nouveau compte.
+  if (isReadOnlyBillingStatus(cabinet.billingStatus)) {
+    return NextResponse.json({ error: 'CABINET_READ_ONLY' }, { status: 423 });
+  }
 
   // Le hook global de auth.ts (sign-up) cree systematiquement un Cabinet pour
   // toute inscription reussie - y compris celle-ci, qui passe par le meme

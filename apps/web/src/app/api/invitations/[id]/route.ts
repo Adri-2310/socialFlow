@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // envoye par email cesse immediatement de fonctionner (la route d'acceptation
 // ne retient que le statut "pending").
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;

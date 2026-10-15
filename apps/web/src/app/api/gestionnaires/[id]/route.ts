@@ -43,7 +43,7 @@ async function notify(
 
 // Suspend ou reactive un gestionnaire (reversible).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;
@@ -133,7 +133,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // par api/cron/purge-deleted-accounts). L'email reste reserve jusqu'a la purge (D7).
 // Restaurable par le cabinet pendant GESTIONNAIRE_RESTORE_WINDOW_DAYS (PUT).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;
@@ -168,7 +168,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 // GESTIONNAIRE_RESTORE_WINDOW_DAYS jours (D52). Meme convention que
 // api/admin/users/[id] : PUT = restauration.
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;

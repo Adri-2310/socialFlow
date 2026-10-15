@@ -11,7 +11,7 @@ import { sendGestionnaireAccessChangedEmail } from '@/lib/email';
 // sessions en cours sont coupees, un email de confirmation part vers la
 // nouvelle adresse et l'ancienne est prevenue.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;

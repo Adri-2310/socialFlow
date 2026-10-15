@@ -12,7 +12,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Gestionnaire RH. La garde (401/403 JSON, pas de redirection HTML) vit dans
 // lib/api-guard.ts.
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
   if (guard.response) return guard.response;
   const { session } = guard;
   const cabinetId = session.user.cabinetId as string;
