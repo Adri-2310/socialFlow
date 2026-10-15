@@ -97,6 +97,7 @@ const stateOf = (id: string) =>
       currentPeriodEnd: true,
       planId: true,
       billingPeriod: true,
+      cancelAtPeriodEnd: true,
       status: true,
     },
   });
@@ -194,6 +195,28 @@ describe('suivi de l abonnement', () => {
     expect(state.billingStatus).toBe('ACTIF');
     expect(state.planId).toBe('pro');
     expect(state.billingPeriod).toBe('yearly');
+  });
+
+  it('suit la resiliation programmee et sa reprise depuis Stripe (D59)', async () => {
+    const cabinet = await createCabinet({ billingStatus: 'ACTIF' });
+
+    await send(
+      makeEvent(
+        'customer.subscription.updated',
+        subscription(cabinet.stripeCustomerId, 'active', { cancel_at_period_end: true }),
+      ),
+    );
+    expect((await stateOf(cabinet.id)).cancelAtPeriodEnd).toBe(true);
+    expect((await stateOf(cabinet.id)).billingStatus).toBe('ACTIF');
+
+    await send(
+      makeEvent(
+        'customer.subscription.updated',
+        subscription(cabinet.stripeCustomerId, 'active', { cancel_at_period_end: false }),
+        NOW + 60,
+      ),
+    );
+    expect((await stateOf(cabinet.id)).cancelAtPeriodEnd).toBe(false);
   });
 
   it('ignore un plan inconnu du catalogue', async () => {

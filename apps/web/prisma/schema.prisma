@@ -110,6 +110,9 @@ model Cabinet {
   // date du dernier evenement Stripe applique (un evenement plus ancien est
   // ignore, les webhooks pouvant arriver dans le desordre).
   pastDueSince     DateTime?
+  // Resiliation programmee en fin de periode (D59) : le cabinet garde l'acces
+  // jusqu'a currentPeriodEnd. Suit Stripe par webhook, jamais l'inverse.
+  cancelAtPeriodEnd Boolean     @default(false)
   billingEventAt   DateTime?
   users            User[]
   invitations      Invitation[]

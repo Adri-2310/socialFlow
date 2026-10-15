@@ -22,6 +22,7 @@ type BillingUpdate = {
   currentPeriodEnd?: Date | null;
   planId?: string | null;
   billingPeriod?: 'monthly' | 'yearly' | null;
+  cancelAtPeriodEnd?: boolean;
 };
 
 type ApplyResult = {
@@ -100,6 +101,9 @@ async function applyBillingUpdate(
           : {}),
         ...(update.planId ? { planId: update.planId } : {}),
         ...(update.billingPeriod ? { billingPeriod: update.billingPeriod } : {}),
+        ...(update.cancelAtPeriodEnd !== undefined
+          ? { cancelAtPeriodEnd: update.cancelAtPeriodEnd }
+          : {}),
       },
     });
 
@@ -190,6 +194,8 @@ export async function applySubscriptionState(
     status: (current) => (current === 'RESILIE' && mapped !== 'RESILIE' ? null : mapped),
     trialEndsAt: fromUnix(subscription.trial_end),
     currentPeriodEnd: fromUnix(subscription.items?.data?.[0]?.current_period_end),
+    // D59 : resiliation programmee dans l'application, relue depuis Stripe.
+    cancelAtPeriodEnd: subscription.cancel_at_period_end === true,
     ...plan,
   });
   if (result?.changed && result.current === 'DELAI_GRACE' && result.pastDueSince) {
