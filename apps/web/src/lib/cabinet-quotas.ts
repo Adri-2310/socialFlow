@@ -31,14 +31,9 @@ export function isQuotaReached(used: number, limit: number | null): boolean {
   return limit !== null && used >= limit;
 }
 
-// Affichage d'un volume : Mo sous 1 Go, sinon Go.
-export function formatStorageMb(mb: number): string {
-  if (mb >= 1024) {
-    const go = mb / 1024;
-    return `${Number.isInteger(go) ? go : go.toFixed(1)} Go`;
-  }
-  return `${mb} Mo`;
-}
+// Defini dans un module sans acces donnees (composants client) ; reexporte
+// ici pour les imports existants.
+export { formatStorageMb } from '@/lib/quota-format';
 
 // Part consommee, bornee a [0, 100], pour les barres de progression.
 export function quotaPercent(used: number, limit: number | null): number {
