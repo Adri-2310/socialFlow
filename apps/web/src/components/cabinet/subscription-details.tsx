@@ -10,7 +10,7 @@ import type { CabinetSubscriptionDetails } from '@/lib/cabinet-billing';
 import type { BillingExtras } from '@/lib/cabinet-subscription';
 import type { PlanChangeOptions } from '@/lib/plan-change';
 
-// Retour de la saisie de carte chez Stripe (voir la page Facturation).
+// Retour de la saisie de carte chez Stripe (voir la page Mon abonnement).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;
 
 const FLASH_MESSAGES: Record<
@@ -90,7 +90,7 @@ const STATUS_TONE: Record<string, string> = {
   RESILIE: 'bg-muted text-muted-foreground',
 };
 
-// Page "Facturation" du Cabinet RH : la gestion se fait dans SocialFlow, sans
+// Page "Mon abonnement" du Cabinet RH : la gestion se fait dans SocialFlow, sans
 // portail Stripe (D59). Seule la saisie d'une carte passe par une page Stripe.
 // Les actions (carte, resiliation, reprise) sont dans subscription-actions.
 export function SubscriptionDetails({

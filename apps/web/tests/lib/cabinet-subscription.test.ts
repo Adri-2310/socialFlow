@@ -207,7 +207,7 @@ describe('resiliation et reprise (D59)', () => {
 });
 
 describe('changement de carte (D59)', () => {
-  it('ouvre une session Stripe en mode setup, carte seulement, retour sur Facturation', async () => {
+  it('ouvre une session Stripe en mode setup, carte seulement, retour sur Mon abonnement', async () => {
     const cabinet = await createCabinet();
 
     const result = await createCardUpdateSession(cabinet.id, APP_URL);

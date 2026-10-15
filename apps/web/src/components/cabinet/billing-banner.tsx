@@ -67,7 +67,7 @@ function Banner({
   icon: React.ReactNode;
   title: string;
   description: string;
-  // Lien vers la page Facturation, pour regulariser.
+  // Lien vers la page Mon abonnement, pour regulariser.
   action?: boolean;
 }) {
   const styles =

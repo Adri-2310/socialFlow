@@ -10,7 +10,7 @@ import { getPlanChangeOptions } from '@/lib/plan-change';
 import { requireSession } from '@/lib/require-session';
 
 export const metadata: Metadata = {
-  title: 'Facturation — SocialFlow',
+  title: 'Mon abonnement — SocialFlow',
   description: 'Votre abonnement, votre carte, vos factures et vos quotas.',
 };
 
@@ -56,7 +56,7 @@ export default async function CabinetBillingPage({
   return (
     <>
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-foreground">Facturation</h2>
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Mon abonnement</h2>
         <p className="text-sm text-muted-foreground">
           Votre abonnement, votre carte, vos factures et vos quotas.
         </p>

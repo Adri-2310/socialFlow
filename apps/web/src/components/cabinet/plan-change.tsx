@@ -108,7 +108,7 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
 
   if (pending) {
     return (
-      <section className="rounded-2xl border border-primary/30 bg-primary/5 p-5 sm:p-6">
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <h2 className="text-sm font-bold text-foreground">Changement de plan programmé</h2>
         <p className="mt-2 text-sm text-foreground">
           Passage à <span className="font-semibold">{pending.planName ?? 'un autre plan'}</span>
