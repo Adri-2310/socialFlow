@@ -25,7 +25,7 @@ const { prisma } = await import('@/lib/prisma');
 const email = await import('@/lib/email');
 const { getEmailTemplate, getCustomTemplate, saveEmailTemplate, resetEmailTemplate, listEmailTemplates } =
   await import('@/lib/cabinet-email-templates');
-const { TEMPLATES } = await import('@/lib/email-templates');
+const { TEMPLATES, validateTemplate } = await import('@/lib/email-templates');
 const { PUT: putRoute, DELETE: deleteRoute } = await import(
   '@/app/api/cabinet/settings/email-templates/[type]/route'
 );
@@ -90,7 +90,25 @@ describe('modeles d email du cabinet (D68)', () => {
       custom: false,
     });
     expect(await getCustomTemplate(cabinetId, TYPE)).toBeNull();
-    expect((await listEmailTemplates(cabinetId)).map((t) => t.type)).toEqual([TYPE]);
+    expect((await listEmailTemplates(cabinetId)).map((t) => t.type)).toEqual([
+      TYPE,
+      'INVITATION_ENTREPRISE',
+    ]);
+  });
+
+  it('propose un modele par defaut pour l invitation d un administrateur d entreprise (D70)', async () => {
+    const { cabinetId } = await creerCabinetRH('tpl-entreprise');
+
+    const modele = await getEmailTemplate(cabinetId, 'INVITATION_ENTREPRISE');
+    expect(modele.custom).toBe(false);
+    expect(modele.subject).toContain('{{entreprise_nom}}');
+    expect(
+      validateTemplate('INVITATION_ENTREPRISE', { subject: modele.subject, body: modele.body }).ok,
+    ).toBe(true);
+    // Une variable propre a l'invitation de gestionnaire n'existe pas ici, et inversement.
+    expect(
+      validateTemplate('INVITATION_GESTIONNAIRE', { subject: '{{entreprise_nom}}', body: 'x' }).ok,
+    ).toBe(false);
   });
 
   it('enregistre un modele et l audite sans en consigner le contenu', async () => {

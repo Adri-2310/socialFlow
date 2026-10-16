@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendGestionnaireInvitationEmail } from '@/lib/email';
+import { sendEntrepriseInvitationEmail, sendGestionnaireInvitationEmail } from '@/lib/email';
 import { TEMPLATES, isTemplateType, validateTemplate } from '@/lib/email-templates';
 
 // Envoi d'un email de test du modele (brouillon, non enregistre) (D68). Il part
@@ -42,14 +42,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
   const link = appUrl ? `${appUrl}/invitations/accept?token=exemple` : sample.lien;
   try {
     const brand = await getCabinetEmailBrand(cabinetId);
-    await sendGestionnaireInvitationEmail(
-      ownEmail,
-      brand,
-      sample.invitant_nom,
-      link,
-      validation.value,
-      { subjectPrefix: '[Test] ' },
-    );
+    const options = { subjectPrefix: '[Test] ' };
+    if (type === 'INVITATION_ENTREPRISE') {
+      await sendEntrepriseInvitationEmail(
+        ownEmail,
+        brand,
+        sample.invitant_nom,
+        sample.entreprise_nom,
+        link,
+        validation.value,
+        options,
+      );
+    } else {
+      await sendGestionnaireInvitationEmail(
+        ownEmail,
+        brand,
+        sample.invitant_nom,
+        link,
+        validation.value,
+        options,
+      );
+    }
   } catch (error) {
     console.error("Echec de l'envoi de l'email de test", error);
     return NextResponse.json({ error: 'EMAIL_SEND_FAILED' }, { status: 502 });

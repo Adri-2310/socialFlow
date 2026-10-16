@@ -7,7 +7,7 @@
 // [liens](https://...). Tout le reste est echappe : un cabinet ne peut ni
 // casser la mise en page ni injecter du HTML ou un script.
 
-export const TEMPLATE_TYPES = ['INVITATION_GESTIONNAIRE'] as const;
+export const TEMPLATE_TYPES = ['INVITATION_GESTIONNAIRE', 'INVITATION_ENTREPRISE'] as const;
 export type TemplateType = (typeof TEMPLATE_TYPES)[number];
 
 export function isTemplateType(value: string): value is TemplateType {
@@ -45,6 +45,30 @@ export const TEMPLATES: Record<TemplateType, TemplateDefinition> = {
       cabinet_nom: 'Cabinet Exemple',
       invitant_nom: 'Alice Martin',
       // Domaine reserve (.invalid, RFC 2606) : ne mene jamais a un vrai site.
+      lien: 'https://exemple.invalid/invitations/accept?token=exemple',
+    },
+  },
+  // D4, D5 : invitation de l'administrateur d'une entreprise cliente.
+  INVITATION_ENTREPRISE: {
+    label: 'Invitation d’un administrateur d’entreprise',
+    description: 'Envoyé quand vous invitez l’administrateur d’une entreprise cliente.',
+    variables: [
+      { name: 'cabinet_nom', label: 'Nom du cabinet' },
+      { name: 'entreprise_nom', label: 'Nom de l’entreprise cliente' },
+      { name: 'invitant_nom', label: 'Nom de la personne qui invite' },
+      { name: 'lien', label: 'Lien pour créer le compte' },
+    ],
+    defaults: {
+      subject: '{{cabinet_nom}} vous invite à accéder à l’espace de {{entreprise_nom}}',
+      body:
+        '{{invitant_nom}} de {{cabinet_nom}} vous invite à créer le compte administrateur de {{entreprise_nom}}. ' +
+        'Vous pourrez y consulter vos salariés et valider les fiches de paie. ' +
+        'Cliquez ci-dessous pour créer votre compte. Ce lien est valable 7 jours et ne peut être utilisé qu’une seule fois.',
+    },
+    sample: {
+      cabinet_nom: 'Cabinet Exemple',
+      entreprise_nom: 'Boulangerie Dupont',
+      invitant_nom: 'Alice Martin',
       lien: 'https://exemple.invalid/invitations/accept?token=exemple',
     },
   },

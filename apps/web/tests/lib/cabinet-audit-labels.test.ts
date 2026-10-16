@@ -90,3 +90,29 @@ describe('actions sur les entreprises clientes', () => {
     );
   });
 });
+
+describe('invitations et retrait d un administrateur d entreprise (D70)', () => {
+  const base = { targetName: null, email: 'admin@client.be', previousEmail: null, newEmail: null };
+
+  it('nomment l entreprise concernee', () => {
+    const entreprise = 'Garage Pirard';
+    expect(describeAuditEntry({ ...base, action: 'INVITATION_SENT', entreprise })).toBe(
+      "Invitation de l'administrateur de Garage Pirard envoyée à admin@client.be",
+    );
+    expect(describeAuditEntry({ ...base, action: 'INVITATION_RESENT', entreprise })).toContain('renvoyée');
+    expect(describeAuditEntry({ ...base, action: 'INVITATION_REVOKED', entreprise })).toContain('révoquée');
+    expect(describeAuditEntry({ ...base, action: 'INVITATION_ACCEPTED', entreprise })).toBe(
+      'admin@client.be a accepté son invitation et administre Garage Pirard',
+    );
+    expect(
+      describeAuditEntry({ ...base, action: 'USER_ARCHIVED', targetName: 'Jean Admin', entreprise }),
+    ).toBe("L'administrateur de Garage Pirard (Jean Admin) a été retiré");
+  });
+
+  it('gardent les phrases d origine sans entreprise', () => {
+    expect(describeAuditEntry({ ...base, action: 'INVITATION_SENT' })).toBe('Invitation envoyée à admin@client.be');
+    expect(describeAuditEntry({ ...base, action: 'USER_ARCHIVED', targetName: 'Alice' })).toBe(
+      'Alice a été retiré du cabinet',
+    );
+  });
+});

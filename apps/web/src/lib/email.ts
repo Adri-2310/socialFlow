@@ -3,15 +3,21 @@ import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { emailTheme, formatFrom, type CabinetEmailBrand, type EmailTheme } from '@/lib/email-brand';
 import { prisma } from '@/lib/prisma';
-import { buildGestionnaireInvitation, ctaButton, emailShell, escapeHtml } from '@/lib/email-layout';
+import { buildEntrepriseInvitation, buildGestionnaireInvitation, ctaButton, emailShell, escapeHtml } from '@/lib/email-layout';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Roles dont les emails de compte prennent l'identite du cabinet (D33, D72) :
+// l'equipe et les clients du cabinet. Le Cabinet RH (titulaire), client de
+// SocialFlow, et le SuperAdmin recoivent des emails SocialFlow.
+const CABINET_BRANDED_ROLES = ['GESTIONNAIRE_RH', 'ENTREPRISE_CLIENTE', 'COLLABORATEUR'];
+
 // Contexte d'un email de COMPTE (connexion, mot de passe, double authentification,
-// verification d'adresse...) : aux couleurs du cabinet de l'utilisateur quand il
-// en a un (D33, D66), a celles de SocialFlow sinon (SuperAdmin, inscription en
-// cours, adresse inconnue). Jamais bloquant : une erreur de lecture donne
-// l'identite SocialFlow plutot qu'un email perdu.
+// verification d'adresse...) : aux couleurs du cabinet pour un gestionnaire, un
+// administrateur d'entreprise ou un collaborateur (D33, D72), a celles de
+// SocialFlow sinon (titulaire, SuperAdmin, inscription en cours, adresse
+// inconnue). Jamais bloquant : une erreur de lecture donne l'identite SocialFlow
+// plutot qu'un email perdu.
 async function accountContext(email: string) {
   let brand: CabinetEmailBrand | null = null;
   try {
@@ -19,7 +25,7 @@ async function accountContext(email: string) {
       where: { email: email.trim().toLowerCase() },
       select: { cabinetId: true, role: true },
     });
-    if (user?.cabinetId && user.role !== 'SUPER_ADMIN') {
+    if (user?.cabinetId && CABINET_BRANDED_ROLES.includes(user.role ?? '')) {
       brand = await getCabinetEmailBrand(user.cabinetId);
     }
   } catch (error) {
@@ -283,6 +289,37 @@ export async function sendGestionnaireInvitationEmail(
   const { subject, html } = buildGestionnaireInvitation({
     brand,
     inviterName,
+    url,
+    template,
+    subjectPrefix: options?.subjectPrefix,
+  });
+
+  const { error } = await resend.emails.send({
+    from: formatFrom(brand.name, process.env.RESEND_FROM_EMAIL as string),
+    to: email,
+    subject,
+    html,
+    ...(brand.replyTo ? { replyTo: brand.replyTo } : {}),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+// Invitation de l'administrateur d'une entreprise cliente (D4, D5), envoyee au
+// nom du cabinet comme celle d'un gestionnaire.
+export async function sendEntrepriseInvitationEmail(
+  email: string,
+  brand: CabinetEmailBrand,
+  inviterName: string,
+  entrepriseName: string,
+  url: string,
+  template?: { subject: string; body: string } | null,
+  options?: { subjectPrefix?: string },
+) {
+  const { subject, html } = buildEntrepriseInvitation({
+    brand,
+    inviterName,
+    entrepriseName,
     url,
     template,
     subjectPrefix: options?.subjectPrefix,

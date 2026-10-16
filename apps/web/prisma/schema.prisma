@@ -68,6 +68,8 @@ model User {
   cabinetName String?
 
   entreprisesAssignees GestionnaireEntreprise[]
+  // Entreprise dont ce compte est l'administrateur (role ENTREPRISE_CLIENTE, D5).
+  entrepriseAdministree Entreprise? @relation("EntrepriseAdmin")
 
   auditLogsAsActor  AuditLog[] @relation("AuditLogActor")
   auditLogsAsTarget AuditLog[] @relation("AuditLogTarget")
@@ -166,6 +168,14 @@ model Entreprise {
   updatedAt     DateTime                 @updatedAt
   gestionnaires GestionnaireEntreprise[]
 
+  // D5 : un seul compte administrateur par entreprise. Renseigne a l'acceptation
+  // de l'invitation ; @unique garantit qu'un compte n'administre qu'une
+  // entreprise (D7). SetNull : si le compte est purge, l'entreprise redevient
+  // sans administrateur et peut en inviter un nouveau.
+  adminUserId String? @unique
+  adminUser   User?   @relation("EntrepriseAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
+  invitations Invitation[]
+
   @@unique([cabinetId, vatNumber])
   @@index([cabinetId, deletedAt])
   @@map("entreprise")
@@ -247,8 +257,13 @@ model Invitation {
   cabinet     Cabinet   @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
   invitedById String
   invitedBy   User      @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  // Invitation ENTREPRISE_CLIENTE (D4, D5) : l'entreprise dont la personne
+  // deviendra l'administrateur. null pour une invitation de gestionnaire.
+  entrepriseId String?
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
 
   @@index([email])
+  @@index([entrepriseId])
   @@map("invitation")
 }
 

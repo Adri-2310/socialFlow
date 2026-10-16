@@ -13,6 +13,9 @@ export type InvitationPreview = {
   primaryColor: string | null;
   secondaryColor: string | null;
   logoUrl: string | null;
+  // Invitation d'administrateur d'entreprise (D5) : nom de l'entreprise ; null
+  // pour une invitation de gestionnaire.
+  entrepriseName: string | null;
 };
 
 export async function getInvitationPreview(
@@ -26,6 +29,7 @@ export async function getInvitationPreview(
       email: true,
       status: true,
       expiresAt: true,
+      entreprise: { select: { name: true, deletedAt: true, adminUserId: true } },
       cabinet: {
         select: {
           name: true,
@@ -45,6 +49,10 @@ export async function getInvitationPreview(
   }
   const cabinet = invitation.cabinet;
   if (cabinet.deletedAt) return null;
+  // Meme regle que l'acceptation (D5) : entreprise archivee ou deja pourvue
+  // d'un administrateur = lien invalide.
+  const entreprise = invitation.entreprise;
+  if (entreprise && (entreprise.deletedAt || entreprise.adminUserId)) return null;
 
   return {
     email: invitation.email,
@@ -53,5 +61,6 @@ export async function getInvitationPreview(
     primaryColor: cabinet.primaryColor,
     secondaryColor: cabinet.secondaryColor,
     logoUrl: cabinet.logoUrl,
+    entrepriseName: entreprise?.name ?? null,
   };
 }

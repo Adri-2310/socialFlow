@@ -59,6 +59,15 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
+      // Une personne invitee prouve deja son adresse par le lien d'invitation
+      // (la route d'acceptation pose emailVerified) : pas d'email de
+      // verification, qui partirait de surcroit avec la mauvaise identite
+      // puisque le compte n'a pas encore son role ni son cabinet (D72).
+      const invited = await prisma.invitation.findFirst({
+        where: { email: user.email.toLowerCase(), status: { in: ['pending', 'accepted'] } },
+        select: { id: true },
+      });
+      if (invited) return;
       await sendVerificationEmail(user.email, url);
     },
     // Verification "souple" : l'email part a l'inscription et reste

@@ -54,7 +54,9 @@ export async function getCabinetOverview(cabinetId: string): Promise<CabinetOver
       _count: { _all: true },
     }),
     prisma.invitation.count({
-      where: { cabinetId, status: 'pending', expiresAt: { gt: now } },
+      // Gestionnaires seulement : les invitations d'administrateurs d'entreprise
+      // (D5) ne comptent ni dans l'equipe ni dans les quotas.
+      where: { cabinetId, role: 'GESTIONNAIRE_RH', status: 'pending', expiresAt: { gt: now } },
     }),
   ]);
 

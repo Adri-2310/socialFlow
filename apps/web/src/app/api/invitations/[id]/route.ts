@@ -16,7 +16,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   // invitation d'un autre cabinet existe.
   const invitation = await prisma.invitation.findFirst({
     where: { id, cabinetId },
-    select: { id: true, email: true, status: true },
+    select: {
+      id: true,
+      email: true,
+      status: true,
+      entreprise: { select: { id: true, name: true } },
+    },
   });
   if (!invitation) {
     return NextResponse.json({ error: 'INVITATION_NOT_FOUND' }, { status: 404 });
@@ -43,7 +48,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         action: 'INVITATION_REVOKED',
         actorId: session.user.id,
         cabinetId,
-        metadata: { invitationId: invitation.id, email: invitation.email },
+        metadata: {
+          invitationId: invitation.id,
+          email: invitation.email,
+          ...(invitation.entreprise
+            ? { entrepriseId: invitation.entreprise.id, entreprise: invitation.entreprise.name }
+            : {}),
+        },
       },
     });
     return true;

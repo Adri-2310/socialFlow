@@ -406,13 +406,23 @@ describe('getBillingExtras', () => {
 
   it('n appelle pas Stripe sans client, et signale une indisponibilite', async () => {
     const sansClient = await createCabinet({ stripeCustomerId: null });
-    expect(await getBillingExtras(sansClient.id)).toEqual({ card: null, invoices: [], available: true });
+    expect(await getBillingExtras(sansClient.id)).toEqual({
+      card: null,
+      invoices: [],
+      available: true,
+      pendingChange: null,
+    });
     expect(customersRetrieve).not.toHaveBeenCalled();
 
     const cabinet = await createCabinet();
     customersRetrieve.mockRejectedValue(new Error('stripe down'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(await getBillingExtras(cabinet.id)).toEqual({ card: null, invoices: [], available: false });
+    expect(await getBillingExtras(cabinet.id)).toEqual({
+      card: null,
+      invoices: [],
+      available: false,
+      pendingChange: null,
+    });
   });
 });
 

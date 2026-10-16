@@ -57,20 +57,32 @@ export function describeAuditEntry(input: AuditMessageInput): string {
   const email = input.email ?? 'une adresse inconnue';
 
   switch (input.action) {
+    // D5 : une invitation d'administrateur d'entreprise nomme l'entreprise.
     case 'INVITATION_SENT':
-      return `Invitation envoyée à ${email}`;
+      return input.entreprise
+        ? `Invitation de l'administrateur de ${input.entreprise} envoyée à ${email}`
+        : `Invitation envoyée à ${email}`;
     case 'INVITATION_RESENT':
-      return `Invitation renvoyée à ${email}`;
+      return input.entreprise
+        ? `Invitation de l'administrateur de ${input.entreprise} renvoyée à ${email}`
+        : `Invitation renvoyée à ${email}`;
     case 'INVITATION_REVOKED':
-      return `Invitation de ${email} révoquée`;
+      return input.entreprise
+        ? `Invitation de l'administrateur de ${input.entreprise} (${email}) révoquée`
+        : `Invitation de ${email} révoquée`;
     case 'INVITATION_ACCEPTED':
-      return `${email} a accepté son invitation`;
+      return input.entreprise
+        ? `${email} a accepté son invitation et administre ${input.entreprise}`
+        : `${email} a accepté son invitation`;
     case 'USER_SUSPENDED':
       return `${target} a été suspendu`;
     case 'USER_REACTIVATED':
       return `${target} a été réactivé`;
     case 'USER_ARCHIVED':
-      return `${target} a été retiré du cabinet`;
+      // D5 : retrait de l'administrateur d'une entreprise (remplacement).
+      return input.entreprise
+        ? `L'administrateur de ${input.entreprise} (${target}) a été retiré`
+        : `${target} a été retiré du cabinet`;
     case 'USER_RESTORED':
       return `${target} a été restauré`;
     case 'USER_EMAIL_CHANGED':

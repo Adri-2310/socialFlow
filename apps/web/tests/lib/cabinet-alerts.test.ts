@@ -189,3 +189,38 @@ describe('buildCabinetAlerts', () => {
     expect(alerts.map((a) => a.level)).toEqual(['danger', 'warning', 'info']);
   });
 });
+
+describe('invitations d administrateurs d entreprise (D70)', () => {
+  const entreprise = (id: string, name: string, status: 'pending' | 'expired' | null) => ({
+    id,
+    name,
+    covered: true,
+    adminInvitation: status
+      ? { id: `inv-${id}`, email: 'admin@client.be', status, expiresAt: new Date(now.getTime() - day) }
+      : null,
+  });
+
+  it('signale les invitations expirees en nommant les entreprises', () => {
+    const alerts = build({
+      entreprises: [
+        entreprise('e1', 'Boulangerie Dupont', 'expired'),
+        entreprise('e2', 'Garage Pirard', 'pending'),
+        entreprise('e3', 'Librairie Martin', null),
+        entreprise('e4', 'Atelier Leroy', 'expired'),
+      ],
+    });
+
+    const alert = alerts.find((a) => a.id === 'invitations-admin-expirees');
+    expect(alert).toMatchObject({
+      level: 'warning',
+      title: '2 invitations d’administrateurs expirées',
+      href: '/dashboard/cabinet/entreprises',
+    });
+    expect(alert?.description).toContain('Boulangerie Dupont, Atelier Leroy');
+    expect(alert?.description).not.toContain('Garage Pirard');
+  });
+
+  it('ne signale rien quand aucune invitation n est expiree', () => {
+    expect(build({ entreprises: [entreprise('e1', 'Boulangerie Dupont', 'pending')] })).toEqual([]);
+  });
+});

@@ -21,6 +21,8 @@ const CABINET = {
 const gestionnaire = `vitest-auth-acct-gest-${stamp}@socialflow.page`;
 const titulaire = `vitest-auth-acct-tit-${stamp}@socialflow.page`;
 const admin = `vitest-auth-acct-adm-${stamp}@socialflow.page`;
+const entreprise = `vitest-auth-acct-ent-${stamp}@socialflow.page`;
+const collaborateur = `vitest-auth-acct-col-${stamp}@socialflow.page`;
 const sansCabinet = `vitest-auth-acct-none-${stamp}@socialflow.page`;
 let cabinetId = '';
 
@@ -41,6 +43,8 @@ beforeAll(async () => {
   await user(`acct-gest-${stamp}`, gestionnaire, 'GESTIONNAIRE_RH', true);
   await user(`acct-tit-${stamp}`, titulaire, 'CABINET_RH', true);
   await user(`acct-adm-${stamp}`, admin, 'SUPER_ADMIN', false);
+  await user(`acct-ent-${stamp}`, entreprise, 'ENTREPRISE_CLIENTE', true);
+  await user(`acct-col-${stamp}`, collaborateur, 'COLLABORATEUR', true);
   await user(`acct-none-${stamp}`, sansCabinet, 'GESTIONNAIRE_RH', false);
 });
 
@@ -56,7 +60,7 @@ afterAll(async () => {
 
 const sent = () => send.mock.calls[0][0] as { from: string; subject: string; html: string; to: string };
 
-describe('emails de compte au nom du cabinet (D66)', () => {
+describe('emails de compte au nom du cabinet (D66, D72)', () => {
   it('lien de reinitialisation : couleur, nom et logo du cabinet', async () => {
     await email.sendResetPasswordEmail(gestionnaire, 'https://app/reset?t=1');
 
@@ -93,17 +97,39 @@ describe('emails de compte au nom du cabinet (D66)', () => {
   });
 
   it('changement d adresse : theme du cabinet de l ANCIENNE adresse', async () => {
-    await email.sendChangeEmailConfirmationEmail(titulaire, `nouvelle-${stamp}@test.com`, 'https://app/c');
+    await email.sendChangeEmailConfirmationEmail(gestionnaire, `nouvelle-${stamp}@test.com`, 'https://app/c');
 
     const mail = sent();
-    expect(mail.to).toBe(titulaire);
+    expect(mail.to).toBe(gestionnaire);
     expect(mail.from).toBe('"Alicia Cabinet" <noreply@socialflow.page>');
     expect(mail.html).toContain('bgcolor="#008734"');
   });
 
-  it('le titulaire du cabinet est aussi concerne', async () => {
-    await email.sendPasswordChangedEmail(titulaire);
+  it.each([
+    ['un administrateur d entreprise', entreprise],
+    ['un collaborateur', collaborateur],
+  ])('%s recoit aussi les emails de compte au nom du cabinet (D72)', async (_label, address) => {
+    await email.sendVerificationEmail(address, 'https://app/v');
+    const mail = sent();
+    expect(mail.from).toBe('"Alicia Cabinet" <noreply@socialflow.page>');
+    expect(mail.subject).toBe('Confirmez votre adresse email Alicia Cabinet');
+    expect(mail.html).toContain('bgcolor="#008734" class="email-header"');
+
+    send.mockClear();
+    await email.sendPasswordChangedEmail(address);
     expect(sent().subject).toBe('Votre mot de passe Alicia Cabinet a été modifié');
+  });
+
+  it('le titulaire du cabinet (Cabinet RH) recoit des emails aux couleurs de SocialFlow (D72)', async () => {
+    await email.sendPasswordChangedEmail(titulaire);
+    const mail = sent();
+    expect(mail.from).toBe('SocialFlow <noreply@socialflow.page>');
+    expect(mail.subject).toBe('Votre mot de passe SocialFlow a été modifié');
+    expect(mail.html).toContain('Social<span');
+
+    send.mockClear();
+    await email.sendVerificationEmail(titulaire, 'https://app/v');
+    expect(sent().subject).toBe('Confirmez votre adresse email SocialFlow');
   });
 
   it('la casse de l adresse ne change rien', async () => {

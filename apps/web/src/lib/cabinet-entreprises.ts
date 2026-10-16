@@ -88,6 +88,12 @@ export type EntrepriseRow = {
   gestionnaires: { id: string; name: string; status: 'actif' | 'suspendu' }[];
   // D27 : couverte = au moins un gestionnaire ACTIF assigne.
   covered: boolean;
+  // D5 : compte administrateur de l'entreprise (invitation acceptee), s'il existe.
+  admin: { name: string; email: string } | null;
+  // Derniere invitation d'administrateur non acceptee ni revoquee (a renvoyer ou
+  // a revoquer). Une invitation jamais acceptee reste "pending" en base apres son
+  // echeance : on la presente comme expiree (invitationDisplayStatus).
+  adminInvitation: { id: string; email: string; status: 'pending' | 'expired'; expiresAt: Date } | null;
 };
 
 export type ArchivedEntrepriseRow = { id: string; name: string; vatNumber: string; deletedAt: Date };
@@ -107,6 +113,15 @@ const ENTREPRISE_SELECT = {
     where: { user: { deletedAt: null } },
     select: { user: { select: { id: true, name: true, status: true } } },
   },
+  adminUser: { select: { name: true, email: true, deletedAt: true } },
+  invitations: {
+    // Tableau mutable : Prisma refuse un tableau readonly (objet `as const`).
+    where: { status: { in: ['pending', 'expired'] as string[] } },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    // Jamais le hash du jeton (C3).
+    select: { id: true, email: true, status: true, expiresAt: true },
+  },
 } as const;
 
 export async function getEntreprises(cabinetId: string): Promise<EntrepriseRow[]> {
@@ -116,7 +131,8 @@ export async function getEntreprises(cabinetId: string): Promise<EntrepriseRow[]
     select: ENTREPRISE_SELECT,
   });
 
-  return rows.map(({ gestionnaires, ...row }) => {
+  const now = new Date();
+  return rows.map(({ gestionnaires, adminUser, invitations, ...row }) => {
     const assigned = gestionnaires
       .map(({ user }) => ({
         id: user.id,
@@ -124,7 +140,22 @@ export async function getEntreprises(cabinetId: string): Promise<EntrepriseRow[]
         status: user.status === 'suspendu' ? ('suspendu' as const) : ('actif' as const),
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-    return { ...row, gestionnaires: assigned, covered: assigned.some((g) => g.status === 'actif') };
+    const invitation = invitations[0];
+    return {
+      ...row,
+      gestionnaires: assigned,
+      covered: assigned.some((g) => g.status === 'actif'),
+      // Un compte archive n'est plus l'administrateur affiche.
+      admin: adminUser && !adminUser.deletedAt ? { name: adminUser.name, email: adminUser.email } : null,
+      adminInvitation: invitation
+        ? {
+            id: invitation.id,
+            email: invitation.email,
+            status: invitation.expiresAt.getTime() <= now.getTime() ? ('expired' as const) : ('pending' as const),
+            expiresAt: invitation.expiresAt,
+          }
+        : null,
+    };
   });
 }
 

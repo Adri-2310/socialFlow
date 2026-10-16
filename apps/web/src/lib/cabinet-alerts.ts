@@ -33,7 +33,8 @@ export type CabinetAlertsInput = {
   gestionnaires: GestionnaireRow[];
   archived: ArchivedGestionnaireRow[];
   // Entreprises clientes non archivees ; absent = pas d'alerte de couverture.
-  entreprises?: Pick<EntrepriseRow, 'id' | 'name' | 'covered'>[];
+  entreprises?: (Pick<EntrepriseRow, 'id' | 'name' | 'covered'> &
+    Partial<Pick<EntrepriseRow, 'adminInvitation'>>)[];
   // Etat d'abonnement du cabinet (D55) ; absent = pas d'alerte de facturation.
   subscription?: { status: BillingStatus; trialEndsAt: Date | null };
   now?: Date;
@@ -209,6 +210,23 @@ export function buildCabinetAlerts(input: CabinetAlertsInput): CabinetAlert[] {
       title: `${plural(expired.length, 'invitation expirée', 'invitations expirées')}`,
       description: 'Renvoyez-les pour que ces personnes puissent rejoindre votre cabinet.',
       href: GESTIONNAIRES_HREF,
+    });
+  }
+
+  // D70 : une invitation d'administrateur d'entreprise restee sans reponse. Les
+  // invitations de gestionnaires ont leur propre alerte ci-dessus.
+  const expiredAdmins = (input.entreprises ?? []).filter((e) => e.adminInvitation?.status === 'expired');
+  if (expiredAdmins.length > 0) {
+    alerts.push({
+      id: 'invitations-admin-expirees',
+      level: 'warning',
+      title: plural(
+        expiredAdmins.length,
+        'invitation d’administrateur expirée',
+        'invitations d’administrateurs expirées',
+      ),
+      description: `Renvoyez-les pour : ${expiredAdmins.map((e) => e.name).join(', ')}.`,
+      href: ENTREPRISES_HREF,
     });
   }
 

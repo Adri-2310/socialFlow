@@ -1,6 +1,6 @@
 import type { EmailTheme } from '@/lib/email-brand';
 import { emailTheme, type CabinetEmailBrand } from '@/lib/email-brand';
-import { TEMPLATES, renderBody, renderSubject } from '@/lib/email-templates';
+import { TEMPLATES, renderBody, renderSubject, type TemplateType } from '@/lib/email-templates';
 
 // Gabarit HTML des emails de SocialFlow et des cabinets : pur, sans envoi ni
 // acces donnees. Utilise par lib/email.ts pour envoyer, ET par l'apercu des
@@ -140,17 +140,71 @@ export function buildGestionnaireInvitation(input: {
   template?: { subject: string; body: string } | null;
   subjectPrefix?: string;
 }): { subject: string; html: string } {
-  const { brand, inviterName, url } = input;
+  return buildInvitation({ type: 'INVITATION_GESTIONNAIRE', ...input });
+}
+
+// Invitation de l'administrateur d'une entreprise cliente (D4, D5) : meme
+// gabarit, avec le nom de l'entreprise.
+export function buildEntrepriseInvitation(input: {
+  brand: CabinetEmailBrand;
+  inviterName: string;
+  entrepriseName: string;
+  url: string;
+  template?: { subject: string; body: string } | null;
+  subjectPrefix?: string;
+}): { subject: string; html: string } {
+  return buildInvitation({ type: 'INVITATION_ENTREPRISE', ...input });
+}
+
+// Apercu d'un modele quel que soit son type : l'editeur n'a pas a connaitre les
+// variables propres a chaque invitation.
+export function buildTemplatePreview(
+  type: TemplateType,
+  input: {
+    brand: CabinetEmailBrand;
+    template: { subject: string; body: string };
+  },
+): { subject: string; html: string } {
+  const sample = TEMPLATES[type].sample;
+  return buildInvitation({
+    type,
+    brand: input.brand,
+    inviterName: sample.invitant_nom,
+    entrepriseName: sample.entreprise_nom,
+    url: sample.lien,
+    template: input.template,
+  });
+}
+
+function buildInvitation(input: {
+  type: TemplateType;
+  brand: CabinetEmailBrand;
+  inviterName: string;
+  entrepriseName?: string;
+  url: string;
+  template?: { subject: string; body: string } | null;
+  subjectPrefix?: string;
+}): { subject: string; html: string } {
+  const { brand, inviterName, url, type } = input;
   const theme = emailTheme(brand);
   const accent = theme?.headerBg ?? '#6d28d9';
   const name = escapeHtml(brand.name);
-  const content = input.template ?? TEMPLATES.INVITATION_GESTIONNAIRE.defaults;
-  const values = { cabinet_nom: brand.name, invitant_nom: inviterName, lien: url };
+  const content = input.template ?? TEMPLATES[type].defaults;
+  const values: Record<string, string> = {
+    cabinet_nom: brand.name,
+    invitant_nom: inviterName,
+    lien: url,
+    ...(input.entrepriseName ? { entreprise_nom: input.entrepriseName } : {}),
+  };
+  const title =
+    type === 'INVITATION_ENTREPRISE' && input.entrepriseName
+      ? `Accédez à l’espace de ${escapeHtml(input.entrepriseName)}`
+      : `Vous êtes invité à rejoindre ${name}`;
 
   const html = emailShell(
     `
     <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:${accent};">Invitation</p>
-    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Vous êtes invité à rejoindre ${name}</h1>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">${title}</h1>
     ${renderBody(content.body, values)}
     <div style="height:12px;"></div>
     ${ctaButton('Accepter l’invitation', url, theme)}
