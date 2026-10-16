@@ -65,7 +65,7 @@ ESSAI (trialing) ─► fin d'essai : débit auto ─► ACTIF
 | Action | Règles |
 |---|---|
 | Créer | Raison sociale, n° d'entreprise/TVA belge (format `BE0XXX.XXX.XXX`, unique dans le cabinet), adresse, email de contact ; **au moins un gestionnaire assigné** ; bloqué au-delà de `maxEntreprises` |
-| Inviter l'administrateur | Un seul admin par entreprise (D5) ; invitation `ENTREPRISE_CLIENTE` liée à l'entreprise ; renvoyer / révoquer |
+| Inviter l'administrateur (D70) | Un seul admin par entreprise (D5) ; invitation `ENTREPRISE_CLIENTE` liée à l'entreprise, valable 7 jours, email au nom du cabinet (modèle modifiable) ; refus si l'entreprise a déjà un admin, si une invitation est en cours ou si l'adresse a déjà un compte (D7) ; renvoyer / révoquer depuis la ligne de l'entreprise ; ne compte pas dans les quotas. Remplacement de l'admin : à venir |
 | Modifier | Coordonnées et assignations ; le n° d'entreprise n'est plus modifiable dès qu'une fiche existe |
 | Archiver | Soft-delete ; l'entreprise et ses portails passent en lecture seule ; fiches conservées 5 ans |
 
@@ -127,7 +127,7 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | Renvoyer / révoquer une invitation | `api/invitations/[id]/resend` (POST), `api/invitations/[id]` (DELETE) | ✅ Jeton haché (C3), audit |
 | Modifier l'email d'un gestionnaire | `api/gestionnaires/[id]/email` (POST), `components/cabinet/edit-email-dialog.tsx` | ✅ D53 |
 | Suspendre / réactiver / retirer / restaurer un gestionnaire | `api/gestionnaires/[id]` (PATCH, DELETE, PUT), `components/cabinet/gestionnaire-actions.tsx`, `gestionnaire-restore.tsx` | ✅ D52. Suspendre ou retirer le dernier gestionnaire actif d'une entreprise est refusé (`409 GESTIONNAIRE_HAS_UNCOVERED_ENTREPRISES`, D27, D69) |
-| Portefeuille d'entreprises (D4, D27, D69) | `dashboard/cabinet/entreprises`, `lib/cabinet-entreprises.ts`, `lib/entreprise-http.ts`, `api/cabinet/entreprises` (POST) et `[id]` (PATCH, DELETE, PUT), `components/cabinet/entreprises-manager.tsx`, `entreprise-form-dialog.tsx`, `entreprise-create.tsx`, `entreprise-actions.tsx`, `entreprise-restore.tsx`, tables `Entreprise` et `GestionnaireEntreprise` | ✅ Créer, modifier (coordonnées et assignations), archiver, restaurer ; n° belge validé et unique dans le cabinet ; quota `maxEntreprises` sous verrou ; audit sans valeurs ; alerte « entreprise sans gestionnaire actif ». **Reste** : invitation de l'administrateur (D5), blocage du n° dès qu'une fiche existe, compteurs de fiches par entreprise (D26), portails en lecture seule à l'archivage |
+| Portefeuille d'entreprises (D4, D27, D69) | `dashboard/cabinet/entreprises`, `lib/cabinet-entreprises.ts`, `lib/entreprise-http.ts`, `api/cabinet/entreprises` (POST) et `[id]` (PATCH, DELETE, PUT), `components/cabinet/entreprises-manager.tsx`, `entreprise-form-dialog.tsx`, `entreprise-create.tsx`, `entreprise-actions.tsx`, `entreprise-restore.tsx`, tables `Entreprise` et `GestionnaireEntreprise` | ✅ Créer, modifier (coordonnées et assignations), archiver, restaurer ; n° belge validé et unique dans le cabinet ; quota `maxEntreprises` sous verrou ; audit sans valeurs ; alerte « entreprise sans gestionnaire actif ». **Invitation de l'administrateur** (D5, D70) : ✅ `lib/entreprise-admin.ts`, `api/cabinet/entreprises/[id]/admin-invitation`, `components/cabinet/entreprise-admin-invite.tsx`, accueil `dashboard/entreprise`. **Reste** : remplacement de l'administrateur, blocage du n° dès qu'une fiche existe, compteurs de fiches par entreprise (D26), portails en lecture seule à l'archivage |
 
 ## 7. Écarts à corriger (dette)
 
@@ -139,7 +139,7 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | C4 | Acceptation d'invitation : mot de passe uniquement | Proposer aussi Google/Microsoft (email du compte OAuth = email invité) |
 | C5 | ~~Pas de renvoi ni de révocation d'invitation~~ | Corrigé le 13/10 (voir § 6) |
 | C6 | Acceptation via inscription + suppression du cabinet « fantôme » | Fragile : prévoir une création de compte dédiée aux invitations, sans passer par le hook d'auto-inscription |
-| C7 | Suspension = blocage total des connexions de tout le cabinet | Adapter à D29 : portails Entreprise et Collaborateur en lecture seule |
+| C7 | Suspension manuelle par le SuperAdmin = blocage total des connexions de tout le cabinet | **Décidé (D71), à implémenter** : lecture seule par défaut (comme l'impayé, D29) avec message adapté à chaque rôle, export autorisé et aucun envoi automatique ; blocage total **optionnel**, choisi explicitement par le SuperAdmin avec un motif obligatoire ; type et motif tracés dans l'audit |
 | C8 | ~~Échec Stripe silencieux à l'inscription (`catch(() => {})`)~~ | Corrigé avec C1 : l'inscription ne contacte plus Stripe ; les échecs de Checkout sont journalisés et renvoyés (`CHECKOUT_FAILED`, `PRICE_NOT_FOUND`) |
 
 ## 8. Critères d'acceptation

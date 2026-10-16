@@ -1,6 +1,6 @@
 # Rôle : Entreprise cliente
 
-> Statut : **à construire** (le rôle existe dans `User.role`, rien d'autre).
+> Statut : **à construire** ; seuls l'**invitation et la création du compte** (D70) et un **accueil minimal** (`/dashboard/entreprise`, nom de l'entreprise et du cabinet) existent.
 > Décisions de référence : [DECISIONS.md](../DECISIONS.md) D4, D5, D9, D10, D29, D37, D41, D42, D46–D48.
 
 ## 1. Mission
