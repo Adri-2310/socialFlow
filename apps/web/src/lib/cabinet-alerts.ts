@@ -3,6 +3,7 @@ import type {
   GestionnaireRow,
   InvitationRow,
 } from '@/lib/cabinet-data';
+import type { EntrepriseRow } from '@/lib/cabinet-entreprises';
 import { trialDaysLeft, type BillingStatus } from '@/lib/billing';
 import {
   formatStorageMb,
@@ -14,8 +15,7 @@ import {
 // Alertes du tableau de bord Cabinet RH (roles/02-cabinet-rh.md § 4.1).
 // Module pur : construit la liste a partir de donnees deja lues, donc
 // testable sans base. Les alertes qui dependent de chantiers a venir
-// (entreprise sans gestionnaire, echeances ONSS, paiement en echec) s'y
-// ajouteront quand leurs donnees existeront.
+// (echeances ONSS) s'y ajouteront quand leurs donnees existeront.
 
 export type AlertLevel = 'danger' | 'warning' | 'info';
 
@@ -32,12 +32,15 @@ export type CabinetAlertsInput = {
   invitations: InvitationRow[];
   gestionnaires: GestionnaireRow[];
   archived: ArchivedGestionnaireRow[];
+  // Entreprises clientes non archivees ; absent = pas d'alerte de couverture.
+  entreprises?: Pick<EntrepriseRow, 'id' | 'name' | 'covered'>[];
   // Etat d'abonnement du cabinet (D55) ; absent = pas d'alerte de facturation.
   subscription?: { status: BillingStatus; trialEndsAt: Date | null };
   now?: Date;
 };
 
 const GESTIONNAIRES_HREF = '/dashboard/cabinet/gestionnaires';
+const ENTREPRISES_HREF = '/dashboard/cabinet/entreprises';
 // Seuil a partir duquel un quota est signale avant d'etre atteint.
 const QUOTA_WARNING_PERCENT = 80;
 // Une restauration qui expire dans ce delai merite d'etre signalee.
@@ -71,7 +74,7 @@ function quotaAlerts(quotas: CabinetQuotaUsage): CabinetAlert[] {
       used: quotas.entreprises.used,
       limit: limits.maxEntreprises,
       format: String,
-      href: undefined,
+      href: ENTREPRISES_HREF,
     },
     {
       key: 'stockage',
@@ -184,6 +187,19 @@ export function buildCabinetAlerts(input: CabinetAlertsInput): CabinetAlert[] {
     ...(input.subscription ? subscriptionAlerts(input.subscription, now) : []),
     ...quotaAlerts(input.quotas),
   ];
+
+  // D27 : une entreprise sans gestionnaire actif n'a personne pour produire
+  // ses fiches.
+  const uncovered = (input.entreprises ?? []).filter((e) => !e.covered);
+  if (uncovered.length > 0) {
+    alerts.push({
+      id: 'entreprises-sans-gestionnaire',
+      level: 'danger',
+      title: `${plural(uncovered.length, 'entreprise sans gestionnaire actif', 'entreprises sans gestionnaire actif')}`,
+      description: `Assignez un gestionnaire actif à : ${uncovered.map((e) => e.name).join(', ')}.`,
+      href: ENTREPRISES_HREF,
+    });
+  }
 
   const expired = input.invitations.filter((i) => i.status === 'expired');
   if (expired.length > 0) {

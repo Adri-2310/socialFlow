@@ -51,7 +51,10 @@ describe('isCabinetAuditAction', () => {
     expect(isCabinetAuditAction(undefined)).toBe(false);
     expect(CABINET_AUDIT_ACTION_LIST).not.toContain('PRICING_PLAN_UPDATED');
     expect(isCabinetAuditAction('CABINET_CREATED')).toBe(false);
-    expect(CABINET_AUDIT_ACTION_LIST.filter((a) => a.startsWith('CABINET_'))).toEqual([]);
+    // Cycle de vie du cabinet exclu ; seuls ses parametres (D30) y figurent.
+    expect(CABINET_AUDIT_ACTION_LIST.filter((a) => a.startsWith('CABINET_'))).toEqual([
+      'CABINET_SETTINGS_UPDATED',
+    ]);
   });
 });
 
@@ -66,5 +69,24 @@ describe('parseBrusselsDayStart', () => {
     expect(parseBrusselsDayStart('2026-02-31')).toBeNull();
     expect(parseBrusselsDayStart('')).toBeNull();
     expect(parseBrusselsDayStart(undefined)).toBeNull();
+  });
+});
+
+describe('actions sur les entreprises clientes', () => {
+  const base = { targetName: null, email: null, previousEmail: null, newEmail: null };
+
+  it('sont listees dans le journal du cabinet', () => {
+    for (const action of ['ENTREPRISE_CREATED', 'ENTREPRISE_UPDATED', 'ENTREPRISE_ARCHIVED', 'ENTREPRISE_RESTORED']) {
+      expect(isCabinetAuditAction(action)).toBe(true);
+    }
+  });
+
+  it('nomment l entreprise concernee', () => {
+    expect(describeAuditEntry({ ...base, action: 'ENTREPRISE_CREATED', entreprise: 'Garage Pirard' })).toBe(
+      "L'entreprise Garage Pirard a été créée",
+    );
+    expect(describeAuditEntry({ ...base, action: 'ENTREPRISE_ARCHIVED', entreprise: null })).toBe(
+      "L'entreprise cliente a été archivée",
+    );
   });
 });

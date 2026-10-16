@@ -106,6 +106,7 @@ export async function getCabinetAuditLog(
         email: readString(row.metadata, 'email'),
         previousEmail: readString(row.metadata, 'previousEmail'),
         newEmail: readString(row.metadata, 'newEmail'),
+        entreprise: readString(row.metadata, 'entreprise'),
       }),
     })),
   };

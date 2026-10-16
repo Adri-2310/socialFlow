@@ -16,6 +16,10 @@ export const CABINET_AUDIT_ACTIONS = {
   USER_ARCHIVED: 'Gestionnaire retiré',
   USER_RESTORED: 'Gestionnaire restauré',
   USER_EMAIL_CHANGED: 'Email modifié',
+  ENTREPRISE_CREATED: 'Entreprise créée',
+  ENTREPRISE_UPDATED: 'Entreprise modifiée',
+  ENTREPRISE_ARCHIVED: 'Entreprise archivée',
+  ENTREPRISE_RESTORED: 'Entreprise restaurée',
   SUBSCRIPTION_CANCEL_SCHEDULED: 'Résiliation programmée',
   SUBSCRIPTION_CANCEL_REVERTED: 'Résiliation annulée',
   PAYMENT_METHOD_UPDATED: 'Carte bancaire modifiée',
@@ -42,6 +46,8 @@ export type AuditMessageInput = {
   email: string | null;
   previousEmail: string | null;
   newEmail: string | null;
+  // Raison sociale de l'entreprise concernee (metadata), pour ENTREPRISE_*.
+  entreprise?: string | null;
 };
 
 // Phrase d'une entree, sans l'auteur (affiche a part). Une action inconnue
@@ -71,6 +77,14 @@ export function describeAuditEntry(input: AuditMessageInput): string {
       return input.previousEmail && input.newEmail
         ? `L'email de ${target} a été modifié (${input.previousEmail} → ${input.newEmail})`
         : `L'email de ${target} a été modifié`;
+    case 'ENTREPRISE_CREATED':
+      return `L'entreprise ${input.entreprise ?? 'cliente'} a été créée`;
+    case 'ENTREPRISE_UPDATED':
+      return `L'entreprise ${input.entreprise ?? 'cliente'} a été modifiée`;
+    case 'ENTREPRISE_ARCHIVED':
+      return `L'entreprise ${input.entreprise ?? 'cliente'} a été archivée`;
+    case 'ENTREPRISE_RESTORED':
+      return `L'entreprise ${input.entreprise ?? 'cliente'} a été restaurée`;
     case 'SUBSCRIPTION_CANCEL_SCHEDULED':
       return "La résiliation de l'abonnement a été programmée en fin de période";
     case 'SUBSCRIPTION_CANCEL_REVERTED':

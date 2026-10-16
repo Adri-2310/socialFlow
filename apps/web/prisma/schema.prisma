@@ -34,7 +34,7 @@ model User {
   // bloque uniquement ce compte, pas les autres membres de son cabinet
   // (contrairement a Cabinet.status qui suspend tout le cabinet). Meme
   // convention que Cabinet.status : string libre plutot qu'un enum Prisma.
-  status String @default("actif") // actif | suspendu
+  status      String  @default("actif") // actif | suspendu
   // Qui a pose la suspension (D52) : SUPER_ADMIN | CABINET_RH. Sert a (1)
   // n'autoriser la levee que par l'auteur (un Cabinet RH ne leve pas une
   // suspension du SuperAdmin) et (2) afficher le bon message a la connexion.
@@ -67,6 +67,8 @@ model User {
   // Cabinet.name.
   cabinetName String?
 
+  entreprisesAssignees GestionnaireEntreprise[]
+
   auditLogsAsActor  AuditLog[] @relation("AuditLogActor")
   auditLogsAsTarget AuditLog[] @relation("AuditLogTarget")
 
@@ -77,69 +79,110 @@ model User {
 }
 
 model Cabinet {
-  id               String       @id @default(cuid())
-  name             String
+  id                String          @id @default(cuid())
+  name              String
   // Suspension par un SuperAdmin (voir apps/web/src/app/api/admin/cabinets/[id]
   // et le blocage de connexion associe dans hooks.after de auth.ts). Meme
   // convention que Invitation.status : string libre plutot qu'un enum
   // Prisma, coherent avec le reste du schema.
-  status           String       @default("actif") // actif | suspendu
+  status            String          @default("actif") // actif | suspendu
   // Archivage par un SuperAdmin (pas de vraie suppression : User.cabinetId a
   // onDelete: Cascade, supprimer reellement un Cabinet supprimerait tous ses
   // utilisateurs). Meme convention que User.deletedAt : bloque l'acces
   // immediatement (voir hooks.after de auth.ts), purge reelle et definitive
   // apres CABINET_DELETION_RETENTION_DAYS (voir api/cron/purge-deleted-cabinets).
-  deletedAt        DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  deletedAt         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   // Identifiant du Customer Stripe correspondant (voir src/lib/stripe.ts et
   // /dashboard/admin/facturation) - null tant qu'aucun abonnement Stripe reel
   // n'a ete cree pour ce cabinet. Unique : un Customer Stripe par cabinet.
-  stripeCustomerId String?      @unique
+  stripeCustomerId  String?         @unique
   // Abonnement (D55) : le plan appartient au cabinet. Les transitions de
   // billingStatus viendront du webhook Stripe (chantier C0) ; pour l'instant
   // elles sont posees a l'inscription (voir lib/stripe-trial.ts).
   // planId = PricingPlan.planId ; billingPeriod : monthly | yearly ;
   // billingStatus : EN_ATTENTE_PAIEMENT | ESSAI | ACTIF | DELAI_GRACE | IMPAYE | RESILIE.
-  planId           String?
-  billingPeriod    String?
-  billingStatus    String       @default("EN_ATTENTE_PAIEMENT")
-  trialEndsAt      DateTime?
-  currentPeriodEnd DateTime?
+  planId            String?
+  billingPeriod     String?
+  billingStatus     String          @default("EN_ATTENTE_PAIEMENT")
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
   // D57 : debut du delai de grace (paiement echoue), null hors impaye ; et
   // date du dernier evenement Stripe applique (un evenement plus ancien est
   // ignore, les webhooks pouvant arriver dans le desordre).
-  pastDueSince     DateTime?
+  pastDueSince      DateTime?
   // Resiliation programmee en fin de periode (D59) : le cabinet garde l'acces
   // jusqu'a currentPeriodEnd. Suit Stripe par webhook, jamais l'inverse.
-  cancelAtPeriodEnd Boolean     @default(false)
+  cancelAtPeriodEnd Boolean         @default(false)
   // Identite du cabinet (D30), affichee a ses clients. name = raison sociale.
   // Tous facultatifs sauf la raison sociale : le n° de TVA est stocke au
   // format canonique BE0XXX.XXX.XXX (voir lib/cabinet-identity.ts).
-  vatNumber        String?
-  addressLine      String?
-  postalCode       String?
-  city             String?
-  country          String       @default("BE")
-  contactEmail     String?
-  contactPhone     String?
+  vatNumber         String?
+  addressLine       String?
+  postalCode        String?
+  city              String?
+  country           String          @default("BE")
+  contactEmail      String?
+  contactPhone      String?
   // Branding (D33, D62) : nom affiche et couleurs #rrggbb. null = valeurs par
   // defaut de SocialFlow.
-  displayName      String?
-  primaryColor     String?
-  secondaryColor   String?
+  displayName       String?
+  primaryColor      String?
+  secondaryColor    String?
   // Logo (D33, D62) : image publique stockee hors base (Vercel Blob). logoPath
   // sert a la supprimer quand le logo est remplace ou retire.
-  logoUrl          String?
-  logoPath         String?
-  billingEventAt   DateTime?
-  users            User[]
-  invitations      Invitation[]
-  auditLogs        AuditLog[]
-  emailTemplates   EmailTemplate[]
+  logoUrl           String?
+  logoPath          String?
+  billingEventAt    DateTime?
+  users             User[]
+  invitations       Invitation[]
+  auditLogs         AuditLog[]
+  emailTemplates    EmailTemplate[]
+  entreprises       Entreprise[]
 
   @@index([deletedAt])
   @@map("cabinet")
+}
+
+// Entreprise cliente d'un cabinet (D4, roles/02-cabinet-rh.md § 4.3). Le n°
+// d'entreprise (format canonique BE0XXX.XXX.XXX) est unique dans le cabinet,
+// archivees comprises : on ne recree pas une entreprise archivee, on la
+// restaure. deletedAt = archivage (soft-delete, fiches conservees 5 ans).
+model Entreprise {
+  id            String                   @id @default(cuid())
+  cabinetId     String
+  cabinet       Cabinet                  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  name          String
+  vatNumber     String
+  addressLine   String?
+  postalCode    String?
+  city          String?
+  country       String                   @default("BE")
+  contactEmail  String?
+  contactPhone  String?
+  deletedAt     DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  gestionnaires GestionnaireEntreprise[]
+
+  @@unique([cabinetId, vatNumber])
+  @@index([cabinetId, deletedAt])
+  @@map("entreprise")
+}
+
+// Assignation N:M gestionnaire <-> entreprise (D4, D27). Un gestionnaire ne
+// travaille que sur les entreprises qui lui sont assignees.
+model GestionnaireEntreprise {
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@id([entrepriseId, userId])
+  @@index([userId])
+  @@map("gestionnaire_entreprise")
 }
 
 // Modele d'email personnalise d'un cabinet (D30, D68). Absent = modele par
@@ -250,24 +293,24 @@ model Account {
 }
 
 model PricingPlan {
-  id           String    @id @default(cuid())
-  planId       String    @unique
-  name         String
-  description  String
-  monthlyPrice Int?
-  yearlyPrice  Int?
-  highlighted  Boolean   @default(false)
-  badge        String?
-  features     String[]
-  sortOrder    Int       @default(0)
+  id              String    @id @default(cuid())
+  planId          String    @unique
+  name            String
+  description     String
+  monthlyPrice    Int?
+  yearlyPrice     Int?
+  highlighted     Boolean   @default(false)
+  badge           String?
+  features        String[]
+  sortOrder       Int       @default(0)
   // Quotas bloquants (D15, valeurs par defaut en D34) ; null = illimite.
   // maxUtilisateurs = Cabinet RH + gestionnaires ; maxStorageMb en Mo.
   maxEntreprises  Int?
   maxUtilisateurs Int?
   maxStorageMb    Int?
-  archivedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@map("pricing_plan")
 }

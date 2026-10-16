@@ -11,7 +11,7 @@ export type PlanQuotas = {
 export type QuotaKey = keyof PlanQuotas;
 
 export type CabinetQuotaUsage = {
-  // null : cabinet sans plan connu, aucun quota applique (voir resolvePlanQuotas).
+  // null : cabinet sans plan connu, aucun quota applique (voir getCabinetPlanQuotas).
   limits: PlanQuotas | null;
   // D56 : le quota "utilisateurs" (maxUtilisateurs) ne compte que les
   // gestionnaires non archives, le titulaire (Cabinet RH) n'y figure pas
@@ -19,8 +19,9 @@ export type CabinetQuotaUsage = {
   // reservent une place, sinon un cabinet pourrait en envoyer sans limite et
   // depasser son quota des qu'elles sont acceptees.
   utilisateurs: { members: number; pendingInvitations: number; used: number };
-  // Pas encore de table d'entreprises ni de documents (chantiers C1 et C5) :
-  // 0 est donc la valeur reelle, pas un manque.
+  // Entreprises clientes non archivees (une entreprise archivee libere sa
+  // place). Pas encore de documents (chantier C5) : le stockage vaut 0, valeur
+  // reelle et non un manque.
   entreprises: { used: number };
   storageMb: { used: number };
 };
@@ -45,7 +46,7 @@ export function quotaPercent(used: number, limit: number | null): number {
 // l'ont deja. Sans plan connu (compte cree sans plan, plan supprime), aucun
 // quota n'est applique plutot que de bloquer un cabinet sur une valeur
 // inventee.
-async function resolvePlanQuotas(cabinetId: string): Promise<PlanQuotas | null> {
+export async function getCabinetPlanQuotas(cabinetId: string): Promise<PlanQuotas | null> {
   const cabinet = await prisma.cabinet.findUnique({
     where: { id: cabinetId },
     select: { planId: true },
@@ -60,8 +61,8 @@ async function resolvePlanQuotas(cabinetId: string): Promise<PlanQuotas | null> 
 }
 
 export async function getCabinetQuotaUsage(cabinetId: string): Promise<CabinetQuotaUsage> {
-  const [limits, members, pendingInvitations] = await Promise.all([
-    resolvePlanQuotas(cabinetId),
+  const [limits, members, pendingInvitations, entreprises] = await Promise.all([
+    getCabinetPlanQuotas(cabinetId),
     prisma.user.count({
       where: { cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: null },
     }),
@@ -73,12 +74,13 @@ export async function getCabinetQuotaUsage(cabinetId: string): Promise<CabinetQu
         expiresAt: { gt: new Date() },
       },
     }),
+    prisma.entreprise.count({ where: { cabinetId, deletedAt: null } }),
   ]);
 
   return {
     limits,
     utilisateurs: { members, pendingInvitations, used: members + pendingInvitations },
-    entreprises: { used: 0 },
+    entreprises: { used: entreprises },
     storageMb: { used: 0 },
   };
 }

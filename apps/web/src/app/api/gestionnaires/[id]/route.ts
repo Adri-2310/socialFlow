@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { sendGestionnaireAccessChangedEmail, type GestionnaireAccessChange } from '@/lib/email';
 import { gestionnaireRestoreDeadline } from '@/lib/gestionnaire-retention';
+import { getUncoveredEntreprises } from '@/lib/cabinet-entreprises';
 import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
@@ -14,9 +15,8 @@ type GestionnaireStatus = (typeof VALID_STATUSES)[number];
 // elle-meme (cabinetId de la session + role) : un gestionnaire d'un autre
 // cabinet, ou n'importe quel autre utilisateur, est "introuvable" (404).
 //
-// D27 : le refus tant qu'une entreprise n'est couverte que par ce
-// gestionnaire sera ajoute avec les entreprises (chantier C1) ; il n'existe
-// aucune assignation a verifier pour l'instant.
+// D27 : suspendre ou retirer un gestionnaire est refuse (409) tant qu'une
+// entreprise n'est couverte que par lui ; la reponse liste ces entreprises.
 async function findGestionnaire(id: string, cabinetId: string) {
   return prisma.user.findFirst({
     where: { id, cabinetId, role: 'GESTIONNAIRE_RH', deletedAt: null },
@@ -37,6 +37,15 @@ async function notify(
   } catch (error) {
     console.error("Echec de l'envoi de l'email de changement d'acces", error);
   }
+}
+
+async function uncoveredResponse(cabinetId: string, userId: string) {
+  const uncovered = await getUncoveredEntreprises(cabinetId, userId);
+  if (uncovered.length === 0) return null;
+  return NextResponse.json(
+    { error: 'GESTIONNAIRE_HAS_UNCOVERED_ENTREPRISES', entreprises: uncovered },
+    { status: 409 },
+  );
 }
 
 // Suspend ou reactive un gestionnaire (reversible).
@@ -62,6 +71,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (target.status === 'suspendu') {
       return NextResponse.json({ error: 'GESTIONNAIRE_ALREADY_SUSPENDED' }, { status: 409 });
     }
+    const uncovered = await uncoveredResponse(cabinetId, target.id);
+    if (uncovered) return uncovered;
 
     const done = await prisma.$transaction(async (tx) => {
       const { count } = await tx.user.updateMany({
@@ -141,6 +152,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!target) {
     return NextResponse.json({ error: 'GESTIONNAIRE_NOT_FOUND' }, { status: 404 });
   }
+  const uncovered = await uncoveredResponse(cabinetId, target.id);
+  if (uncovered) return uncovered;
 
   await prisma.$transaction(async (tx) => {
     await tx.session.deleteMany({ where: { userId: target.id } });
