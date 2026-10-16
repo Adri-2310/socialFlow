@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState, type SubmitEvent } from 'react';
+import Link from 'next/link';
 import { AlertTriangle, Loader2, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
 import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
-export function DeleteAccount() {
+// `blockedBySubscription` : le titulaire dont l'abonnement court ne peut pas
+// supprimer son compte (D67). Le serveur le refuse de toute facon ; on le dit
+// avant, plutot que de laisser aller jusqu'a l'erreur.
+export function DeleteAccount({ blockedBySubscription = false }: { blockedBySubscription?: boolean }) {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -48,6 +52,24 @@ export function DeleteAccount() {
     }
 
     setEmailSent(true);
+  }
+
+  if (blockedBySubscription) {
+    return (
+      <div className="rounded-xl border border-border bg-muted/40 p-5">
+        <p className="text-sm font-semibold text-foreground">Supprimer mon compte</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Vous ne pouvez pas supprimer votre compte tant que l&apos;abonnement de votre cabinet est
+          en cours. Résiliez-le d&apos;abord, puis revenez ici une fois l&apos;abonnement terminé.
+        </p>
+        <Link
+          href="/dashboard/cabinet/facturation"
+          className="mt-3 inline-block text-sm font-semibold text-primary hover:underline"
+        >
+          Gérer mon abonnement
+        </Link>
+      </div>
+    );
   }
 
   if (emailSent) {

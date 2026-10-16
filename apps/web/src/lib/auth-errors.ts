@@ -24,6 +24,8 @@ const MESSAGES: Record<string, string> = {
   SESSION_EXPIRED: 'Session expirée. Reconnectez-vous.',
   ACCOUNT_DELETED:
     `Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à ${ACCOUNT_DELETION_RETENTION_DAYS} jours après la suppression).`,
+  ACCOUNT_DELETION_BLOCKED_BY_SUBSCRIPTION:
+    'Vous ne pouvez pas supprimer votre compte tant que l’abonnement de votre cabinet est en cours. Résiliez-le d’abord depuis « Mon abonnement ».',
   CABINET_SUSPENDED: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
   USER_SUSPENDED: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
   USER_SUSPENDED_BY_CABINET:

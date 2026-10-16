@@ -5,6 +5,7 @@ import { deleteSessionCookie } from 'better-auth/cookies';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { ACCOUNT_DELETION_BLOCKED_CODE, accountDeletionBlock } from '@/lib/account-deletion-guard';
 import {
   sendMagicLinkEmail,
   sendOTPEmail,
@@ -229,6 +230,19 @@ export const auth = betterAuth({
             OAUTH_PROVIDER_LABELS[account.providerId] ?? account.providerId;
         }
         return;
+      }
+
+      // Le titulaire du cabinet ne peut pas supprimer son compte tant que son
+      // abonnement court (D67) : refuse des la demande, et a nouveau a la
+      // confirmation (l'abonnement a pu demarrer entre-temps).
+      if (ctx.path === '/delete-user' || isCallbackGet) {
+        const requester = await getSessionFromCtx(ctx, { disableCookieCache: true }).catch(() => null);
+        if (requester && (await accountDeletionBlock(requester.user.id))) {
+          throw new APIError('FORBIDDEN', {
+            code: ACCOUNT_DELETION_BLOCKED_CODE,
+            message: "Resiliez d'abord l'abonnement du cabinet avant de supprimer ce compte.",
+          });
+        }
       }
 
       if (!isCallbackGet && !isDeleteWithToken) return;

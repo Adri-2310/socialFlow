@@ -8,6 +8,7 @@ import { AppHeader } from '@/components/layout/app-header';
 import { requireSession } from '@/lib/require-session';
 import { roleDisplayLabel } from '@/lib/role-labels';
 import { prisma } from '@/lib/prisma';
+import { isSubscriptionBlockingDeletion } from '@/lib/account-deletion-guard';
 
 const BILLING_LABELS: Record<string, string> = {
   monthly: 'Mensuelle',
@@ -104,7 +105,11 @@ export default async function ProfilPage() {
             </div>
 
             <div className="mt-8 border-t border-border/60 pt-6">
-              <DeleteAccount />
+              <DeleteAccount
+                blockedBySubscription={
+                  user.role === 'CABINET_RH' && isSubscriptionBlockingDeletion(cabinet?.billingStatus)
+                }
+              />
             </div>
           </div>
         </section>
