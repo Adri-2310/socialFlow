@@ -24,7 +24,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 const FALLBACK = 'Une erreur est survenue. Veuillez réessayer.';
 
 const inputClass =
-  'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
+  'w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
 function describe(error: BrandingFieldError | undefined): string | null {
   if (!error) return null;
