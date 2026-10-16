@@ -4,6 +4,7 @@ import { CabinetAlerts } from '@/components/cabinet/alerts';
 import { OverviewCards } from '@/components/cabinet/overview-cards';
 import { QuotaUsage } from '@/components/cabinet/quota-usage';
 import { buildCabinetAlerts } from '@/lib/cabinet-alerts';
+import { getEntreprises } from '@/lib/cabinet-entreprises';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import { requireSession } from '@/lib/require-session';
 import { requirePaidCabinet } from '@/lib/cabinet-access';
@@ -27,12 +28,13 @@ export default async function CabinetOverviewPage() {
   // D32 : rien d'autre que l'ecran de paiement tant que le Checkout n'est pas fait.
   await requirePaidCabinet(user.cabinetId);
 
-  const [overview, quotas, invitations, gestionnaires, archived] = await Promise.all([
+  const [overview, quotas, invitations, gestionnaires, archived, entreprises] = await Promise.all([
     getCabinetOverview(user.cabinetId),
     getCabinetQuotaUsage(user.cabinetId),
     getInvitations(user.cabinetId),
     getGestionnaires(user.cabinetId),
     getArchivedGestionnaires(user.cabinetId),
+    getEntreprises(user.cabinetId),
   ]);
 
   const alerts = buildCabinetAlerts({
@@ -40,6 +42,7 @@ export default async function CabinetOverviewPage() {
     invitations,
     gestionnaires,
     archived,
+    entreprises,
     subscription: {
       status: overview.subscription.status,
       trialEndsAt: overview.subscription.trialEndsAt,

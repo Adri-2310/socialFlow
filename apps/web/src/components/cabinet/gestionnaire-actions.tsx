@@ -63,6 +63,14 @@ export function GestionnaireActions({
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
+      // D27 : on nomme les entreprises a reassigner avant de pouvoir continuer.
+      if (body?.error === 'GESTIONNAIRE_HAS_UNCOVERED_ENTREPRISES' && Array.isArray(body.entreprises)) {
+        const names = body.entreprises.map((e: { name: string }) => e.name).join(', ');
+        setError(
+          `Réassignez d’abord ces entreprises à un autre gestionnaire actif : ${names}.`,
+        );
+        return;
+      }
       setError(ERROR_MESSAGES[body?.error] ?? 'Une erreur est survenue. Veuillez réessayer.');
       return;
     }

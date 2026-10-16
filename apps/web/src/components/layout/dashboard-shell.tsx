@@ -46,7 +46,7 @@ const SHELL_CONFIG = {
     nav: [
       { label: "Vue d'ensemble", icon: LayoutDashboard, href: '/dashboard/cabinet' },
       { label: 'Gestionnaires', icon: Users, href: '/dashboard/cabinet/gestionnaires' },
-      { label: 'Entreprises', icon: Building2 },
+      { label: 'Entreprises', icon: Building2, href: '/dashboard/cabinet/entreprises' },
       { label: 'Mon abonnement', icon: CreditCard, href: '/dashboard/cabinet/facturation' },
       { label: "Journal d'audit", icon: ScrollText, href: '/dashboard/cabinet/audit' },
       { label: 'Paramètres', icon: Settings, href: '/dashboard/cabinet/parametres' },
