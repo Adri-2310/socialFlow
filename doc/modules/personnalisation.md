@@ -1,6 +1,6 @@
 # Module : personnalisation du cabinet et white-label
 
-> Statut : **à construire**. Décisions : D30, D33, D35.
+> Statut : **identité, logo, couleurs, emails au nom du cabinet et modèle d'invitation de gestionnaire construits** ; domaine personnalisé et autres types de modèles à venir. Décisions : D30, D33, D35.
 
 ## 1. Niveaux
 
