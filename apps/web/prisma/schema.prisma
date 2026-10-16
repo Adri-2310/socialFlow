@@ -136,9 +136,27 @@ model Cabinet {
   users            User[]
   invitations      Invitation[]
   auditLogs        AuditLog[]
+  emailTemplates   EmailTemplate[]
 
   @@index([deletedAt])
   @@map("cabinet")
+}
+
+// Modele d'email personnalise d'un cabinet (D30, D68). Absent = modele par
+// defaut de SocialFlow (voir lib/email-templates.ts). Un seul modele par type et
+// par cabinet.
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  cabinetId   String
+  cabinet     Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  type        String
+  subject     String
+  body        String
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  @@unique([cabinetId, type])
+  @@map("email_template")
 }
 
 // Journal d'audit global consulte par le dashboard SuperAdmin (voir

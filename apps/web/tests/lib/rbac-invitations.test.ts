@@ -138,6 +138,7 @@ describe('creation d une invitation', () => {
       expect.objectContaining({ name: 'Cabinet de Cabinet Test' }),
       'Cabinet Test',
       expect.stringContaining('/invitations/accept?token='),
+      null,
     );
   });
 

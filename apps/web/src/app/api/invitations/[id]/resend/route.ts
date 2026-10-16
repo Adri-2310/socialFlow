@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
+import { getCustomTemplate } from '@/lib/cabinet-email-templates';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
 
@@ -66,11 +67,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   try {
     const brand = await getCabinetEmailBrand(cabinetId);
+    const template = await getCustomTemplate(cabinetId, 'INVITATION_GESTIONNAIRE');
     await sendGestionnaireInvitationEmail(
       invitation.email,
       brand,
       session.user.name,
       invitationUrl(token),
+      template,
     );
   } catch (error) {
     // Contrairement a la creation, l'envoi est ici le seul but de l'appel :

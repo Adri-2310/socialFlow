@@ -104,6 +104,85 @@ describe('emails au nom du cabinet', () => {
     expect(mail.from).toMatch(/^"[^"<>]+" <noreply@socialflow\.page>$/);
   });
 
+  it('invitation : utilise le modele personnalise du cabinet (sujet et corps)', async () => {
+    await sendGestionnaireInvitationEmail(
+      'bruno@test.com',
+      brand,
+      'Alicia',
+      'https://app/accept?token=x',
+      {
+        subject: 'Bienvenue chez {{cabinet_nom}} !',
+        body: 'Salut,\n\n**{{invitant_nom}}** compte sur toi.',
+      },
+    );
+
+    const mail = send.mock.calls[0][0];
+    expect(mail.subject).toBe('Bienvenue chez Alicia Cabinet !');
+    expect(mail.html).toContain('<strong>Alicia</strong> compte sur toi.');
+    // Titre, bouton et mention de securite restent fixes.
+    expect(mail.html).toContain('Vous êtes invité à rejoindre Alicia Cabinet');
+    expect(mail.html).toContain('Accepter l’invitation');
+    expect(mail.html).toContain("attendiez pas cette invitation");
+    expect(mail.html).not.toContain('valable 7 jours');
+  });
+
+  it('l apercu des modeles est exactement l email envoye (meme constructeur)', async () => {
+    const { buildGestionnaireInvitation } = await import('@/lib/email-layout');
+    const template = { subject: 'Bienvenue {{cabinet_nom}}', body: 'Salut **{{invitant_nom}}**' };
+
+    await sendGestionnaireInvitationEmail('bruno@test.com', brand, 'Alicia', 'https://app/accept?token=x', template);
+
+    const mail = send.mock.calls[0][0];
+    const preview = buildGestionnaireInvitation({
+      brand,
+      inviterName: 'Alicia',
+      url: 'https://app/accept?token=x',
+      template,
+    });
+    expect(mail.html).toBe(preview.html);
+    expect(mail.subject).toBe(preview.subject);
+  });
+
+  it('inertLinks : plus aucun lien cliquable, le reste de l email est conserve', async () => {
+    const { inertLinks, buildGestionnaireInvitation } = await import('@/lib/email-layout');
+    const { html } = buildGestionnaireInvitation({
+      brand,
+      inviterName: 'Alicia',
+      url: 'https://app/accept?token=x',
+      template: { subject: 's', body: '[site](https://exemple.be) et [moi]({{lien}})' },
+    });
+
+    // L'email envoye garde ses vrais liens.
+    expect(html).toContain('href="https://app/accept?token=x"');
+    expect(html).toContain('href="https://exemple.be/"');
+
+    const inert = inertLinks(html);
+    expect(inert).not.toContain('href=');
+    expect(inert).not.toContain('https://app/accept');
+    expect(inert).toContain('pointer-events:none');
+    expect(inert).toContain('cursor:default');
+    // Le texte, les couleurs et la mise en page sont inchanges.
+    expect(inert).toContain('Accepter l’invitation');
+    expect(inert).toContain('bgcolor="#008734"');
+    expect(inert).toContain('>site</a>');
+  });
+
+  it('invitation de test : sujet prefixe et HTML du modele echappe', async () => {
+    await sendGestionnaireInvitationEmail(
+      'alicia@test.com',
+      brand,
+      'Alice',
+      'https://app/accept?token=exemple',
+      { subject: 'Sujet', body: '<script>alert(1)</script> {{invitant_nom}}' },
+      { subjectPrefix: '[Test] ' },
+    );
+
+    const mail = send.mock.calls[0][0];
+    expect(mail.subject).toBe('[Test] Sujet');
+    expect(mail.html).not.toContain('<script>alert');
+    expect(mail.html).toContain('&lt;script&gt;');
+  });
+
   it('sans adresse de contact : pas de reponse forcee', async () => {
     await sendGestionnaireInvitationEmail(
       'bruno@test.com',
