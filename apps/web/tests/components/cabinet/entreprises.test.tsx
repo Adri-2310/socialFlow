@@ -39,6 +39,8 @@ const entreprise = (overrides: Partial<EntrepriseRow> = {}): EntrepriseRow => ({
   createdAt: new Date('2026-10-01'),
   gestionnaires: [{ id: 'g1', name: 'Alice Martin', status: 'actif' }],
   covered: true,
+  admin: null,
+  adminInvitation: null,
   ...overrides,
 });
 
@@ -243,5 +245,107 @@ describe('GestionnaireActions et couverture (D27)', () => {
       await screen.findByText(/Réassignez d’abord ces entreprises.*Boulangerie Dupont, Garage Pirard/),
     ).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('administrateur de l entreprise (D5, D70)', () => {
+  it('propose d inviter l administrateur et pre-remplit l email de contact', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ success: true }) });
+    renderManager({ entreprises: [entreprise({ contactEmail: 'contact@dupont.be' })] });
+
+    expect(screen.getByText('Aucun administrateur pour le moment.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: "Inviter l'administrateur de Boulangerie Dupont" }));
+
+    const field = screen.getByLabelText("Email de l'administrateur de Boulangerie Dupont");
+    expect(field).toHaveValue('contact@dupont.be');
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer l’invitation' }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/cabinet/entreprises/e1/admin-invitation');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ email: 'contact@dupont.be' });
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it('explique qu une entreprise a deja un administrateur', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'ENTREPRISE_ALREADY_HAS_ADMIN' }),
+    });
+    renderManager();
+
+    await userEvent.click(screen.getByRole('button', { name: "Inviter l'administrateur de Boulangerie Dupont" }));
+    await userEvent.type(screen.getByLabelText("Email de l'administrateur de Boulangerie Dupont"), 'a@b.be');
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer l’invitation' }));
+
+    expect(await screen.findByText('Cette entreprise a déjà un administrateur.')).toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('montre l invitation en attente avec renvoi et revocation', () => {
+    renderManager({
+      entreprises: [
+        entreprise({
+          adminInvitation: {
+            id: 'inv1',
+            email: 'admin@dupont.be',
+            status: 'pending',
+            expiresAt: new Date('2026-10-30'),
+          },
+        }),
+      ],
+    });
+
+    expect(screen.getByText(/Invitation envoyée à admin@dupont.be/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Renvoyer l'invitation à admin@dupont.be" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Révoquer l'invitation de admin@dupont.be" })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Inviter l'administrateur/ })).not.toBeInTheDocument();
+  });
+
+  it('une invitation expiree ne propose que le renvoi', () => {
+    renderManager({
+      entreprises: [
+        entreprise({
+          adminInvitation: {
+            id: 'inv1',
+            email: 'admin@dupont.be',
+            status: 'expired',
+            expiresAt: new Date('2026-10-01'),
+          },
+        }),
+      ],
+    });
+
+    expect(screen.getByText(/Invitation à admin@dupont.be expirée/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Renvoyer l'invitation à admin@dupont.be" })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Révoquer/ })).not.toBeInTheDocument();
+  });
+
+  it('retire l administrateur apres confirmation', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
+    renderManager({
+      entreprises: [entreprise({ admin: { name: 'Jean Admin', email: 'jean@dupont.be' } })],
+    });
+
+    expect(screen.getByText('Jean Admin · jean@dupont.be')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: "Retirer l'administrateur de Boulangerie Dupont" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retirer' }).at(-1)!);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/cabinet/entreprises/e1/admin', { method: 'DELETE' });
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it('desactive l invitation et le retrait en lecture seule', () => {
+    renderManager({ readOnly: true });
+    expect(screen.getByRole('button', { name: "Inviter l'administrateur de Boulangerie Dupont" })).toBeDisabled();
+
+    renderManager({
+      readOnly: true,
+      entreprises: [entreprise({ id: 'e2', name: 'Garage Pirard', admin: { name: 'Zoe', email: 'z@p.be' } })],
+    });
+    expect(screen.getByRole('button', { name: "Retirer l'administrateur de Garage Pirard" })).toBeDisabled();
   });
 });

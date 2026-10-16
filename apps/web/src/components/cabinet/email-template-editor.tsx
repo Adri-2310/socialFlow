@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Send } from 'lucide-react';
-import { buildGestionnaireInvitation, inertLinks } from '@/lib/email-layout';
+import { buildTemplatePreview, inertLinks } from '@/lib/email-layout';
 import type { CabinetEmailBrand } from '@/lib/email-brand';
 import {
   BODY_MAX,
@@ -101,12 +101,7 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
   }, []);
 
   // Meme constructeur que l'envoi reel : l'apercu est l'email recu.
-  const preview = buildGestionnaireInvitation({
-    brand,
-    inviterName: definition.sample.invitant_nom,
-    url: definition.sample.lien,
-    template: { subject, body },
-  });
+  const preview = buildTemplatePreview(type, { brand, template: { subject, body } });
 
   const touch = () => {
     setDone(null);

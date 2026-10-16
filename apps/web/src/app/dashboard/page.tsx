@@ -27,6 +27,10 @@ export default async function DashboardPage() {
     redirect('/dashboard/cabinet');
   }
 
+  if (user.role === 'ENTREPRISE_CLIENTE' && user.cabinetId) {
+    redirect('/dashboard/entreprise');
+  }
+
   return (
     <>
       <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} />

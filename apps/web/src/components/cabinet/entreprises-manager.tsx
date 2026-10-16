@@ -1,5 +1,8 @@
 import { AlertTriangle, Building2 } from 'lucide-react';
 import { EntrepriseActions } from '@/components/cabinet/entreprise-actions';
+import { EntrepriseAdminInvite } from '@/components/cabinet/entreprise-admin-invite';
+import { EntrepriseAdminRemove } from '@/components/cabinet/entreprise-admin-remove';
+import { InvitationActions } from '@/components/cabinet/invitation-actions';
 import { EntrepriseCreate } from '@/components/cabinet/entreprise-create';
 import { EntrepriseRestore } from '@/components/cabinet/entreprise-restore';
 import type { GestionnaireOption } from '@/components/cabinet/entreprise-form-dialog';
@@ -7,6 +10,56 @@ import type { ArchivedEntrepriseRow, EntrepriseRow } from '@/lib/cabinet-entrepr
 import type { CountryOption } from '@/lib/countries';
 
 const formatDate = (date: Date) => date.toLocaleDateString('fr-BE');
+
+// Administrateur de l'entreprise (D5) : son compte, l'invitation en cours
+// (renvoyer / revoquer) ou la possibilite d'en inviter un.
+function AdminBlock({ entreprise: e, readOnly }: { entreprise: EntrepriseRow; readOnly: boolean }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-muted/40 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 text-xs">
+        <p className="font-semibold text-foreground">Administrateur</p>
+        {e.admin ? (
+          <p className="truncate text-muted-foreground">
+            {e.admin.name} · {e.admin.email}
+          </p>
+        ) : e.adminInvitation ? (
+          <p className="text-muted-foreground">
+            {e.adminInvitation.status === 'pending'
+              ? `Invitation envoyée à ${e.adminInvitation.email} · expire le ${formatDate(e.adminInvitation.expiresAt)}`
+              : `Invitation à ${e.adminInvitation.email} expirée le ${formatDate(e.adminInvitation.expiresAt)}`}
+          </p>
+        ) : (
+          <p className="text-muted-foreground">Aucun administrateur pour le moment.</p>
+        )}
+      </div>
+      {e.admin && (
+        <EntrepriseAdminRemove
+          entrepriseId={e.id}
+          entrepriseName={e.name}
+          adminName={e.admin.name}
+          readOnly={readOnly}
+        />
+      )}
+      {!e.admin &&
+        (e.adminInvitation ? (
+          !readOnly && (
+            <InvitationActions
+              invitationId={e.adminInvitation.id}
+              email={e.adminInvitation.email}
+              status={e.adminInvitation.status}
+            />
+          )
+        ) : (
+          <EntrepriseAdminInvite
+            entrepriseId={e.id}
+            name={e.name}
+            defaultEmail={e.contactEmail ?? ''}
+            readOnly={readOnly}
+          />
+        ))}
+    </div>
+  );
+}
 
 // Presentation : recoit les lignes deja lues (cabinet-entreprises.ts), sans
 // acces donnees. Le Cabinet RH ne voit ici que l'identite des entreprises et
@@ -49,10 +102,8 @@ export function EntreprisesManager({
         ) : (
           <ul className="divide-y divide-border">
             {entreprises.map((e) => (
-              <li
-                key={e.id}
-                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-              >
+              <li key={e.id} className="space-y-3 px-4 py-3 sm:px-5">
+               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{e.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
@@ -92,6 +143,8 @@ export function EntreprisesManager({
                   gestionnaires={gestionnaires}
                   readOnly={readOnly}
                 />
+               </div>
+               <AdminBlock entreprise={e} readOnly={readOnly} />
               </li>
             ))}
           </ul>

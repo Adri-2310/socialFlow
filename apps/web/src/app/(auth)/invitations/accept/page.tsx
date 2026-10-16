@@ -20,7 +20,9 @@ export async function generateMetadata({
   if (!preview) return { title: 'Accepter une invitation — SocialFlow' };
 
   return {
-    title: `Rejoindre ${preview.brandName}`,
+    title: preview.entrepriseName
+      ? `Espace de ${preview.entrepriseName}`
+      : `Rejoindre ${preview.brandName}`,
     applicationName: preview.brandName,
     robots: { index: false, follow: false },
     ...(preview.logoUrl ? { icons: { icon: preview.logoUrl, shortcut: preview.logoUrl } } : {}),
@@ -44,7 +46,11 @@ export default async function AcceptInvitationPage({
 
       <AuthBrandPanel
         title={
-          preview ? (
+          preview?.entrepriseName ? (
+            <>
+              L&apos;espace de {preview.entrepriseName}, avec {preview.brandName}.
+            </>
+          ) : preview ? (
             <>Rejoignez l&apos;équipe de {preview.brandName}.</>
           ) : (
             <>
@@ -54,7 +60,11 @@ export default async function AcceptInvitationPage({
             </>
           )
         }
-        description="Créez votre compte pour accéder aux dossiers qui vous sont assignés."
+        description={
+          preview?.entrepriseName
+            ? 'Créez votre compte administrateur pour suivre vos salariés et valider vos fiches de paie.'
+            : 'Créez votre compte pour accéder aux dossiers qui vous sont assignés.'
+        }
         quote="« Nous avons divisé par deux le temps de traitement de nos paies. » — Payroll BXL"
         brand={
           preview
@@ -72,10 +82,14 @@ export default async function AcceptInvitationPage({
           {preview && token ? (
             <>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Rejoindre {preview.brandName}
+                {preview.entrepriseName
+                  ? `Espace de ${preview.entrepriseName}`
+                  : `Rejoindre ${preview.brandName}`}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Créez votre compte gestionnaire RH pour {preview.brandName}.
+                {preview.entrepriseName
+                  ? `Créez le compte administrateur de ${preview.entrepriseName}, client de ${preview.brandName}.`
+                  : `Créez votre compte gestionnaire RH pour ${preview.brandName}.`}
               </p>
               <div className="mt-6">
                 <AcceptInvitationForm token={token} email={preview.email} />

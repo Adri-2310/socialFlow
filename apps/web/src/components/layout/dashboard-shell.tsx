@@ -52,6 +52,13 @@ const SHELL_CONFIG = {
       { label: 'Paramètres', icon: Settings, href: '/dashboard/cabinet/parametres' },
     ],
   },
+  // Portail de l'administrateur d'une entreprise cliente (roles/04). Une seule
+  // page pour l'instant ; les autres entrees arrivent avec le portail.
+  ENTREPRISE_CLIENTE: {
+    consoleLabel: 'Espace Entreprise',
+    roleLabel: 'Entreprise cliente',
+    nav: [{ label: 'Accueil', icon: LayoutDashboard, href: '/dashboard/entreprise' }],
+  },
 } satisfies Record<string, ShellConfig>;
 
 export type ShellRole = keyof typeof SHELL_CONFIG;

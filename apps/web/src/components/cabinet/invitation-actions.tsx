@@ -15,6 +15,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVITATION_ALREADY_ACCEPTED: 'Cette invitation a déjà été acceptée.',
   INVITATION_ALREADY_REVOKED: 'Cette invitation a déjà été révoquée.',
   EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email.',
+  ENTREPRISE_ALREADY_HAS_ADMIN: 'Cette entreprise a déjà un administrateur.',
+  ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable ou archivée.',
   EMAIL_SEND_FAILED: "L'email n'a pas pu être envoyé. Réessayez dans un instant.",
 };
 
