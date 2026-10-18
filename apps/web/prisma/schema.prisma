@@ -276,6 +276,11 @@ model Invitation {
   // deviendra l'administrateur. null pour une invitation de gestionnaire.
   entrepriseId String?
   entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  // D78 : invitation de REMPLACEMENT - l'administrateur en place au moment de l'envoi. Il
+  // reste actif jusqu'a l'acceptation, qui l'archive dans la meme transaction. null pour
+  // une premiere invitation. Pas de cle etrangere : l'id sert de preuve que l'admin n'a
+  // pas change entre-temps.
+  replacesAdminId String?
 
   @@index([email])
   @@index([entrepriseId])

@@ -41,6 +41,8 @@ type LoadedInvitation = {
   cabinetName: string;
   entrepriseId: string | null;
   entrepriseName: string | null;
+  // D78 : administrateur que cette invitation remplace (archive a l'acceptation).
+  replacesAdminId: string | null;
 };
 
 // Format de l'identifiant de fournisseur d'un compte « mot de passe » dans
@@ -72,6 +74,7 @@ export async function loadAcceptableInvitation(
       expiresAt: true,
       cabinetId: true,
       entrepriseId: true,
+      replacesAdminId: true,
       cabinet: {
         select: { name: true, billingStatus: true, status: true, suspensionType: true, deletedAt: true },
       },
@@ -88,7 +91,11 @@ export async function loadAcceptableInvitation(
   }
   if (invitation.entrepriseId) {
     const entreprise = invitation.entreprise;
-    if (!entreprise || entreprise.deletedAt || entreprise.adminUserId) {
+    // D5 : la place doit etre libre - ou tenue par l'administrateur que cette invitation
+    // remplace (D78). Un autre administrateur arrive entre-temps rend le lien invalide.
+    const placeFree =
+      !entreprise?.adminUserId || entreprise.adminUserId === invitation.replacesAdminId;
+    if (!entreprise || entreprise.deletedAt || !placeFree) {
       return { ok: false, error: 'INVALID_TOKEN' };
     }
   }
@@ -107,6 +114,7 @@ export async function loadAcceptableInvitation(
       cabinetName: invitation.cabinet.name,
       entrepriseId: invitation.entrepriseId,
       entrepriseName: invitation.entreprise?.name ?? null,
+      replacesAdminId: invitation.replacesAdminId,
     },
   };
 }
@@ -121,14 +129,46 @@ async function applyInvitation(tx: Tx, invitation: LoadedInvitation, userId: str
     where: { id: userId },
     data: { role: invitation.role, cabinetId: invitation.cabinetId, emailVerified: true },
   });
-  // D5 : seulement si l'entreprise n'a pas deja un administrateur (course avec
-  // une autre acceptation).
+  // D5 : seulement si la place est libre, ou tenue par l'administrateur remplace (D78) :
+  // la condition est dans l'ecriture, donc une course avec une autre acceptation ou un
+  // retrait echoue proprement.
+  let replacedAdminId: string | null = null;
   if (invitation.entrepriseId) {
+    const current = await tx.entreprise.findUnique({
+      where: { id: invitation.entrepriseId },
+      select: { adminUserId: true },
+    });
+    const holder = current?.adminUserId ?? null;
+    if (holder && holder !== invitation.replacesAdminId) throw new EntrepriseAdminTaken();
     const { count } = await tx.entreprise.updateMany({
-      where: { id: invitation.entrepriseId, adminUserId: null, deletedAt: null },
+      where: { id: invitation.entrepriseId, adminUserId: holder, deletedAt: null },
       data: { adminUserId: userId },
     });
     if (count === 0) throw new EntrepriseAdminTaken();
+    replacedAdminId = holder;
+  }
+  // D78 : l'ancien administrateur est archive avec ses sessions coupees, dans la meme
+  // transaction (meme traitement que son retrait, lib/entreprise-admin.ts).
+  if (replacedAdminId) {
+    await tx.session.deleteMany({ where: { userId: replacedAdminId } });
+    await tx.user.update({
+      where: { id: replacedAdminId },
+      data: { deletedAt: new Date(), deletedBy: 'CABINET_RH' },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'USER_ARCHIVED',
+        actorId: userId,
+        cabinetId: invitation.cabinetId,
+        targetUserId: replacedAdminId,
+        metadata: {
+          role: 'ENTREPRISE_CLIENTE',
+          entrepriseId: invitation.entrepriseId,
+          entreprise: invitation.entrepriseName,
+          replacedBy: userId,
+        },
+      },
+    });
   }
   // Filtre sur le statut dans l'ecriture : couvre une double acceptation ou une
   // revocation simultanee.
