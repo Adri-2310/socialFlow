@@ -8,18 +8,47 @@ import { UserMenu } from '@/components/layout/user-menu';
 // reutilise UserMenu pour le meme comportement de deconnexion/profil. Meme
 // logo que navbar.tsx/auth-brand-panel.tsx (Image /logo-simple.png), pas une
 // icone generique, pour rester coherent avec le reste de l'app.
-export function AppHeader({ userName, roleLabel }: { userName: string; roleLabel: string }) {
+// `brand` : identite du cabinet pour ses gestionnaires, entreprises et collaborateurs
+// (D33, D76) - son nom et son logo, jamais SocialFlow - et retour sur son portail a la
+// deconnexion.
+export function AppHeader({
+  userName,
+  roleLabel,
+  brand,
+}: {
+  userName: string;
+  roleLabel: string;
+  brand?: { name: string; logoUrl: string | null; logoutHref: string } | null;
+}) {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md sm:px-6">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <Image src="/logo-simple.png" alt="SocialFlow" width={36} height={36} className="rounded-xl" />
-        <span className="text-sm font-bold text-foreground">
-          Social<span className="text-primary dark:text-indigo-400">Flow</span>
-        </span>
+        {brand ? (
+          <>
+            {brand.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- URL externe (Blob), taille fixe
+              <img
+                src={brand.logoUrl}
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-xl object-contain"
+              />
+            )}
+            <span className="max-w-[12rem] truncate text-sm font-bold text-foreground">{brand.name}</span>
+          </>
+        ) : (
+          <>
+            <Image src="/logo-simple.png" alt="SocialFlow" width={36} height={36} className="rounded-xl" />
+            <span className="text-sm font-bold text-foreground">
+              Social<span className="text-primary dark:text-indigo-400">Flow</span>
+            </span>
+          </>
+        )}
       </Link>
       <div className="ml-auto flex items-center gap-3">
         <ThemeToggle />
-        <UserMenu userName={userName} roleLabel={roleLabel} />
+        <UserMenu userName={userName} roleLabel={roleLabel} logoutHref={brand?.logoutHref} />
       </div>
     </header>
   );
