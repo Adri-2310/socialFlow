@@ -88,6 +88,14 @@ model Cabinet {
   // convention que Invitation.status : string libre plutot qu'un enum
   // Prisma, coherent avec le reste du schema.
   status            String          @default("actif") // actif | suspendu
+  // D71 : nature d'une suspension manuelle par le SuperAdmin. READ_ONLY (defaut
+  // des nouvelles suspensions) = lecture seule, connexions possibles ; BLOCKED =
+  // blocage total des connexions, choisi explicitement avec un motif. null avec
+  // status "suspendu" = suspension anterieure a ce champ, donc blocage total
+  // (comportement d'alors). Remis a null a la reactivation.
+  suspensionType    String?
+  // Motif saisi par le SuperAdmin ; jamais montre aux clients du cabinet (D29).
+  suspensionReason  String?
   // Archivage par un SuperAdmin (pas de vraie suppression : User.cabinetId a
   // onDelete: Cascade, supprimer reellement un Cabinet supprimerait tous ses
   // utilisateurs). Meme convention que User.deletedAt : bloque l'acces

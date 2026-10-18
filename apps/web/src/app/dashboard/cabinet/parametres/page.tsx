@@ -5,7 +5,7 @@ import { EmailTemplateEditor } from '@/components/cabinet/email-template-editor'
 import { IdentityForm } from '@/components/cabinet/identity-form';
 import { LogoForm } from '@/components/cabinet/logo-form';
 import { SettingsTabs, type SettingsTab } from '@/components/cabinet/settings-tabs';
-import { isReadOnlyBillingStatus } from '@/lib/billing';
+import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 import { requirePaidCabinet } from '@/lib/cabinet-access';
 import { getCabinetBranding } from '@/lib/cabinet-branding';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
@@ -46,10 +46,10 @@ export default async function CabinetSettingsPage({
     getCabinetEmailBrand(user.cabinetId),
     prisma.cabinet.findUnique({
       where: { id: user.cabinetId },
-      select: { billingStatus: true, logoUrl: true },
+      select: { billingStatus: true, status: true, suspensionType: true, logoUrl: true },
     }),
   ]);
-  const readOnly = isReadOnlyBillingStatus(cabinet?.billingStatus);
+  const readOnly = cabinet ? isCabinetReadOnly(cabinet) : false;
 
   const tabs: SettingsTab[] = [
     {

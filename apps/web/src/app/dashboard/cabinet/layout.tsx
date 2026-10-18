@@ -7,6 +7,8 @@ import { requireSession } from '@/lib/require-session';
 import { prisma } from '@/lib/prisma';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { BillingBanner } from '@/components/cabinet/billing-banner';
+import { SuspensionBanner } from '@/components/cabinet/suspension-banner';
+import { suspensionTypeOf } from '@/lib/cabinet-suspension';
 import { graceEndsAt, normalizeBillingStatus } from '@/lib/billing';
 import { buildThemeCss } from '@/lib/branding-rules';
 
@@ -37,6 +39,8 @@ export default async function CabinetLayout({ children }: { children: ReactNode 
         where: { id: user.cabinetId },
         select: {
           billingStatus: true,
+          status: true,
+          suspensionType: true,
           pastDueSince: true,
           displayName: true,
           primaryColor: true,
@@ -59,6 +63,8 @@ export default async function CabinetLayout({ children }: { children: ReactNode 
       {/* Theme du cabinet (D33) : valeurs #rrggbb validees a l'enregistrement,
           jamais du texte libre. */}
       {theme && <style dangerouslySetInnerHTML={{ __html: theme }} />}
+      {/* D71 : suspension en lecture seule par le SuperAdmin. */}
+      <SuspensionBanner suspended={!!cabinet && suspensionTypeOf(cabinet) !== null} />
       <BillingBanner
         status={status}
         graceEndsAt={cabinet?.pastDueSince ? graceEndsAt(cabinet.pastDueSince) : null}

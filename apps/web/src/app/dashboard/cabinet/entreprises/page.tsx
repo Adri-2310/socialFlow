@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { EntreprisesManager } from '@/components/cabinet/entreprises-manager';
-import { isReadOnlyBillingStatus } from '@/lib/billing';
+import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 import { requirePaidCabinet } from '@/lib/cabinet-access';
 import { getGestionnaires } from '@/lib/cabinet-data';
 import { getArchivedEntreprises, getEntreprises } from '@/lib/cabinet-entreprises';
@@ -29,7 +29,7 @@ export default async function EntreprisesPage() {
     getCabinetQuotaUsage(user.cabinetId),
     prisma.cabinet.findUnique({
       where: { id: user.cabinetId },
-      select: { billingStatus: true },
+      select: { billingStatus: true, status: true, suspensionType: true },
     }),
   ]);
 
@@ -42,7 +42,7 @@ export default async function EntreprisesPage() {
       // navigateur (erreur d'hydratation sinon).
       countries={countryOptions()}
       quota={quotas.limits ? { used: quotas.entreprises.used, limit: quotas.limits.maxEntreprises } : undefined}
-      readOnly={isReadOnlyBillingStatus(cabinet?.billingStatus ?? '')}
+      readOnly={cabinet ? isCabinetReadOnly(cabinet) : false}
     />
   );
 }

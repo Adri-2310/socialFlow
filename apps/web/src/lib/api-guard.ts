@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { isReadOnlyBillingStatus } from '@/lib/billing';
+import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 import { prisma } from '@/lib/prisma';
 
 type Session = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
@@ -45,15 +45,16 @@ export async function requireApiSession(
   }
 
   // Route d'ecriture : refusee (423) quand le cabinet de l'utilisateur est en
-  // lecture seule (impaye, resilie - D29). La lecture de l'etat n'a lieu que
+  // lecture seule (impaye, resilie - D29 ; suspension du SuperAdmin - D71). La
+  // lecture de l'etat n'a lieu que
   // pour les routes qui le demandent. Un utilisateur sans cabinet (SuperAdmin)
   // n'est pas concerne.
   if (options?.writable && session.user.cabinetId) {
     const cabinet = await prisma.cabinet.findUnique({
       where: { id: session.user.cabinetId },
-      select: { billingStatus: true },
+      select: { billingStatus: true, status: true, suspensionType: true },
     });
-    if (cabinet && isReadOnlyBillingStatus(cabinet.billingStatus)) {
+    if (cabinet && isCabinetReadOnly(cabinet)) {
       return { response: NextResponse.json({ error: 'CABINET_READ_ONLY' }, { status: 423 }) };
     }
   }

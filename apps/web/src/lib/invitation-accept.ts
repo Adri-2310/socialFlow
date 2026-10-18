@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hashInvitationToken } from '@/lib/invitations';
-import { isReadOnlyBillingStatus } from '@/lib/billing';
+import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 
 // Acceptation d'une invitation (C4, C6) : cree le compte avec le role et le
 // cabinet imposes par l'invitation, sans passer par l'auto-inscription. Plus de
@@ -76,7 +76,9 @@ export async function loadAcceptableInvitation(
       expiresAt: true,
       cabinetId: true,
       entrepriseId: true,
-      cabinet: { select: { name: true, billingStatus: true, deletedAt: true } },
+      cabinet: {
+        select: { name: true, billingStatus: true, status: true, suspensionType: true, deletedAt: true },
+      },
       entreprise: { select: { name: true, deletedAt: true, adminUserId: true } },
     },
   });
@@ -94,8 +96,8 @@ export async function loadAcceptableInvitation(
       return { ok: false, error: 'INVALID_TOKEN' };
     }
   }
-  // D29 : un cabinet en lecture seule ne peut pas accueillir de nouveau compte.
-  if (isReadOnlyBillingStatus(invitation.cabinet.billingStatus)) {
+  // D29, D71 : un cabinet en lecture seule ne peut pas accueillir de nouveau compte.
+  if (isCabinetReadOnly(invitation.cabinet)) {
     return { ok: false, error: 'CABINET_READ_ONLY' };
   }
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Building2 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/require-session';
+import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 
 export const metadata: Metadata = {
   title: 'Accueil',
@@ -22,12 +23,17 @@ export default async function EntrepriseHomePage() {
         select: {
           name: true,
           deletedAt: true,
-          cabinet: { select: { name: true, displayName: true } },
+          cabinet: {
+            select: { name: true, displayName: true, billingStatus: true, status: true, suspensionType: true },
+          },
         },
       })
     : null;
 
   const cabinetName = entreprise?.cabinet.displayName?.trim() || entreprise?.cabinet.name;
+  // D29, D71 : cabinet en lecture seule (impaye, resiliation ou suspension). Le
+  // message ne donne aucune raison commerciale.
+  const readOnly = !!entreprise && isCabinetReadOnly(entreprise.cabinet);
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
@@ -44,6 +50,12 @@ export default async function EntrepriseHomePage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Votre paie est gérée par {cabinetName}.
               </p>
+              {readOnly && !entreprise.deletedAt && (
+                <p className="mt-3 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                  Votre espace est en lecture seule : vous pouvez consulter vos informations, mais plus
+                  rien ne peut être modifié pour le moment.
+                </p>
+              )}
               {entreprise.deletedAt && (
                 <p className="mt-3 text-sm font-semibold text-destructive-text">
                   Cette entreprise a été archivée par votre cabinet : l’espace est en lecture seule.

@@ -6,6 +6,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { createCabinetForOwner } from '@/lib/cabinet-provision';
+import { isLoginBlocked } from '@/lib/cabinet-suspension';
 import { ACCOUNT_DELETION_BLOCKED_CODE, accountDeletionBlock } from '@/lib/account-deletion-guard';
 import {
   sendMagicLinkEmail,
@@ -361,13 +362,15 @@ export const auth = betterAuth({
       if (freshSession?.user.cabinetId) {
         const cabinet = await prisma.cabinet.findUnique({
           where: { id: freshSession.user.cabinetId },
-          select: { status: true, deletedAt: true },
+          select: { status: true, suspensionType: true, deletedAt: true },
         });
         // Un cabinet archive (voir api/admin/cabinets/[id]) bloque l'acces au
         // meme titre qu'un cabinet suspendu, avec la meme erreur : du point
         // de vue de l'utilisateur bloque, la distinction (temporaire vs en
         // cours de purge) n'a pas a etre divulguee.
-        if (cabinet?.status === 'suspendu' || cabinet?.deletedAt) {
+        // D71 : une suspension en lecture seule laisse se connecter ; seul le
+        // blocage total (ou une suspension anterieure a D71) refuse la connexion.
+        if (cabinet && isLoginBlocked(cabinet)) {
           await ctx.context.internalAdapter.deleteSession(freshSession.session.token);
           deleteSessionCookie(ctx, true);
           ctx.context.setNewSession(null);
