@@ -81,6 +81,7 @@ Le Cabinet RH **ne voit pas** la liste des salariés ni le contenu des fiches d'
 ### 4.5 Abonnement et facturation
 - Page **Mon abonnement** (`/dashboard/cabinet/facturation`), **sans portail client Stripe** (D59) : abonnement, carte (modifiable sur une page Stripe, jamais supprimée), factures, résiliation en fin de période et reprise. Le changement de plan ou de périodicité se fait aussi dans SocialFlow, en fin de période et avec contrôle des quotas (D60).
 - Le plan local suit toujours Stripe via le webhook, jamais l'inverse.
+- **Export des données du cabinet** (D74) : onglet **Données** des paramètres, fichier JSON (identité, abonnement, équipe, entreprises et assignations, invitations, journal d'audit ; jamais de salaire, de fiche ni de secret). **Reste disponible en lecture seule** (résiliation, impayé, suspension). Chaque export est journalisé (`DATA_EXPORTED`).
 - Downgrade impossible si la consommation actuelle dépasse les quotas du plan visé (message indiquant quoi réduire). Tout changement de plan ou de périodicité prend effet **en fin de période**, sans prorata (D60).
 
 ### 4.6 Journal d'audit du cabinet (D31)
