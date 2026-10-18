@@ -26,7 +26,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 | Écran | Route | Ce qu'il fait |
 |---|---|---|
 | Vue d'ensemble | `/dashboard/admin` | KPIs (cabinets actifs, nouveaux du mois, MRR réel Stripe), répartition par plan, aperçu des 10 derniers cabinets et des 10 dernières entrées d'audit, résumé monitoring |
-| Cabinets | `/dashboard/admin/cabinets` | Liste triable : nom, statut, plan, nombre de gestionnaires, date de création. Actions : suspendre, réactiver, archiver, restaurer |
+| Cabinets | `/dashboard/admin/cabinets` | Liste triable : nom, statut, plan, nombre de gestionnaires, date de création. Actions : suspendre (lecture seule par défaut, blocage total optionnel avec motif, D71), bloquer les connexions d'un cabinet en lecture seule, réactiver, archiver, restaurer |
 | Utilisateurs | `/dashboard/admin/utilisateurs` | Liste de tous les comptes (nom, email, rôle, statut, cabinet). Actions : suspendre, réactiver, archiver, restaurer |
 | Monitoring | `/dashboard/admin/monitoring` | Santé et latence de la base, sessions actives, utilisateurs actifs distincts, cabinets/utilisateurs par statut, top 10 des compteurs du rate limiter |
 | Journal d'audit | `/dashboard/admin/audit` | Historique des actions (acteur, cabinet ou utilisateur visé, date) |
@@ -38,7 +38,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 ### 4.1 Cabinets — `api/admin/cabinets/[id]`
 | Action | Méthode | Effet | Audit |
 |---|---|---|---|
-| Suspendre | `PATCH {status:'suspendu'}` | Supprime toutes les sessions des membres du cabinet, `Cabinet.status = 'suspendu'` ; plus aucune connexion possible | `CABINET_SUSPENDED` |
+| Suspendre (D71) | `PATCH {status:'suspendu', mode?, reason?}` | `mode` = `READ_ONLY` (**par défaut**) : `Cabinet.status = 'suspendu'`, lecture seule (`423` aux écritures), connexions et sessions conservées, motif facultatif. `mode` = `BLOCKED` : motif **obligatoire** (`400 REASON_REQUIRED`), sessions des membres supprimées, plus aucune connexion. Motif limité à 500 caractères (`REASON_TOO_LONG`), mode inconnu → `INVALID_MODE`. Repasser de `READ_ONLY` à `BLOCKED` est possible. Type et motif dans `Cabinet.suspensionType` / `suspensionReason` | `CABINET_SUSPENDED` (métadonnées `mode`, `reason`, `previousMode`) |
 | Réactiver | `PATCH {status:'actif'}` | `Cabinet.status = 'actif'` | `CABINET_REACTIVATED` |
 | Archiver | `DELETE` | Supprime les sessions, `Cabinet.deletedAt = now` ; accès bloqué ; purge définitive après **90 jours** (`CABINET_DELETION_RETENTION_DAYS`, cron `purge-deleted-cabinets` à 4 h) | `CABINET_ARCHIVED` |
 | Restaurer | `PUT` | `deletedAt = null` (le statut suspendu éventuel est conservé) | `CABINET_RESTORED` |
@@ -56,7 +56,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 
 ### 4.3 Plans tarifaires — `api/admin/plans`
 - Création, modification, archivage et restauration d'un `PricingPlan` (identifiant `[a-z0-9-]`, nom, description, prix mensuel et annuel en entiers, badge, mise en avant, ordre, au moins une fonctionnalité).
-- Les prix sont répercutés dans Stripe (Product/Price) ; l'inscription n'accepte que les plans existants, non archivés et non « sur devis ».
+- Les prix sont répercutés dans Stripe (Product/Price) ; l'inscription n'accepte que les plans existants, non archivés.
 - Audit : `PRICING_PLAN_CREATED | UPDATED | ARCHIVED | RESTORED`.
 
 ### 4.4 Données affichées
@@ -70,6 +70,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | 03:00 | `/api/cron/purge-deleted-accounts` | Purge définitive des comptes archivés depuis plus de 90 jours |
 | 04:00 | `/api/cron/purge-deleted-cabinets` | Purge définitive des cabinets archivés depuis plus de 90 jours |
 | 05:00 | `/api/cron/purge-expired-sessions` | Suppression des sessions expirées |
+| 06:00 | `/api/cron/suspend-overdue-cabinets` | Passage en `IMPAYE` (lecture seule) des cabinets dont le délai de grâce de 7 jours est écoulé (D57) |
 
 ## 5. Ce que le SuperAdmin ne peut pas faire (par décision)
 
@@ -86,7 +87,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | A3 | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
 | A4 | **Modifier un cabinet** (D19) | Fiche cabinet : nom, coordonnées, et changement de plan **uniquement via Stripe** (le plan local suit l'abonnement, jamais l'inverse). Audit `CABINET_UPDATED` avec avant/après |
 | A5 | **Quotas par plan** (D15) | `PricingPlan` + `maxEntreprises`, `maxUtilisateurs`, `maxStorageMb` (`null` = illimité) et droits `integrations`, `whiteLabel`, éditables dans Configuration ; valeurs de départ = cahier des charges client (D34) |
-| A6 | **Webhook Stripe + délai de grâce** (D23) | Voir § 6.1 |
+| A6 | **Webhook Stripe + délai de grâce** (D23, D57) | Voir § 6.1. ✅ Webhook `api/webhooks/stripe` (signature, idempotence, ordre des événements, plan repris du prix) ; ✅ tâche quotidienne `api/cron/suspend-overdue-cabinets` (fin du délai de 7 jours → `IMPAYE`, emails au titulaire et aux SuperAdmins) ; ✅ refus des écritures en lecture seule (`423 CABINET_READ_ONLY`) pour les routes du Cabinet RH, via `requireApiSession({ writable: true })`, et bandeau d'abonnement |
 | A7 | **Barèmes automatiques** (D22) | Voir § 6.2 |
 | A8 | **Notifications in-app** | Modèle `Notification` (destinataire, type, message, lien, lu/non lu) + cloche dans l'en-tête, partagé par tous les rôles |
 | A9 | Journal d'audit | Filtres (action, acteur, cabinet, période), export CSV ; ajout `ipAddress`, `userAgent`, `metadata Json` |
@@ -98,8 +99,8 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 Inscription ─► essai 30 j (trialing) ─► 1er paiement ─► actif
                                           │ échec
                                           ▼
-                               past_due : délai de grâce 14 j
-                    (Stripe relance la carte, emails J0 / J7 / J12)
+                               past_due : délai de grâce 7 j
+                    (Stripe relance la carte ; email au titulaire et aux SuperAdmins à J0)
                           │ paiement OK          │ fin du délai
                           ▼                      ▼
                         actif         cabinet suspendu (status = 'suspendu',
@@ -111,10 +112,10 @@ Inscription ─► essai 30 j (trialing) ─► 1er paiement ─► actif
 
 - Route `api/webhooks/stripe` : vérification de signature, idempotence (table `WebhookEvent`, `eventId` unique).
 - Événements : `customer.subscription.updated` (trialing/active/past_due/canceled), `invoice.payment_failed`, `invoice.paid`, `customer.subscription.deleted`.
-- Fin du délai : un cron quotidien suspend les cabinets en `past_due` depuis plus de 14 jours.
+- Fin du délai : un cron quotidien passe à `IMPAYE` les cabinets en `past_due` depuis plus de 7 jours (D57).
 - Alertes : email au titulaire du cabinet (Resend) et au SuperAdmin, plus une notification in-app pour chacun (A8). Bandeau rouge permanent dans le portail du cabinet pendant le délai de grâce.
 - `Cabinet` gagne `billingStatus` (miroir de Stripe) et `suspendedReason` (`'admin' | 'impaye'`) : une suspension manuelle ne doit jamais être levée par un paiement.
-- Durée du délai : **14 jours par défaut**, à confirmer.
+- Durée du délai : **7 jours** (D57).
 
 ### 6.2 Barèmes de paie automatiques (proposition à valider, détail dans [modules/paie.md](../modules/paie.md) § 5)
 
@@ -129,5 +130,5 @@ Contrainte : un changement silencieux de barème fausserait des fiches de paie. 
 
 ## 7. Questions ouvertes
 
-1. Délai de grâce de **14 jours** : ça te va ?
+1. ~~Délai de grâce de 14 jours~~ : fixé à **7 jours** (D57).
 2. **Barèmes** : es-tu d'accord avec « détection automatique + activation validée par le SuperAdmin » ? L'alternative, un remplacement 100 % automatique, est risquée pour un logiciel de paie.

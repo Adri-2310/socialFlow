@@ -17,11 +17,13 @@ const PLANS: PlanConfigRow[] = [
     description: 'Pour les petits cabinets.',
     monthlyPrice: 150,
     yearlyPrice: 120,
-    custom: false,
     highlighted: false,
     badge: null,
     features: ['Feature A', 'Feature B'],
     sortOrder: 1,
+    maxEntreprises: null,
+    maxUtilisateurs: null,
+    maxStorageMb: null,
     archivedAt: null,
     stripe: {
       productId: 'prod_1',
@@ -39,11 +41,13 @@ const PLANS: PlanConfigRow[] = [
     description: 'Pour les grands secretariats.',
     monthlyPrice: null,
     yearlyPrice: null,
-    custom: false,
     highlighted: true,
     badge: 'Le plus choisi',
     features: ['Feature C'],
     sortOrder: 2,
+    maxEntreprises: null,
+    maxUtilisateurs: null,
+    maxStorageMb: null,
     archivedAt: null,
     stripe: {
       productId: null,
@@ -63,11 +67,13 @@ const ARCHIVED_PLAN: PlanConfigRow = {
   description: 'Ancien plan retire.',
   monthlyPrice: 50,
   yearlyPrice: 40,
-  custom: false,
   highlighted: false,
   badge: null,
   features: ['Feature D'],
   sortOrder: 3,
+  maxEntreprises: null,
+  maxUtilisateurs: null,
+  maxStorageMb: null,
   archivedAt: '2026-01-01T00:00:00.000Z',
   stripe: {
     productId: null,
@@ -97,9 +103,15 @@ describe('PlansConfig - affichage', () => {
     expect(screen.getByText('Désynchronisé de Stripe')).toBeInTheDocument();
   });
 
-  it('affiche "Sur devis" quand le plan n a pas de prix mensuel', () => {
+  it('affiche "Prix non défini" quand le plan n a pas de prix mensuel', () => {
     render(<PlansConfig plans={PLANS} />);
-    expect(screen.getByText('Sur devis')).toBeInTheDocument();
+    expect(screen.getByText('Prix non défini')).toBeInTheDocument();
+  });
+
+  it('affiche les quotas du plan, "illimité" quand la limite est vide (D15)', () => {
+    render(<PlansConfig plans={PLANS} />);
+    expect(screen.getAllByText(/Entreprises illimitées/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Gestionnaires illimités/).length).toBeGreaterThan(0);
   });
 });
 
@@ -143,6 +155,9 @@ describe('PlansConfig - edition', () => {
             highlighted: false,
             sortOrder: 1,
             features: ['Feature A', 'Feature B'],
+            maxEntreprises: null,
+            maxUtilisateurs: null,
+            maxStorageMb: null,
           }),
         }),
       ),
@@ -201,6 +216,9 @@ describe('PlansConfig - creation', () => {
             highlighted: false,
             sortOrder: 0,
             features: ['Feature X'],
+            maxEntreprises: null,
+            maxUtilisateurs: null,
+            maxStorageMb: null,
           }),
         }),
       ),

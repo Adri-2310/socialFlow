@@ -1,28 +1,23 @@
-import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
+import { getCustomTemplate } from '@/lib/cabinet-email-templates';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
+import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
+import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
 
-const INVITATION_TTL_DAYS = 7;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Premiere iteration RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md
 // section 4.1) : seul un Cabinet RH peut inviter, et uniquement en tant que
-// Gestionnaire RH. requireSession() n'est pas reutilise ici : concu pour les
-// Server Components (redirect() de next/navigation), il renverrait une
-// redirection HTML sur un appel fetch() JSON plutot qu'un 401/403 propre.
-// Lit request.headers directement (pas next/headers()) : ce Route Handler
-// doit rester appelable/testable comme une fonction pure, sans dependre du
-// contexte de requete implicite de Next.js.
+// Gestionnaire RH. La garde (401/403 JSON, pas de redirection HTML) vit dans
+// lib/api-guard.ts.
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'CABINET_RH' || !session.user.cabinetId) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
+  if (guard.response) return guard.response;
+  const { session } = guard;
+  const cabinetId = session.user.cabinetId as string;
 
   const body = await request.json().catch(() => null);
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -36,29 +31,53 @@ export async function POST(request: Request) {
   }
 
   const existingInvitation = await prisma.invitation.findFirst({
-    where: { email, cabinetId: session.user.cabinetId, status: 'pending', expiresAt: { gt: new Date() } },
+    where: { email, cabinetId, status: 'pending', expiresAt: { gt: new Date() } },
   });
   if (existingInvitation) {
     return NextResponse.json({ error: 'INVITATION_ALREADY_PENDING' }, { status: 409 });
   }
 
-  const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: session.user.cabinetId } });
+  // D15, D56 : quota de gestionnaires (gestionnaires + invitations en
+  // attente ; le titulaire ne compte pas) bloquant. Controle apres les doublons pour ne pas
+  // masquer une erreur plus precise.
+  const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinetId);
+  if (limits && isQuotaReached(utilisateurs.used, limits.maxUtilisateurs)) {
+    return NextResponse.json(
+      quotaExceededBody('maxUtilisateurs', limits.maxUtilisateurs as number, utilisateurs.used),
+      { status: 403 },
+    );
+  }
 
-  const token = crypto.randomBytes(32).toString('base64url');
-  await prisma.invitation.create({
-    data: {
-      email,
-      role: 'GESTIONNAIRE_RH',
-      token,
-      cabinetId: cabinet.id,
-      invitedById: session.user.id,
-      expiresAt: new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000),
-    },
+  const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinetId } });
+
+  const { token, tokenHash } = createInvitationToken();
+  // Invitation et audit dans la meme transaction (CONVENTIONS.md § 3).
+  await prisma.$transaction(async (tx) => {
+    const invitation = await tx.invitation.create({
+      data: {
+        email,
+        role: 'GESTIONNAIRE_RH',
+        tokenHash,
+        cabinetId: cabinet.id,
+        invitedById: session.user.id,
+        expiresAt: invitationExpiry(),
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'INVITATION_SENT',
+        actorId: session.user.id,
+        cabinetId: cabinet.id,
+        metadata: { invitationId: invitation.id, email, role: 'GESTIONNAIRE_RH' },
+      },
+    });
   });
 
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/invitations/accept?token=${token}`;
+  const url = invitationUrl(token);
   try {
-    await sendGestionnaireInvitationEmail(email, cabinet.name, session.user.name, url);
+    const brand = await getCabinetEmailBrand(cabinet.id);
+    const template = await getCustomTemplate(cabinet.id, 'INVITATION_GESTIONNAIRE');
+    await sendGestionnaireInvitationEmail(email, brand, session.user.name, url, template);
   } catch (error) {
     // L'invitation existe deja en base a ce stade (token valide 7 jours) :
     // un echec d'envoi (Resend indisponible, etc.) ne doit pas faire

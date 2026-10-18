@@ -51,7 +51,7 @@ flowchart LR
 | Intégrations | `apps/web/src/lib/integrations/` | Derrière une interface, avec une version simulée et une version réelle |
 | Tâches planifiées | `apps/web/src/app/api/cron/*` + `vercel.json` | Protégées par `CRON_SECRET`, idempotentes |
 
-Stockage de fichiers : non choisi à ce jour. Vercel Blob est le candidat naturel sur Vercel, à trancher lors du chantier Documents.
+Stockage de fichiers : **Vercel Blob** derrière `StorageGateway` (D54, `modules/stockage.md`).
 
 ## 4. Isolation des données (multi-tenant)
 
@@ -81,7 +81,7 @@ stateDiagram-v2
     Essai --> Actif: 1er débit réussi
     Actif --> DelaiGrace: paiement échoué
     DelaiGrace --> Actif: paiement régularisé
-    DelaiGrace --> Suspendu: 14 jours écoulés
+    DelaiGrace --> Suspendu: 7 jours écoulés
     Suspendu --> Actif: paiement régularisé
     Actif --> LectureSeule: résiliation, fin de période
     LectureSeule --> Archive: 90 jours
@@ -240,7 +240,7 @@ Tout email part par Resend (pas de SMTP de cabinet, D30) ; pour les emails « au
 | Purge des comptes archivés (> 90 j) | Quotidienne 03:00 | ✅ |
 | Purge des cabinets archivés (> 90 j) | Quotidienne 04:00 | ✅ |
 | Purge des sessions expirées | Quotidienne 05:00 | ✅ |
-| Suspension des cabinets en délai de grâce dépassé | Quotidienne | 🆕 |
+| Passage en `IMPAYE` des cabinets en délai de grâce dépassé (D57) | Quotidienne 06:00 | ✅ |
 | Rappels prestations (J-3, J-1) et validation (J+2, J+4) | Quotidienne | 🆕 |
 | Rappels d'échéances du calendrier (J-7, J-3, J-1) | Quotidienne | 🆕 |
 | Vérification des nouveaux barèmes officiels | Hebdomadaire | 🆕 |

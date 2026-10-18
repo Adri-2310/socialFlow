@@ -5,7 +5,9 @@ import { deleteSessionCookie } from 'better-auth/cookies';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { provisionStripeTrial } from '@/lib/stripe-trial';
+import { createCabinetForOwner } from '@/lib/cabinet-provision';
+import { isLoginBlocked } from '@/lib/cabinet-suspension';
+import { ACCOUNT_DELETION_BLOCKED_CODE, accountDeletionBlock } from '@/lib/account-deletion-guard';
 import {
   sendMagicLinkEmail,
   sendOTPEmail,
@@ -149,27 +151,6 @@ export const auth = betterAuth({
         input: true,
         validator: { input: z.string().trim().min(1).max(200) },
       },
-      plan: {
-        type: 'string',
-        required: false,
-        input: true,
-        // Format seulement : les plans etant geres dynamiquement (voir
-        // PricingPlan, /dashboard/admin/configuration), un enum fige ici
-        // rejetterait tout plan cree apres coup. La vraie validation - le
-        // plan existe, n'est pas archive, n'est pas "sur devis" - se fait
-        // dans hooks.before ci-dessous pour /sign-up/email et /update-user,
-        // les deux seuls chemins qui ecrivent ce champ.
-        validator: { input: z.string().trim().min(1).max(100) },
-      },
-      billingPeriod: {
-        type: 'string',
-        required: false,
-        defaultValue: 'monthly',
-        input: true,
-        // Synchronise a la main avec BillingPeriod dans @/lib/plans, meme
-        // raison que `plan` ci-dessus.
-        validator: { input: z.enum(['monthly', 'yearly']) },
-      },
       // Archivage : voir hooks.before ci-dessous. input:false car seul le
       // hook (cote serveur, via internalAdapter.updateUser) doit pouvoir le
       // poser - jamais le client.
@@ -185,6 +166,13 @@ export const auth = betterAuth({
         type: 'string',
         required: false,
         defaultValue: 'actif',
+        input: false,
+      },
+      // Auteur de la suspension (D52) : lu a la connexion pour distinguer une
+      // suspension par le cabinet d'une suspension par le SuperAdmin.
+      suspendedBy: {
+        type: 'string',
+        required: false,
         input: false,
       },
     },
@@ -223,6 +211,19 @@ export const auth = betterAuth({
             OAUTH_PROVIDER_LABELS[account.providerId] ?? account.providerId;
         }
         return;
+      }
+
+      // Le titulaire du cabinet ne peut pas supprimer son compte tant que son
+      // abonnement court (D67) : refuse des la demande, et a nouveau a la
+      // confirmation (l'abonnement a pu demarrer entre-temps).
+      if (ctx.path === '/delete-user' || isCallbackGet) {
+        const requester = await getSessionFromCtx(ctx, { disableCookieCache: true }).catch(() => null);
+        if (requester && (await accountDeletionBlock(requester.user.id))) {
+          throw new APIError('FORBIDDEN', {
+            code: ACCOUNT_DELETION_BLOCKED_CODE,
+            message: "Resiliez d'abord l'abonnement du cabinet avant de supprimer ce compte.",
+          });
+        }
       }
 
       if (!isCallbackGet && !isDeleteWithToken) return;
@@ -324,9 +325,17 @@ export const auth = betterAuth({
         deleteSessionCookie(ctx, true);
         ctx.context.setNewSession(null);
 
+        // D52 : suspendu par son cabinet, l'utilisateur doit s'adresser a son
+        // cabinet et non au support SocialFlow. Toute autre valeur
+        // (SUPER_ADMIN ou null, anterieur au champ) garde le message d'origine.
+        const byCabinet =
+          (freshSession.user as { suspendedBy?: string | null }).suspendedBy === 'CABINET_RH';
+        const apiCode = byCabinet ? 'USER_SUSPENDED_BY_CABINET' : 'USER_SUSPENDED';
+        const redirectCode = byCabinet ? 'user_suspended_by_cabinet' : 'user_suspended';
+
         if (ctx.path === '/sign-in/email') {
           throw new APIError('FORBIDDEN', {
-            code: 'USER_SUSPENDED',
+            code: apiCode,
             message: 'Ce compte a ete suspendu.',
           });
         }
@@ -334,11 +343,11 @@ export const auth = betterAuth({
         if (ctx.path === '/magic-link/verify' || ctx.path.startsWith('/callback/')) {
           const errorURL = ctx.context.options.onAPIError?.errorURL || '/erreur-connexion';
           const separator = errorURL.includes('?') ? '&' : '?';
-          throw ctx.redirect(`${errorURL}${separator}error=user_suspended`);
+          throw ctx.redirect(`${errorURL}${separator}error=${redirectCode}`);
         }
 
         throw new APIError('FORBIDDEN', {
-          code: 'USER_SUSPENDED',
+          code: apiCode,
           message: 'Ce compte a ete suspendu.',
         });
       }
@@ -353,13 +362,15 @@ export const auth = betterAuth({
       if (freshSession?.user.cabinetId) {
         const cabinet = await prisma.cabinet.findUnique({
           where: { id: freshSession.user.cabinetId },
-          select: { status: true, deletedAt: true },
+          select: { status: true, suspensionType: true, deletedAt: true },
         });
         // Un cabinet archive (voir api/admin/cabinets/[id]) bloque l'acces au
         // meme titre qu'un cabinet suspendu, avec la meme erreur : du point
         // de vue de l'utilisateur bloque, la distinction (temporaire vs en
         // cours de purge) n'a pas a etre divulguee.
-        if (cabinet?.status === 'suspendu' || cabinet?.deletedAt) {
+        // D71 : une suspension en lecture seule laisse se connecter ; seul le
+        // blocage total (ou une suspension anterieure a D71) refuse la connexion.
+        if (cabinet && isLoginBlocked(cabinet)) {
           await ctx.context.internalAdapter.deleteSession(freshSession.session.token);
           deleteSessionCookie(ctx, true);
           ctx.context.setNewSession(null);
@@ -434,82 +445,22 @@ export const auth = betterAuth({
         : false;
       if (!success) return;
 
-      // Ni /sign-up/email ni /update-user (les deux seuls chemins qui
-      // ecrivent `plan`, voir additionalFields.plan ci-dessus) ne doivent
-      // persister un plan invalide (supprime/archive entre le chargement du
-      // formulaire et la soumission, ou valeur forgee) - le validateur zod
-      // ne verifie que le format. Fait en `after`, pas en `before` : une
-      // APIError levee depuis un hook `before` n'est pas convertie en
-      // reponse HTTP propre pour un appel serveur direct (auth.api.*),
-      // contrairement a `after` (verifie par les tests de ce fichier).
-      let validatedPlan: { planId: string; billingPeriod: 'monthly' | 'yearly' } | null = null;
-      if (ctx.path === '/sign-up/email' || ctx.path === '/update-user') {
-        const requestedPlan = (ctx.body as { plan?: string } | undefined)?.plan;
-        if (requestedPlan !== undefined) {
-          const validPlan = await prisma.pricingPlan.findFirst({
-            where: { planId: requestedPlan, archivedAt: null, custom: false },
-            select: { id: true },
-          });
-          if (!validPlan) {
-            const userId =
-              ctx.path === '/sign-up/email' ? ctx.context.newSession?.user.id : ctx.context.session?.user.id;
-            if (userId) {
-              await ctx.context.internalAdapter.updateUser(userId, { plan: null });
-            }
-            // /update-user est une action explicite qui doit clairement
-            // echouer ; /sign-up/email continue normalement (voir le bloc
-            // juste en dessous, qui cree toujours le Cabinet) plutot que
-            // d'abandonner tout le compte pour un simple plan invalide.
-            if (ctx.path === '/update-user') {
-              throw new APIError('BAD_REQUEST', {
-                code: 'INVALID_PLAN',
-                message: "Ce plan n'existe pas ou n'est plus disponible.",
-              });
-            }
-          } else {
-            const requestedBilling = (ctx.body as { billingPeriod?: string } | undefined)?.billingPeriod;
-            validatedPlan = { planId: requestedPlan, billingPeriod: requestedBilling === 'yearly' ? 'yearly' : 'monthly' };
-          }
-        }
-      }
-
       // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : l'auto-
-      // inscription cree toujours un Cabinet RH (role par defaut ci-dessus).
-      // On lui cree son Cabinet ici plutot que de le faire poser par le
-      // client, pour la meme raison que role/cabinetId sont input:false.
-      // S'applique aussi a l'inscription faite par la route d'acceptation
-      // d'invitation (qui reutilise ce meme endpoint) : elle nettoie ensuite
-      // ce Cabinet "fantome" en reposant le role/cabinetId de l'invitation
-      // (voir apps/web/src/app/api/invitations/accept/route.ts) - plus
-      // robuste qu'un signal par en-tete, qui ne survit pas de facon fiable
-      // au passage par les before-hooks de better-auth (defuReplaceArrays).
+      // inscription par email cree toujours un Cabinet RH (role par defaut
+      // ci-dessus) et son Cabinet, ici plutot que pose par le client, pour la
+      // meme raison que role/cabinetId sont input:false. Les invitations ne
+      // passent plus par ce chemin (lib/invitation-accept.ts, C6) ; l'inscription
+      // Google/Microsoft est finalisee par api/register/finalize.
+      //
+      // Le plan choisi (D55) n'est pas pose ici : api/register/finalize le pose
+      // sur le cabinet apres l'inscription, pour l'email comme pour OAuth.
       if (ctx.path === '/sign-up/email') {
         const newUser = ctx.context.newSession?.user;
         if (newUser?.role === 'CABINET_RH' && !newUser.cabinetId) {
-          const cabinet = await prisma.cabinet.create({
-            data: { name: newUser.cabinetName?.trim() || `Cabinet de ${newUser.name}` },
-          });
-          await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId: cabinet.id });
-          await prisma.auditLog.create({
-            data: { action: 'CABINET_CREATED', actorId: newUser.id, cabinetId: cabinet.id },
-          });
-
-          if (validatedPlan) {
-            // Best-effort : un souci Stripe ne doit pas faire echouer une
-            // inscription par ailleurs reussie. Cabinet.stripeCustomerId
-            // reste alors simplement null, comme un cabinet qui n'a pas
-            // encore de plan.
-            await provisionStripeTrial(cabinet.id, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
-          }
+          const cabinetId = await createCabinetForOwner(newUser, null);
+          await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId });
         }
         return;
-      }
-
-      if (ctx.path === '/update-user' && validatedPlan) {
-        const cabinetId = ctx.context.session?.user.cabinetId;
-        if (cabinetId) {
-          await provisionStripeTrial(cabinetId, validatedPlan.planId, validatedPlan.billingPeriod).catch(() => {});
-        }
       }
 
       const session = ctx.context.session;

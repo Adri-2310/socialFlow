@@ -2,11 +2,14 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_REQUEST: 'Formulaire incomplet.',
   INVALID_TOKEN: "Ce lien d'invitation n'est plus valable.",
+  EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email. Connectez-vous.',
+  CABINET_READ_ONLY:
+    "Ce cabinet ne peut pas accueillir de nouveau compte pour le moment. Contactez la personne qui vous a invité.",
   PASSWORD_TOO_SHORT: 'Le mot de passe doit contenir au moins 8 caractères.',
   PASSWORD_TOO_LONG: 'Le mot de passe est trop long.',
 };
@@ -18,6 +21,7 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,16 +91,29 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
         <label htmlFor="invite-password" className="block text-sm font-medium text-foreground">
           Mot de passe
         </label>
-        <input
-          id="invite-password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          placeholder="8 caractères minimum"
-        />
+        <div className="relative mt-1.5">
+          <input
+            id="invite-password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-lg border border-input bg-background py-2 pl-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="8 caractères minimum"
+          />
+          {/* Un seul bouton pour les deux champs, comme reset-password-form.tsx. */}
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={
+              showPassword ? 'Masquer les mots de passe' : 'Afficher les mots de passe'
+            }
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       <div>
@@ -105,7 +122,7 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
         </label>
         <input
           id="invite-confirm-password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           autoComplete="new-password"
           required
           value={confirmPassword}
@@ -115,7 +132,7 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
         />
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
 
       <button
         type="submit"

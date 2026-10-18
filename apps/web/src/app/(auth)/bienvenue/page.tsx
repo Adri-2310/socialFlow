@@ -4,40 +4,48 @@ import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
-import { authClient, useSession } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth-client';
 import { isPlanId, type BillingPeriod } from '@/lib/plans';
+
+// Delai minimal d'affichage de l'ecran de bienvenue.
+const MIN_DISPLAY_MS = 1400;
 
 function WelcomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const finalized = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push('/dashboard');
-      router.refresh();
-    }, 1400);
+    // Attend la session : sans elle on ne sait pas encore s'il faut finaliser.
+    if (isPending || finalized.current) return;
+    finalized.current = true;
 
-    return () => clearTimeout(timer);
-  }, [router]);
-
-  useEffect(() => {
     const plan = searchParams.get('plan');
     const billing = searchParams.get('billing');
+    const startedAt = Date.now();
 
-    // Un compte cree via OAuth n'a pas encore de formule : on la finalise ici,
-    // apres coup, car elle ne peut pas transiter par la redirection OAuth elle-meme.
-    if (finalized.current || !session?.user || session.user.plan || !isPlanId(plan)) {
-      return;
-    }
-
-    finalized.current = true;
-    authClient.updateUser({
-      plan,
-      billingPeriod: (billing === 'yearly' ? 'yearly' : 'monthly') satisfies BillingPeriod,
-    });
-  }, [searchParams, session]);
+    (async () => {
+      // Finalise l'inscription du titulaire (D55) : cree son cabinet s'il n'existe
+      // pas encore (inscription Google/Microsoft) et y pose le plan choisi, une
+      // seule fois. Le plan ne peut pas transiter par la redirection OAuth elle-meme.
+      if (session?.user && (isPlanId(plan) || !session.user.cabinetId)) {
+        await fetch('/api/register/finalize', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            ...(isPlanId(plan) ? { plan } : {}),
+            billingPeriod: (billing === 'yearly' ? 'yearly' : 'monthly') satisfies BillingPeriod,
+          }),
+        }).catch(() => undefined);
+      }
+      const remaining = Math.max(0, MIN_DISPLAY_MS - (Date.now() - startedAt));
+      setTimeout(() => {
+        router.push('/dashboard');
+        router.refresh();
+      }, remaining);
+    })();
+  }, [isPending, session, searchParams, router]);
 
   const firstName = session?.user.name?.split(' ')[0];
 

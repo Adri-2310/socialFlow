@@ -13,7 +13,6 @@ export async function getPricingPlans(): Promise<Plan[]> {
     description: row.description,
     monthlyPrice: row.monthlyPrice,
     yearlyPrice: row.yearlyPrice,
-    custom: row.custom,
     highlighted: row.highlighted,
     badge: row.badge,
     features: row.features,

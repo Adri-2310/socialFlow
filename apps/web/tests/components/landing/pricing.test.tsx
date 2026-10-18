@@ -12,7 +12,6 @@ const mockPlans: Plan[] = [
     description: 'Pour les petits cabinets qui démarrent.',
     monthlyPrice: 49,
     yearlyPrice: 39,
-    custom: false,
     highlighted: false,
     badge: null,
     features: ["Jusqu'à 5 entreprises clientes"],
@@ -23,7 +22,6 @@ const mockPlans: Plan[] = [
     description: 'Pour les cabinets en croissance.',
     monthlyPrice: 129,
     yearlyPrice: 103,
-    custom: false,
     highlighted: true,
     badge: 'Le plus choisi',
     features: ["Jusqu'à 50 entreprises clientes"],
@@ -32,9 +30,8 @@ const mockPlans: Plan[] = [
     id: 'enterprise',
     name: 'Enterprise',
     description: 'Pour les grands secrétariats sociaux.',
-    monthlyPrice: null,
-    yearlyPrice: null,
-    custom: true,
+    monthlyPrice: 750,
+    yearlyPrice: 600,
     highlighted: false,
     badge: null,
     features: ['Entreprises illimitées'],
@@ -54,9 +51,14 @@ describe('Pricing', () => {
 
     fireEvent.click(screen.getByText(/Annuel/));
 
-    expect(screen.getByText('39')).toBeInTheDocument();
-    expect(screen.getByText('103')).toBeInTheDocument();
+    // D58 : en annuel on affiche le total de l'annee (12 x le prix mensuel
+    // equivalent), le cout mensuel n'etant qu'une information.
+    expect(screen.getByText('468')).toBeInTheDocument();
+    expect(screen.getByText('1236')).toBeInTheDocument();
+    expect(screen.getAllByText('€/an').length).toBeGreaterThan(0);
+    expect(screen.getByText('soit 39 € par mois, facturé une fois par an')).toBeInTheDocument();
     expect(screen.queryByText('49')).not.toBeInTheDocument();
+    expect(screen.queryByText('39')).not.toBeInTheDocument();
   });
 
   it('revient aux prix mensuels après un second clic sur "Mensuel"', () => {
@@ -68,9 +70,12 @@ describe('Pricing', () => {
     expect(screen.getByText('49')).toBeInTheDocument();
   });
 
-  it('affiche "Sur devis" pour le plan Enterprise, sans bouton de facturation', () => {
+  it('affiche un prix pour chacun des 3 plans, sans devis', () => {
     render(<Pricing plans={mockPlans} />);
 
-    expect(screen.getByText('Sur devis')).toBeInTheDocument();
+    expect(screen.queryByText('Sur devis')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nous contacter')).not.toBeInTheDocument();
+    expect(screen.getByText('750')).toBeInTheDocument();
+    expect(screen.getAllByText("Démarrer l'essai")).toHaveLength(3);
   });
 });

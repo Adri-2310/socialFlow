@@ -32,6 +32,7 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 | [Calendrier et échéances](modules/calendrier-echeances.md) | Échéances légales et internes, rappels |
 | [Collaboration](modules/collaboration.md) | Demandes, messagerie, documents, notifications |
 | [Personnalisation](modules/personnalisation.md) | Branding, modèles d'emails, white-label |
+| [Stockage des fichiers](modules/stockage.md) | Vercel Blob, avatars, documents, quotas, téléchargement audité |
 | [Analytics et intelligence](modules/intelligence.md) | Tableaux de bord, anomalies, assistant (proposition) |
 
 ## Autres documents
@@ -55,10 +56,9 @@ Toute nouvelle décision s'ajoute dans `DECISIONS.md` (numéro suivant, date) **
 |---|---|---|
 | 1 | Durée de conservation du journal d'audit | `FONCTIONNEMENT.md` § 12, `RGPD.md` |
 | 2 | Fiche fiscale 281.10 générée dans l'application ? | `roles/05-collaborateur.md`, `modules/integrations.md` § 6 |
-| 3 | Délai de grâce de 14 jours confirmé ? | `roles/01-superadmin.md` § 7 |
+| 3 | ~~Délai de grâce de 14 jours~~ : fixé à 7 jours (D57) | `DECISIONS.md` |
 | 4 | Barèmes : détection automatique + activation validée par le SuperAdmin ? | `roles/01-superadmin.md` § 7, `modules/paie.md` § 5 |
 | 5 | Accès à des fiches réelles anonymisées pour les cas de référence ? | `modules/paie.md` § 8 |
 | 6 | Catégorie d'employeur pour les cotisations patronales | `modules/paie.md` § 8 |
 | 7 | Priorité, fournisseur et budget du module IA | `modules/intelligence.md` § 4 |
 | 8 | Taille maximale d'un document déposé | `modules/collaboration.md` § 3 |
-| 9 | Choix du stockage de fichiers (Vercel Blob ?) | `FONCTIONNEMENT.md` § 3 |

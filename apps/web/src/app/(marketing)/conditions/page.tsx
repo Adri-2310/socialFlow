@@ -25,7 +25,7 @@ const sections = [
   {
     title: '3. Abonnement et facturation',
     body: [
-      "L'abonnement est souscrit par le cabinet RH ou l'entreprise cliente, selon la formule choisie (voir la page Tarifs). La facturation est mensuelle ou annuelle, sans engagement de durée sauf mention contraire lors de la souscription. Un essai de 30 jours est proposé sans carte bancaire.",
+      "L'abonnement est souscrit par le cabinet RH ou l'entreprise cliente, selon la formule choisie (voir la page Tarifs). La facturation est mensuelle ou annuelle, sans engagement de durée sauf mention contraire lors de la souscription. Un essai gratuit de 30 jours est proposé : une carte bancaire est demandée à l'inscription et n'est débitée qu'à la fin de l'essai, sauf résiliation avant cette date.",
     ],
   },
   {

@@ -13,6 +13,8 @@ export type AuditLogEntry = {
   actorName: string | null;
   cabinetName: string | null;
   targetUserName: string | null;
+  // D71 : type et motif d'une suspension de cabinet.
+  suspension?: { mode: 'READ_ONLY' | 'BLOCKED'; reason: string | null } | null;
 };
 
 const PAGE_SIZE = 25;
@@ -40,7 +42,9 @@ function auditMessage(log: AuditLogEntry): string {
     case 'CABINET_CREATED':
       return `« ${cabinetName} » a créé son compte.`;
     case 'CABINET_SUSPENDED':
-      return `« ${cabinetName} » a été suspendu par ${log.actorName ?? 'un administrateur'}.`;
+      return `« ${cabinetName} » a été suspendu${
+        log.suspension ? (log.suspension.mode === 'READ_ONLY' ? ' en lecture seule' : ' avec blocage des connexions') : ''
+      } par ${log.actorName ?? 'un administrateur'}.${log.suspension?.reason ? ` Motif : ${log.suspension.reason}` : ''}`;
     case 'CABINET_REACTIVATED':
       return `« ${cabinetName} » a été réactivé par ${log.actorName ?? 'un administrateur'}.`;
     case 'CABINET_ARCHIVED':
@@ -63,6 +67,30 @@ function auditMessage(log: AuditLogEntry): string {
       return `Un plan tarifaire a été archivé par ${log.actorName ?? 'un administrateur'}.`;
     case 'PRICING_PLAN_RESTORED':
       return `Un plan tarifaire a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'SUBSCRIPTION_CANCEL_SCHEDULED':
+      return `« ${cabinetName} » : résiliation programmée par ${log.actorName ?? 'le titulaire'}.`;
+    case 'SUBSCRIPTION_CANCEL_REVERTED':
+      return `« ${cabinetName} » : résiliation annulée par ${log.actorName ?? 'le titulaire'}.`;
+    case 'PAYMENT_METHOD_UPDATED':
+      return `« ${cabinetName} » : carte bancaire modifiée par ${log.actorName ?? 'le titulaire'}.`;
+    case 'PLAN_CHANGE_SCHEDULED':
+      return `« ${cabinetName} » : changement de plan programmé par ${log.actorName ?? 'le titulaire'}.`;
+    case 'PLAN_CHANGE_CANCELLED':
+      return `« ${cabinetName} » : changement de plan annulé par ${log.actorName ?? 'le titulaire'}.`;
+    case 'CABINET_SETTINGS_UPDATED':
+      return `« ${cabinetName} » : paramètres modifiés par ${log.actorName ?? 'le titulaire'}.`;
+    case 'BILLING_STATUS_CHANGED':
+      return `Abonnement de « ${cabinetName} » mis à jour par Stripe.`;
+    case 'USER_EMAIL_CHANGED':
+      return `L'email de « ${targetUserName} » a été modifié par ${log.actorName ?? 'un administrateur'}.`;
+    case 'INVITATION_SENT':
+      return `« ${cabinetName} » : une invitation a été envoyée par ${log.actorName ?? 'un utilisateur'}.`;
+    case 'INVITATION_RESENT':
+      return `« ${cabinetName} » : une invitation a été renvoyée par ${log.actorName ?? 'un utilisateur'}.`;
+    case 'INVITATION_REVOKED':
+      return `« ${cabinetName} » : une invitation a été révoquée par ${log.actorName ?? 'un utilisateur'}.`;
+    case 'INVITATION_ACCEPTED':
+      return `« ${cabinetName} » : ${log.actorName ?? 'un utilisateur'} a accepté une invitation.`;
     default:
       return log.action;
   }

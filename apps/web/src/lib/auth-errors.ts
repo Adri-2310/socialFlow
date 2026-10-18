@@ -24,8 +24,12 @@ const MESSAGES: Record<string, string> = {
   SESSION_EXPIRED: 'Session expirée. Reconnectez-vous.',
   ACCOUNT_DELETED:
     `Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à ${ACCOUNT_DELETION_RETENTION_DAYS} jours après la suppression).`,
+  ACCOUNT_DELETION_BLOCKED_BY_SUBSCRIPTION:
+    'Vous ne pouvez pas supprimer votre compte tant que l’abonnement de votre cabinet est en cours. Résiliez-le d’abord depuis « Mon abonnement ».',
   CABINET_SUSPENDED: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
   USER_SUSPENDED: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
+  USER_SUSPENDED_BY_CABINET:
+    'Votre accès a été suspendu par votre cabinet. Contactez le responsable de votre cabinet pour le réactiver.',
   INVALID_PLAN: "Ce plan n'existe pas ou n'est plus disponible. Choisissez-en un autre.",
 
   // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
@@ -53,6 +57,8 @@ const MESSAGES: Record<string, string> = {
     `Ce compte a été supprimé. Contactez le support si vous souhaitez le récupérer (possible jusqu'à ${ACCOUNT_DELETION_RETENTION_DAYS} jours après la suppression).`,
   cabinet_suspended: 'Ce cabinet a été suspendu. Contactez le support pour plus d’informations.',
   user_suspended: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
+  user_suspended_by_cabinet:
+    'Votre accès a été suspendu par votre cabinet. Contactez le responsable de votre cabinet pour le réactiver.',
   internal_server_error: 'Erreur interne. Réessayez dans quelques instants.',
 
   // Lien magique (redirection depuis l'email cliqué).

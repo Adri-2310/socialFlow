@@ -152,7 +152,8 @@ describe('CabinetsTable - suspension et reactivation', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/admin/cabinets/1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'suspendu' }),
+      // D71 : lecture seule par defaut, sans motif.
+      body: JSON.stringify({ status: 'suspendu', mode: 'READ_ONLY', reason: '' }),
     }));
     await waitFor(() => expect(refreshMock).toHaveBeenCalled());
     expect(screen.queryByText('Suspendre ce cabinet ?')).not.toBeInTheDocument();
@@ -172,6 +173,53 @@ describe('CabinetsTable - suspension et reactivation', () => {
       ),
     );
     await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+  });
+
+  it('precise la nature de la suspension dans le badge (D71)', () => {
+    render(
+      <CabinetsTable
+        cabinets={[
+          { id: 'a', name: 'Cabinet Lecture', status: 'suspendu', suspensionType: 'READ_ONLY', plan: 'pro', gestionnaireCount: 1, createdAt: '2026-03-01T00:00:00.000Z', deletedAt: null },
+          { id: 'b', name: 'Cabinet Bloque', status: 'suspendu', suspensionType: 'BLOCKED', plan: 'pro', gestionnaireCount: 1, createdAt: '2026-03-02T00:00:00.000Z', deletedAt: null },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Suspendu · lecture seule')).toBeInTheDocument();
+    expect(screen.getByText('Suspendu · bloqué')).toBeInTheDocument();
+  });
+
+  it('propose de bloquer les connexions seulement pour une lecture seule, avec un motif obligatoire', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <CabinetsTable
+        cabinets={[
+          { id: 'a', name: 'Cabinet Lecture', status: 'suspendu', suspensionType: 'READ_ONLY', plan: 'pro', gestionnaireCount: 1, createdAt: '2026-03-01T00:00:00.000Z', deletedAt: null },
+          { id: 'b', name: 'Cabinet Bloque', status: 'suspendu', suspensionType: 'BLOCKED', plan: 'pro', gestionnaireCount: 1, createdAt: '2026-03-02T00:00:00.000Z', deletedAt: null },
+        ]}
+      />,
+    );
+
+    // Une seule ligne propose "Bloquer" : celle qui est en lecture seule.
+    expect(screen.getAllByRole('button', { name: 'Bloquer' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Bloquer' }));
+
+    expect(screen.getByText('Bloquer les connexions ?')).toBeInTheDocument();
+    const confirm = screen.getByRole('button', { name: 'Bloquer les connexions' });
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/Motif/), { target: { value: 'Fraude suspectée' } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/cabinets/a', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'suspendu', mode: 'BLOCKED', reason: 'Fraude suspectée' }),
+      }),
+    );
   });
 
   it("affiche un message d'erreur si la requete echoue", async () => {

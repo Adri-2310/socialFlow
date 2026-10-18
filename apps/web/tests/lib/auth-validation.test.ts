@@ -41,6 +41,7 @@ vi.mock('@/lib/stripe', () => ({
 const { auth } = await import('@/lib/auth');
 const { prisma } = await import('@/lib/prisma');
 const email = await import('@/lib/email');
+const { POST: finalizeRoute } = await import('@/app/api/register/finalize/route');
 
 const PASSWORD = 'InitialPass123!';
 
@@ -118,22 +119,19 @@ describe('inscription : entrees invalides', () => {
     expect(await prisma.user.findUnique({ where: { email: 'pas-un-email' } })).toBeNull();
   });
 
-  it("cree quand meme le compte et son Cabinet si le `plan` fourni n'existe pas, mais sans le retenir", async () => {
-    const mail = testEmail('signup-plan-invalide');
+  it('cree le compte et son Cabinet sans plan : le plan est pose apres coup par la finalisation', async () => {
+    const mail = testEmail('signup-sans-plan');
     const res = await auth.api.signUpEmail({
-      body: { name: 'X', cabinetName: 'Cabinet X', email: mail, password: PASSWORD, plan: 'plan-inexistant' },
+      body: { name: 'X', cabinetName: 'Cabinet X', email: mail, password: PASSWORD },
       asResponse: true,
     });
 
-    // Un plan invalide au moment de l'inscription (course entre le
-    // chargement du formulaire et la soumission, ou valeur forgee) ne doit
-    // pas empecher la creation du compte ni de son Cabinet - seul le plan
-    // lui-meme est ignore (voir hooks.after dans lib/auth.ts).
     expect(res.status).toBe(200);
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBeNull();
     expect(user.cabinetId).not.toBeNull();
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBeNull();
 
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'CABINET_CREATED', actorId: user.id },
@@ -212,95 +210,132 @@ describe('profil : champs acceptes et refuses', () => {
     expect(res.status).toBe(401);
   });
 
-  it("refuse un `plan` qui n'existe pas et un `billingPeriod` hors de l'enum autorise", async () => {
-    const mail = testEmail('plan-invalide');
+  it("ignore un `plan` ou `billingPeriod` envoye a update-user : ils ne sont plus des champs de l'utilisateur (C2)", async () => {
+    const mail = testEmail('update-user-plan');
     const cj = cookieJar();
     cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
 
-    // Empeche un utilisateur connecte de s'auto-attribuer une formule
-    // arbitraire via update-user (voir doc/analysis/AUDIT_SECURITE_AUTH.md,
-    // finding #2) : plan n'est plus un enum fige (voir hooks.before dans
-    // lib/auth.ts), donc verifie desormais que le plan existe reellement.
-    const resPlan = await auth.api.updateUser({
-      body: { plan: 'plan-inexistant' },
+    await auth.api.updateUser({
+      body: { name: 'Nouveau nom', plan: 'enterprise', billingPeriod: 'yearly' },
       headers: cj.headers(),
       asResponse: true,
-    });
-    expect(resPlan.status).toBe(400);
-    expect((await resPlan.json()).code).toBe('INVALID_PLAN');
+    } as never);
 
-    const resBilling = await auth.api.updateUser({
-      body: { billingPeriod: 'hebdomadaire' },
-      headers: cj.headers(),
-      asResponse: true,
-    });
-    expect(resBilling.status).toBe(400);
-    expect((await resBilling.json()).code).toBe('VALIDATION_ERROR');
-
+    // Le plan n'appartient qu'au cabinet (D55) et ne se pose que par la
+    // finalisation : update-user n'y touche pas.
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBeNull();
-    expect(user.billingPeriod).toBe('monthly');
+    expect(user.name).toBe('Nouveau nom');
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBeNull();
+    expect(cabinet.billingPeriod).toBeNull();
   });
+});
 
-  it('accepte une valeur de `plan` et `billingPeriod` faisant partie de l enum', async () => {
-    const mail = testEmail('plan-valide');
+function finaliser(body: unknown, cj?: ReturnType<typeof cookieJar>) {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  const cookie = cj?.headers().get('cookie');
+  if (cookie) headers.cookie = cookie;
+  return finalizeRoute(
+    new Request('http://localhost:3000/api/register/finalize', { method: 'POST', headers, body: JSON.stringify(body) }),
+  );
+}
+
+describe('finalisation de l inscription du titulaire (D55, C2)', () => {
+  async function inscrire(label: string, cabinetName = 'Cabinet X') {
+    const mail = testEmail(label);
     const cj = cookieJar();
-    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
-
-    const res = await auth.api.updateUser({
-      body: { plan: 'enterprise', billingPeriod: 'yearly' },
-      headers: cj.headers(),
-      asResponse: true,
-    });
-    expect(res.status).toBe(200);
-
+    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', cabinetName, email: mail, password: PASSWORD }, asResponse: true }));
     const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(user.plan).toBe('enterprise');
-    expect(user.billingPeriod).toBe('yearly');
+    return { mail, cj, user };
+  }
+
+  it('refuse sans session (401) et a un role autre que Cabinet RH (403)', async () => {
+    expect((await finaliser({ plan: 'starter' })).status).toBe(401);
+
+    const { cj, user } = await inscrire('finalise-role');
+    await prisma.user.update({ where: { id: user.id }, data: { role: 'GESTIONNAIRE_RH' } });
+    expect((await finaliser({ plan: 'starter' }, cj)).status).toBe(403);
   });
 
-  it("provisionne un essai Stripe des l'inscription quand un plan valide est fourni", async () => {
-    stripePricesList.mockResolvedValue({
-      data: [{ id: 'price_starter_m', metadata: { planId: 'starter', billingPeriod: 'monthly' } }],
-    });
-    const mail = testEmail('signup-avec-plan');
+  it("pose le plan sur le cabinet cree a l'inscription, sans creer d'abonnement Stripe (D25)", async () => {
+    const { cj, user } = await inscrire('finalise-plan');
 
-    const res = await auth.api.signUpEmail({
-      body: { name: 'X', cabinetName: 'Cabinet X', email: mail, password: PASSWORD, plan: 'starter' },
-      asResponse: true,
-    });
+    const res = await finaliser({ plan: 'enterprise', billingPeriod: 'yearly' }, cj);
     expect(res.status).toBe(200);
-
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
-    expect(stripeCustomersCreate).toHaveBeenCalledWith(expect.objectContaining({ metadata: { cabinetId: user.cabinetId } }));
-    expect(stripeSubscriptionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ items: [{ price: 'price_starter_m' }], trial_period_days: 30 }),
-    );
+    expect((await res.json()).created).toBe(false);
 
     const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
-    expect(cabinet.stripeCustomerId).toMatch(/^cus_test_\d+$/);
+    expect(cabinet.planId).toBe('enterprise');
+    expect(cabinet.billingPeriod).toBe('yearly');
+    expect(cabinet.billingStatus).toBe('EN_ATTENTE_PAIEMENT');
+    expect(cabinet.stripeCustomerId).toBeNull();
+    expect(stripeCustomersCreate).not.toHaveBeenCalled();
+    expect(stripeSubscriptionsCreate).not.toHaveBeenCalled();
   });
 
-  it("provisionne un essai Stripe lors de la finalisation du plan apres une inscription OAuth (update-user)", async () => {
-    stripePricesList.mockResolvedValue({
-      data: [{ id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' } }],
-    });
-    const mail = testEmail('oauth-finalisation-plan');
-    const cj = cookieJar();
-    cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
+  it('ignore un plan inexistant et une periode hors liste, sans erreur', async () => {
+    const { cj, user } = await inscrire('finalise-invalide');
 
-    const res = await auth.api.updateUser({
-      body: { plan: 'pro', billingPeriod: 'yearly' },
-      headers: cj.headers(),
-      asResponse: true,
-    });
-    expect(res.status).toBe(200);
+    expect((await finaliser({ plan: 'plan-inexistant', billingPeriod: 'hebdomadaire' }, cj)).status).toBe(200);
 
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
     const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
-    expect(cabinet.stripeCustomerId).toMatch(/^cus_test_\d+$/);
-    expect(stripeSubscriptionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ items: [{ price: 'price_pro_y' }] }),
-    );
+    expect(cabinet.planId).toBeNull();
+    expect(cabinet.billingPeriod).toBeNull();
+
+    // Plan valide, periode inconnue : mensuel par defaut.
+    expect((await finaliser({ plan: 'starter', billingPeriod: 'hebdomadaire' }, cj)).status).toBe(200);
+    expect((await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } })).billingPeriod).toBe('monthly');
+  });
+
+  it('ne change pas le plan d un cabinet qui en a deja un (pas de quotas gratuits)', async () => {
+    const { cj, user } = await inscrire('finalise-deja-pose');
+    await finaliser({ plan: 'starter' }, cj);
+
+    await finaliser({ plan: 'enterprise', billingPeriod: 'yearly' }, cj);
+
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: user.cabinetId! } });
+    expect(cabinet.planId).toBe('starter');
+    expect(cabinet.billingPeriod).toBe('monthly');
+  });
+
+  it('cree le cabinet d un titulaire inscrit par Google ou Microsoft, une seule fois', async () => {
+    // Compte tel que le laisse une inscription OAuth : aucun cabinet.
+    const { cj, user } = await inscrire('finalise-oauth', 'Ignore');
+    await prisma.user.update({ where: { id: user.id }, data: { cabinetId: null, cabinetName: null, name: 'Alice Martin' } });
+    await prisma.cabinet.delete({ where: { id: user.cabinetId! } });
+
+    const premiere = await finaliser({ plan: 'pro', billingPeriod: 'yearly' }, cj);
+    expect(premiere.status).toBe(201);
+    expect((await premiere.json()).created).toBe(true);
+
+    const apres = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(apres.cabinetId).not.toBeNull();
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: apres.cabinetId! } });
+    expect(cabinet.name).toBe('Cabinet de Alice Martin');
+    expect(cabinet.planId).toBe('pro');
+    expect(cabinet.billingPeriod).toBe('yearly');
+    expect(cabinet.billingStatus).toBe('EN_ATTENTE_PAIEMENT');
+    // Une seule entree pour le NOUVEAU cabinet (celle de l'inscription initiale
+    // pointait vers le cabinet supprime pour simuler l'OAuth).
+    expect(await prisma.auditLog.count({ where: { action: 'CABINET_CREATED', actorId: user.id, cabinetId: cabinet.id } })).toBe(1);
+
+    // Rejoue (double rendu cote client) : aucun second cabinet.
+    const seconde = await finaliser({ plan: 'pro', billingPeriod: 'yearly' }, cj);
+    expect(seconde.status).toBe(200);
+    expect((await seconde.json()).created).toBe(false);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).cabinetId).toBe(cabinet.id);
+    expect(await prisma.auditLog.count({ where: { action: 'CABINET_CREATED', actorId: user.id, cabinetId: cabinet.id } })).toBe(1);
+  });
+
+  it('cree le cabinet sans plan quand le plan demande est invalide', async () => {
+    const { cj, user } = await inscrire('finalise-oauth-invalide');
+    await prisma.user.update({ where: { id: user.id }, data: { cabinetId: null } });
+    await prisma.cabinet.delete({ where: { id: user.cabinetId! } });
+
+    expect((await finaliser({ plan: 'plan-inexistant' }, cj)).status).toBe(201);
+
+    const apres = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: apres.cabinetId! } });
+    expect(cabinet.planId).toBeNull();
   });
 });

@@ -6,7 +6,9 @@ import { DeleteAccount } from '@/components/auth/delete-account';
 import { InviteGestionnaire } from '@/components/dashboard/invite-gestionnaire';
 import { AppHeader } from '@/components/layout/app-header';
 import { requireSession } from '@/lib/require-session';
+import { roleDisplayLabel } from '@/lib/role-labels';
 import { prisma } from '@/lib/prisma';
+import { isSubscriptionBlockingDeletion } from '@/lib/account-deletion-guard';
 
 const BILLING_LABELS: Record<string, string> = {
   monthly: 'Mensuelle',
@@ -23,10 +25,13 @@ export const metadata: Metadata = {
 export default async function ProfilPage() {
   const { user } = await requireSession();
 
-  const [plan, cabinet] = await Promise.all([
-    user.plan ? prisma.pricingPlan.findUnique({ where: { planId: user.plan } }) : null,
-    user.cabinetId ? prisma.cabinet.findUnique({ where: { id: user.cabinetId } }) : null,
-  ]);
+  // D55 : la formule et la periode appartiennent au cabinet, pas a la personne.
+  const cabinet = user.cabinetId
+    ? await prisma.cabinet.findUnique({ where: { id: user.cabinetId } })
+    : null;
+  const plan = cabinet?.planId
+    ? await prisma.pricingPlan.findUnique({ where: { planId: cabinet.planId } })
+    : null;
 
   const memberSince = new Intl.DateTimeFormat('fr-BE', {
     day: 'numeric',
@@ -36,7 +41,7 @@ export default async function ProfilPage() {
 
   return (
     <>
-      <AppHeader userName={user.name} roleLabel={user.role ?? ''} />
+      <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} />
       <main>
         <section className="mx-auto max-w-2xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-border/60 bg-card/60 p-8 shadow-xl backdrop-blur-xl">
@@ -77,8 +82,8 @@ export default async function ProfilPage() {
               <div className="flex justify-between border-b border-border/60 pb-3">
                 <dt className="text-muted-foreground">Facturation</dt>
                 <dd className="font-medium text-foreground">
-                  {user.billingPeriod
-                    ? (BILLING_LABELS[user.billingPeriod] ?? user.billingPeriod)
+                  {cabinet?.billingPeriod
+                    ? (BILLING_LABELS[cabinet.billingPeriod] ?? cabinet.billingPeriod)
                     : '—'}
                 </dd>
               </div>
@@ -100,7 +105,11 @@ export default async function ProfilPage() {
             </div>
 
             <div className="mt-8 border-t border-border/60 pt-6">
-              <DeleteAccount />
+              <DeleteAccount
+                blockedBySubscription={
+                  user.role === 'CABINET_RH' && isSubscriptionBlockingDeletion(cabinet?.billingStatus)
+                }
+              />
             </div>
           </div>
         </section>

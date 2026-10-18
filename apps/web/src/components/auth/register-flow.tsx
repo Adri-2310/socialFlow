@@ -45,7 +45,7 @@ export function RegisterFlow({
               Choisissez votre formule
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              30 jours d&apos;essai gratuit, sans carte bancaire.
+              30 jours d&apos;essai gratuit : votre carte n&apos;est débitée qu&apos;à la fin de l&apos;essai.
             </p>
             <div className="mt-6">
               <PlanSelect plans={plans} onSelect={handleSelect} />
@@ -70,7 +70,7 @@ export function RegisterFlow({
               </span>
             </div>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Essai de 30 jours, sans carte bancaire.
+              Essai de 30 jours : carte demandée, débitée seulement à la fin de l&apos;essai.
             </p>
 
             <div className="mt-6">

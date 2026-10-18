@@ -4,7 +4,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { UserMenu } from '@/components/layout/user-menu';
 
 // Header partage par les pages sans sidebar admin (/dashboard generique,
-// /profil). AdminShell garde sa propre topbar (avec sa sidebar) mais
+// /profil). DashboardShell garde sa propre topbar (avec sa sidebar) mais
 // reutilise UserMenu pour le meme comportement de deconnexion/profil. Meme
 // logo que navbar.tsx/auth-brand-panel.tsx (Image /logo-simple.png), pas une
 // icone generique, pour rester coherent avec le reste de l'app.

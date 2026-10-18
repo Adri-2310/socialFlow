@@ -22,6 +22,8 @@ export default defineConfig({
     // avec celui de jsdom et casse Storage.getItem/setItem sans cette option.
     execArgv: ['--no-experimental-webstorage'],
     setupFiles: ['./tests/setup.ts'],
+    // Retire en fin de run les entrees d'audit orphelines laissees par les tests.
+    globalSetup: ['./tests/global-setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],
     // Les fichiers de tests d'auth partagent une seule base Neon et nettoient
     // leurs comptes par prefixe (`vitest-auth-`) en fin de fichier. Executes en

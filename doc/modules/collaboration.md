@@ -39,7 +39,7 @@ Demande
 | Entreprise | Certificat médical, contrat signé, pièces pour le gestionnaire | Admin entreprise, gestionnaire | Admin entreprise, gestionnaires assignés |
 | Salarié | Contrat, attestations, C4, 281.10, PDF des fiches | Gestionnaire (ou généré par le système) | Gestionnaires assignés, admin entreprise (sauf mention contraire), le salarié |
 
-- Stockage objet (Vercel Blob, à confirmer) ; base : métadonnées (nom, type MIME, taille, propriétaire, auteur).
+- Stockage objet (Vercel Blob, D54 ; voir `modules/stockage.md`) ; base : métadonnées (nom, type MIME, taille, propriétaire, auteur).
 - Types autorisés : PDF, JPG, PNG, CSV, XLSX ; 10 Mo maximum par fichier **[à confirmer]** ; contrôle du type réel du fichier, pas seulement de l'extension.
 - **Quota de stockage** du plan (D15) : la somme des tailles est contrôlée avant chaque dépôt (`403 QUOTA_EXCEEDED`).
 - Téléchargement via des URL signées de courte durée, jamais publiques.

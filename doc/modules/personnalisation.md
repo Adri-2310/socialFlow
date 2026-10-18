@@ -1,6 +1,6 @@
 # Module : personnalisation du cabinet et white-label
 
-> Statut : **à construire**. Décisions : D30, D33, D35.
+> Statut : **identité, logo, couleurs, emails au nom du cabinet et modèle d'invitation de gestionnaire construits** ; domaine personnalisé et autres types de modèles à venir. Décisions : D30, D33, D35.
 
 ## 1. Niveaux
 
@@ -35,7 +35,7 @@ EmailTemplate
 - Variables autorisées par type (liste fermée) : `{{cabinet_nom}}`, `{{entreprise_nom}}`, `{{destinataire_prenom}}`, `{{periode}}`, `{{date_limite}}`, `{{lien}}`, `{{nombre_fiches}}`… Une variable inconnue bloque l'enregistrement.
 - Le corps est du texte enrichi limité (gras, italique, liens, paragraphes), rendu dans la mise en page email commune (React Email ou équivalent) : le cabinet ne peut pas casser la mise en page ni injecter du HTML.
 - Aperçu avec des données fictives et envoi d'un test à soi-même.
-- Les emails de sécurité (connexion, mot de passe, 2FA) ne sont **pas** personnalisables.
+- Les emails de sécurité (connexion, mot de passe, 2FA) prennent l'**identité visuelle** du cabinet (nom, couleur, logo, expéditeur, D66) pour ses gestionnaires, administrateurs d'entreprise et collaborateurs ; le Cabinet RH (titulaire) et le SuperAdmin gardent l'identité SocialFlow (D72) mais leur **texte n'est pas modifiable** : pas de modèle personnalisé pour eux.
 
 ## 4. Domaine personnalisé (Enterprise)
 

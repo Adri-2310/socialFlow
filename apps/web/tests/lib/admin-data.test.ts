@@ -64,11 +64,13 @@ async function creerCabinetRH(label: string, plan?: 'starter' | 'pro' | 'enterpr
   const cj = cookieJar();
   cj.apply(
     await auth.api.signUpEmail({
-      body: { name: `Titulaire ${label}`, cabinetName: `Cabinet ${label}`, email: mail, password: PASSWORD, ...(plan ? { plan } : {}) },
+      body: { name: `Titulaire ${label}`, cabinetName: `Cabinet ${label}`, email: mail, password: PASSWORD },
       asResponse: true,
     }),
   );
   const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+  // D55, D73 : le plan appartient au cabinet et se pose apres l'inscription.
+  if (plan) await prisma.cabinet.update({ where: { id: user.cabinetId! }, data: { planId: plan } });
   return { mail, cj, user };
 }
 
@@ -436,7 +438,7 @@ describe('getPricingPlansConfig', () => {
     stripePricesList.mockResolvedValue({
       data: [
         { id: 'price_starter_m', metadata: { planId: 'starter', billingPeriod: 'monthly' }, unit_amount: 15000 },
-        { id: 'price_starter_y', metadata: { planId: 'starter', billingPeriod: 'yearly' }, unit_amount: 12000 },
+        { id: 'price_starter_y', metadata: { planId: 'starter', billingPeriod: 'yearly' }, unit_amount: 144000 },
       ],
     });
 
@@ -454,7 +456,7 @@ describe('getPricingPlansConfig', () => {
     stripePricesList.mockResolvedValue({
       data: [
         { id: 'price_pro_m', metadata: { planId: 'pro', billingPeriod: 'monthly' }, unit_amount: 30000 },
-        { id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' }, unit_amount: 24000 },
+        { id: 'price_pro_y', metadata: { planId: 'pro', billingPeriod: 'yearly' }, unit_amount: 288000 },
       ],
     });
 

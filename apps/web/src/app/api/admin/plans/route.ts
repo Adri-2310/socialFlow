@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
+import { stripeUnitAmountCents } from '@/lib/billing';
 
 type PlanCreateBody = {
   planId: string;
@@ -13,7 +14,14 @@ type PlanCreateBody = {
   highlighted: boolean;
   sortOrder: number;
   features: string[];
+  // Quotas (D15) : null = illimite, absent = inchange.
+  maxEntreprises?: number | null;
+  maxUtilisateurs?: number | null;
+  maxStorageMb?: number | null;
 };
+
+const isQuota = (v: unknown) =>
+  v === undefined || v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0);
 
 // Minuscules/chiffres/tirets uniquement : sert de metadata Stripe et
 // d'identifiant stable dans le code (voir PlanId dans lib/plans.ts).
@@ -31,6 +39,9 @@ function parseBody(body: unknown): PlanCreateBody | null {
   if (b.badge !== null && typeof b.badge !== 'string') return null;
   if (typeof b.highlighted !== 'boolean') return null;
   if (typeof b.sortOrder !== 'number') return null;
+  if (!isQuota(b.maxEntreprises) || !isQuota(b.maxUtilisateurs) || !isQuota(b.maxStorageMb)) {
+    return null;
+  }
   if (!Array.isArray(b.features) || !b.features.every((f) => typeof f === 'string')) return null;
 
   const features = (b.features as string[]).map((f) => f.trim()).filter(Boolean);
@@ -46,6 +57,9 @@ function parseBody(body: unknown): PlanCreateBody | null {
     highlighted: b.highlighted,
     sortOrder: b.sortOrder,
     features,
+    maxEntreprises: b.maxEntreprises as number | null | undefined,
+    maxUtilisateurs: b.maxUtilisateurs as number | null | undefined,
+    maxStorageMb: b.maxStorageMb as number | null | undefined,
   };
 }
 
@@ -79,7 +93,7 @@ export async function POST(request: Request) {
       await stripe.prices.create({
         product: product.id,
         currency: 'eur',
-        unit_amount: Math.round(body.monthlyPrice * 100),
+        unit_amount: stripeUnitAmountCents(body.monthlyPrice, 'monthly'),
         recurring: { interval: 'month' },
         metadata: { planId: body.planId, billingPeriod: 'monthly' },
       });
@@ -88,7 +102,8 @@ export async function POST(request: Request) {
       await stripe.prices.create({
         product: product.id,
         currency: 'eur',
-        unit_amount: Math.round(body.yearlyPrice * 100),
+        // D58 : prix mensuel equivalent, facture une fois par an (x12).
+        unit_amount: stripeUnitAmountCents(body.yearlyPrice, 'yearly'),
         recurring: { interval: 'year' },
         metadata: { planId: body.planId, billingPeriod: 'yearly' },
       });
@@ -108,6 +123,9 @@ export async function POST(request: Request) {
       highlighted: body.highlighted,
       sortOrder: body.sortOrder,
       features: body.features,
+      maxEntreprises: body.maxEntreprises ?? null,
+      maxUtilisateurs: body.maxUtilisateurs ?? null,
+      maxStorageMb: body.maxStorageMb ?? null,
     },
   });
   await prisma.auditLog.create({

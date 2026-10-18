@@ -17,7 +17,6 @@ const plans = [
     // avec le badge "Annuel -20%" affiche dans l'UI.
     monthlyPrice: 150,
     yearlyPrice: 120,
-    custom: false,
     highlighted: false,
     badge: null,
     features: [
@@ -28,6 +27,9 @@ const plans = [
       'Calendrier ONSS',
     ],
     sortOrder: 1,
+    maxEntreprises: 25,
+    maxUtilisateurs: 3,
+    maxStorageMb: 5120,
   },
   {
     planId: 'pro',
@@ -35,7 +37,6 @@ const plans = [
     description: 'Pour les cabinets en croissance.',
     monthlyPrice: 300,
     yearlyPrice: 240,
-    custom: false,
     highlighted: true,
     badge: 'Le plus choisi',
     features: [
@@ -47,6 +48,9 @@ const plans = [
       'Branding personnalisé',
     ],
     sortOrder: 2,
+    maxEntreprises: 100,
+    maxUtilisateurs: 10,
+    maxStorageMb: 25600,
   },
   {
     planId: 'enterprise',
@@ -54,7 +58,6 @@ const plans = [
     description: 'Pour les grands secrétariats sociaux.',
     monthlyPrice: 750,
     yearlyPrice: 600,
-    custom: false,
     highlighted: false,
     badge: null,
     features: [
@@ -66,6 +69,9 @@ const plans = [
       'Accompagnement dédié',
     ],
     sortOrder: 3,
+    maxEntreprises: null,
+    maxUtilisateurs: null,
+    maxStorageMb: 102400,
   },
 ];
 
