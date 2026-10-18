@@ -21,8 +21,6 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   role          String?   @default("CABINET_RH")
-  plan          String?
-  billingPeriod String?
   sessions      Session[]
   accounts      Account[]
 
