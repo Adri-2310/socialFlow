@@ -188,6 +188,40 @@ function portalLine(portalUrl: string | undefined, cabinetName: string): string 
   return `<p style="margin:20px 0 0; font-size:13px; color:#475569;">Pour vous reconnecter par la suite, utilisez le portail de ${cabinetName} : <a href="${href}" style="color:inherit; font-weight:600; text-decoration:underline;">${href}</a></p>`;
 }
 
+// Email de bienvenue apres la creation du compte (D76) : rappelle l'adresse du portail du
+// cabinet, seul endroit ou la personne se connecte. Envoye au nom du cabinet.
+export function buildWelcomeAccount(input: {
+  brand: CabinetEmailBrand;
+  name: string;
+  portalUrl: string;
+  entrepriseName?: string | null;
+}): { subject: string; html: string } {
+  const { brand } = input;
+  const theme = emailTheme(brand);
+  const accent = theme?.headerBg ?? '#6d28d9';
+  const cabinet = escapeHtml(brand.name);
+  const safeUrl = /^https?:\/\//.test(input.portalUrl) ? escapeHtml(input.portalUrl) : null;
+  const where = input.entrepriseName
+    ? `l’espace de ${escapeHtml(input.entrepriseName)}`
+    : `l’espace de ${cabinet}`;
+
+  const html = emailShell(
+    `
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:${accent};">Bienvenue</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Votre compte est créé</h1>
+    <p style="margin:0 0 12px; color:#475569;">Bonjour ${escapeHtml(input.name)},</p>
+    <p style="margin:0 0 12px; color:#475569;">Votre compte pour accéder à ${where} est prêt. Pour vous connecter, utilisez toujours le portail de ${cabinet} : conservez cet email ou ajoutez l’adresse à vos favoris.</p>
+    <div style="height:12px;"></div>
+    ${safeUrl ? ctaButton('Ouvrir mon portail', safeUrl, theme) : ''}
+    ${safeUrl ? `<p style="margin:20px 0 0; font-size:13px; color:#475569; word-break:break-all;">${safeUrl}</p>` : ''}
+    <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous n’êtes pas à l’origine de cette création de compte, contactez ${cabinet}.</p>
+  `,
+    theme,
+  );
+
+  return { subject: `Bienvenue chez ${brand.name}`, html };
+}
+
 function buildInvitation(input: {
   type: TemplateType;
   brand: CabinetEmailBrand;

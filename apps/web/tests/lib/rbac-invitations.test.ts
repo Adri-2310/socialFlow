@@ -11,6 +11,7 @@ vi.mock('@/lib/email', () => ({
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
   sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendGestionnaireInvitationEmail: vi.fn().mockResolvedValue(undefined),
+  sendWelcomeAccountEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -284,6 +285,17 @@ describe('acceptation d une invitation', () => {
     );
     expect(res.status).toBe(200);
     expect(res.headers.getSetCookie().length).toBeGreaterThan(0);
+
+    // D76 : la reponse porte l'adresse du portail, et un email de bienvenue la rappelle.
+    const slug = await ensureCabinetSlug(cabinetUser.cabinetId!);
+    expect((await res.json()).portalUrl).toContain(`/connexion/${slug}`);
+    expect(email.sendWelcomeAccountEmail).toHaveBeenCalledWith(
+      cibleEmail,
+      expect.objectContaining({ name: expect.any(String) }),
+      'Gestionnaire Test',
+      expect.stringContaining(`/connexion/${slug}`),
+      null,
+    );
 
     const nouvelUtilisateur = await prisma.user.findUniqueOrThrow({ where: { email: cibleEmail } });
     expect(nouvelUtilisateur.role).toBe('GESTIONNAIRE_RH');

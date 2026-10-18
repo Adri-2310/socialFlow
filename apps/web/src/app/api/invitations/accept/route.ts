@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { ACCEPT_ERROR_STATUS, acceptInvitationWithPassword } from '@/lib/invitation-accept';
-import { ensureCabinetSlug } from '@/lib/cabinet-portal';
+import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
+import { sendWelcomeAccountEmail } from '@/lib/email';
 import { PORTAL_HEADER } from '@/lib/portal-slug';
 
 // Cree le compte de la personne invitee (C6) : role, cabinet et rattachement
@@ -21,20 +23,31 @@ export async function POST(request: Request) {
   // d'etre poses (memes controles que toute connexion), dont le Set-Cookie est
   // transfere a la reponse. D76 : la personne vient de creer son compte pour CE
   // cabinet, la connexion passe donc par le portail de ce cabinet.
+  const slug = await ensureCabinetSlug(result.cabinetId);
+  const portal = portalUrl(slug);
   const headers = new Headers(request.headers);
-  headers.set(PORTAL_HEADER, await ensureCabinetSlug(result.cabinetId));
+  headers.set(PORTAL_HEADER, slug);
   const signIn = await auth.api.signInEmail({
     body: { email: result.email, password },
     headers,
     asResponse: true,
   });
+  // D76 : email de bienvenue au nom du cabinet, avec l'adresse de son portail. Jamais
+  // bloquant : le compte existe, un echec d'envoi ne doit pas faire echouer l'acceptation.
+  try {
+    const brand = await getCabinetEmailBrand(result.cabinetId);
+    await sendWelcomeAccountEmail(result.email, brand, result.name, portal, result.entrepriseName);
+  } catch (error) {
+    console.error("Echec de l'envoi de l'email de bienvenue", error);
+  }
+
   if (signIn.status !== 200) {
     // Le compte existe et l'invitation est consommee : la personne se connecte
     // normalement ; on ne fait pas echouer l'acceptation pour autant.
-    return NextResponse.json({ success: true, cabinetName: result.cabinetName, signedIn: false });
+    return NextResponse.json({ success: true, cabinetName: result.cabinetName, portalUrl: portal, signedIn: false });
   }
 
-  const response = NextResponse.json({ success: true, cabinetName: result.cabinetName, signedIn: true });
+  const response = NextResponse.json({ success: true, cabinetName: result.cabinetName, portalUrl: portal, signedIn: true });
   for (const cookie of signIn.headers.getSetCookie()) {
     response.headers.append('set-cookie', cookie);
   }

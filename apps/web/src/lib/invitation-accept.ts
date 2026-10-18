@@ -161,7 +161,15 @@ function mapRaceError(error: unknown): AcceptError | null {
 }
 
 export type AcceptResult =
-  | { ok: true; userId: string; email: string; cabinetId: string; cabinetName: string }
+  | {
+      ok: true;
+      userId: string;
+      name: string;
+      email: string;
+      cabinetId: string;
+      cabinetName: string;
+      entrepriseName: string | null;
+    }
   | { ok: false; error: AcceptError };
 
 export async function acceptInvitationWithPassword(input: {
@@ -222,8 +230,10 @@ export async function acceptInvitationWithPassword(input: {
   return {
     ok: true,
     userId: created.id,
+    name,
     email: invitation.email,
     cabinetId: invitation.cabinetId,
     cabinetName: invitation.cabinetName,
+    entrepriseName: invitation.entrepriseName,
   };
 }

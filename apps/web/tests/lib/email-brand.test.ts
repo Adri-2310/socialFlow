@@ -14,6 +14,7 @@ const {
   sendEntrepriseInvitationEmail,
   sendGestionnaireAccessChangedEmail,
   sendMagicLinkEmail,
+  sendWelcomeAccountEmail,
 } = await import('@/lib/email');
 
 const brand = {
@@ -129,6 +130,24 @@ describe('emails au nom du cabinet', () => {
     });
     expect(send.mock.calls[0][0].html).not.toContain('Pour vous reconnecter');
     expect(send.mock.calls[0][0].html).not.toContain('javascript:');
+  });
+
+  it('bienvenue : au nom du cabinet, avec l adresse du portail (D76)', async () => {
+    await sendWelcomeAccountEmail('bruno@test.com', brand, 'Bruno <b>', 'https://app.test/connexion/alicia-cabinet');
+
+    const sent = send.mock.calls[0][0];
+    expect(sent.subject).toBe('Bienvenue chez Alicia Cabinet');
+    expect(sent.html).toContain('href="https://app.test/connexion/alicia-cabinet"');
+    expect(sent.html).toContain('Ouvrir mon portail');
+    expect(sent.html).not.toContain('Bruno <b>');
+    expect(sent.html).toContain('Bruno &lt;b&gt;');
+  });
+
+  it('bienvenue : sans lien pour une adresse qui n est pas http(s)', async () => {
+    await sendWelcomeAccountEmail('bruno@test.com', brand, 'Bruno', 'javascript:alert(1)');
+
+    expect(send.mock.calls[0][0].html).not.toContain('javascript:');
+    expect(send.mock.calls[0][0].html).not.toContain('Ouvrir mon portail');
   });
 
   it('echappe le nom du cabinet dans le HTML et neutralise le sujet', async () => {

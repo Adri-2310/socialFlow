@@ -3,7 +3,7 @@ import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { emailTheme, formatFrom, type CabinetEmailBrand, type EmailTheme } from '@/lib/email-brand';
 import { prisma } from '@/lib/prisma';
-import { buildEntrepriseInvitation, buildGestionnaireInvitation, ctaButton, emailShell, escapeHtml } from '@/lib/email-layout';
+import { buildEntrepriseInvitation, buildGestionnaireInvitation, buildWelcomeAccount, ctaButton, emailShell, escapeHtml } from '@/lib/email-layout';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -331,6 +331,27 @@ export async function sendEntrepriseInvitationEmail(
     from: formatFrom(brand.name, process.env.RESEND_FROM_EMAIL as string),
     to: email,
     subject,
+    html,
+    ...(brand.replyTo ? { replyTo: brand.replyTo } : {}),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+// D76 : bienvenue apres l'acceptation d'une invitation, avec le portail du cabinet.
+export async function sendWelcomeAccountEmail(
+  email: string,
+  brand: CabinetEmailBrand,
+  name: string,
+  portalUrl: string,
+  entrepriseName?: string | null,
+) {
+  const { subject, html } = buildWelcomeAccount({ brand, name, portalUrl, entrepriseName });
+
+  const { error } = await resend.emails.send({
+    from: formatFrom(brand.name, process.env.RESEND_FROM_EMAIL as string),
+    to: email,
+    subject: safeSubject(subject),
     html,
     ...(brand.replyTo ? { replyTo: brand.replyTo } : {}),
   });
