@@ -26,6 +26,7 @@ export const CABINET_AUDIT_ACTIONS = {
   PLAN_CHANGE_SCHEDULED: 'Changement de plan programmé',
   PLAN_CHANGE_CANCELLED: 'Changement de plan annulé',
   CABINET_SETTINGS_UPDATED: 'Paramètres du cabinet modifiés',
+  DATA_EXPORTED: 'Données du cabinet exportées',
 } as const;
 
 export type CabinetAuditAction = keyof typeof CABINET_AUDIT_ACTIONS;
@@ -109,6 +110,8 @@ export function describeAuditEntry(input: AuditMessageInput): string {
       return "Le changement de plan programmé a été annulé";
     case 'CABINET_SETTINGS_UPDATED':
       return 'Les paramètres du cabinet ont été modifiés';
+    case 'DATA_EXPORTED':
+      return 'Les données du cabinet ont été exportées';
     default:
       return input.action;
   }
