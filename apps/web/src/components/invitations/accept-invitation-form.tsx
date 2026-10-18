@@ -7,6 +7,9 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_REQUEST: 'Formulaire incomplet.',
   INVALID_TOKEN: "Ce lien d'invitation n'est plus valable.",
+  EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email. Connectez-vous.',
+  CABINET_READ_ONLY:
+    "Ce cabinet ne peut pas accueillir de nouveau compte pour le moment. Contactez la personne qui vous a invité.",
   PASSWORD_TOO_SHORT: 'Le mot de passe doit contenir au moins 8 caractères.',
   PASSWORD_TOO_LONG: 'Le mot de passe est trop long.',
 };

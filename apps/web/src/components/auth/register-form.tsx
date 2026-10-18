@@ -80,8 +80,6 @@ export function RegisterForm({
       cabinetName,
       email,
       password,
-      plan: planId,
-      billingPeriod,
     });
 
     setLoading(false);
@@ -91,7 +89,8 @@ export function RegisterForm({
       return;
     }
 
-    router.push('/bienvenue');
+    // Le cabinet existe deja : /bienvenue y pose le plan choisi.
+    router.push(`/bienvenue?plan=${planId}&billing=${billingPeriod}`);
     router.refresh();
   }
 
