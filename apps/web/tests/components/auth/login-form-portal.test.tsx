@@ -124,6 +124,18 @@ describe('LoginForm : portail d un cabinet (D76)', () => {
     });
   });
 
+  it('sur la page de SocialFlow, efface le cookie laisse par un portail visite avant (SuperAdmin, titulaire)', async () => {
+    document.cookie = 'sf-portal=alicia-cabinet; path=/; max-age=600';
+    render(<LoginForm />);
+
+    // Des l'affichage : une connexion par mot de passe ou par code partirait sinon avec lui.
+    expect(document.cookie).not.toContain('sf-portal=alicia-cabinet');
+
+    document.cookie = 'sf-portal=alicia-cabinet; path=/; max-age=600';
+    await userEvent.click(screen.getByRole('button', { name: /Google/ }));
+    expect(document.cookie).not.toContain('sf-portal=alicia-cabinet');
+  });
+
   it('sur la page de SocialFlow, Google ne pose aucun cookie de portail', async () => {
     render(<LoginForm />);
 

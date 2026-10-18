@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
@@ -25,11 +25,16 @@ export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
   const [portalLink, setPortalLink] = useState<string | null>(null);
 
   // Cookie de portail, lu par le serveur au retour de Google/Microsoft (10 minutes).
+  // Sur la page de SocialFlow il est EFFACE : sinon le cookie laisse par la visite d'un
+  // portail ferait refuser (wrong_portal) le titulaire ou le SuperAdmin qui se connecte
+  // ici dans les 10 minutes qui suivent.
   function announcePortal() {
-    if (portal) {
-      document.cookie = `${PORTAL_COOKIE}=${portal.slug}; path=/; max-age=600; samesite=lax`;
-    }
+    document.cookie = portal
+      ? `${PORTAL_COOKIE}=${portal.slug}; path=/; max-age=600; samesite=lax`
+      : `${PORTAL_COOKIE}=; path=/; max-age=0; samesite=lax`;
   }
+  // Toute connexion de cette page (mot de passe, code, lien) part avec le bon cookie.
+  useEffect(announcePortal, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [mode, setMode] = useState<'password' | 'passwordless'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
