@@ -269,10 +269,98 @@ describe('acceptation d une invitation', () => {
     expect(cabinetsDuGestionnaire).toHaveLength(1);
     expect(cabinetsDuGestionnaire[0].id).toBe(invitation.cabinetId);
 
-    // Le cabinet fantome auto-cree par le hook de sign-up (avant que la route
-    // d'acceptation ne repose le cabinetId reel) a ete nettoye, pas laisse en orphelin.
+    // C6 : le compte n'est plus cree par l'auto-inscription, donc aucun cabinet
+    // « fantome » n'est jamais cree (ni a nettoyer).
     const cabinetFantome = await prisma.cabinet.findFirst({ where: { name: 'Cabinet de Gestionnaire Test' } });
     expect(cabinetFantome).toBeNull();
+  });
+
+  it('ne cree aucun cabinet et laisse se connecter avec le mot de passe choisi (C6)', async () => {
+    const { cj: cabinetCj } = await creerCabinetRH('cabinet-c6');
+    const cibleEmail = testEmail('gestionnaire-c6');
+    await createInvitation(requestJSON(`${APP_URL}/api/invitations`, { email: cibleEmail }, cabinetCj));
+    const avant = await prisma.cabinet.count();
+
+    const res = await acceptInvitation(
+      requestJSON(`${APP_URL}/api/invitations/accept`, {
+        token: lastTokenSentTo(cibleEmail),
+        name: '  Gestionnaire C6  ',
+        password: PASSWORD,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await prisma.cabinet.count()).toBe(avant);
+
+    const utilisateur = await prisma.user.findUniqueOrThrow({ where: { email: cibleEmail } });
+    expect(utilisateur.name).toBe('Gestionnaire C6');
+
+    // Le compte « mot de passe » cree directement est bien reconnu par la connexion.
+    const connexion = await auth.api.signInEmail({
+      body: { email: cibleEmail, password: PASSWORD },
+      asResponse: true,
+    });
+    expect(connexion.status).toBe(200);
+    const mauvais = await auth.api.signInEmail({
+      body: { email: cibleEmail, password: 'AutreMotDePasse1!' },
+      asResponse: true,
+    });
+    expect(mauvais.status).not.toBe(200);
+  });
+
+  it('refuse un mot de passe trop court sans creer de compte ni consommer l invitation', async () => {
+    const { cj: cabinetCj } = await creerCabinetRH('cabinet-mdp-court');
+    const cibleEmail = testEmail('gestionnaire-mdp-court');
+    await createInvitation(requestJSON(`${APP_URL}/api/invitations`, { email: cibleEmail }, cabinetCj));
+
+    const res = await acceptInvitation(
+      requestJSON(`${APP_URL}/api/invitations/accept`, {
+        token: lastTokenSentTo(cibleEmail),
+        name: 'Court',
+        password: 'abc',
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('PASSWORD_TOO_SHORT');
+    expect(await prisma.user.count({ where: { email: cibleEmail } })).toBe(0);
+    expect((await prisma.invitation.findFirstOrThrow({ where: { email: cibleEmail } })).status).toBe('pending');
+  });
+
+  it('refuse une adresse qui a deja un compte (D7) et une seconde acceptation du meme lien', async () => {
+    const { cj: cabinetCj, user: titulaire } = await creerCabinetRH('cabinet-double');
+    const cibleEmail = testEmail('gestionnaire-double');
+    await createInvitation(requestJSON(`${APP_URL}/api/invitations`, { email: cibleEmail }, cabinetCj));
+    const jeton = lastTokenSentTo(cibleEmail);
+    const accepter = () =>
+      acceptInvitation(
+        requestJSON(`${APP_URL}/api/invitations/accept`, { token: jeton, name: 'Double', password: PASSWORD }),
+      );
+
+    expect((await accepter()).status).toBe(200);
+    // Meme lien rejoue : plus valable, un seul compte.
+    expect((await accepter()).status).toBe(404);
+    expect(await prisma.user.count({ where: { email: cibleEmail } })).toBe(1);
+
+    // Une invitation vers une adresse deja inscrite entre-temps est refusee.
+    const { user: existant } = await creerCabinetRH('cabinet-double-existant');
+    await prisma.invitation.create({
+      data: {
+        email: existant.email,
+        role: 'GESTIONNAIRE_RH',
+        tokenHash: hashInvitationToken('jeton-adresse-deja-inscrite'),
+        cabinetId: titulaire.cabinetId!,
+        invitedById: titulaire.id,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
+    const deja = await acceptInvitation(
+      requestJSON(`${APP_URL}/api/invitations/accept`, {
+        token: 'jeton-adresse-deja-inscrite',
+        name: 'Existant',
+        password: PASSWORD,
+      }),
+    );
+    expect(deja.status).toBe(409);
+    expect((await deja.json()).error).toBe('EMAIL_ALREADY_USED');
   });
 
   it('la session ouverte par acceptation est valide', async () => {

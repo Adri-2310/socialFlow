@@ -5,6 +5,7 @@ import { deleteSessionCookie } from 'better-auth/cookies';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { createCabinetForOwner } from '@/lib/cabinet-provision';
 import { ACCOUNT_DELETION_BLOCKED_CODE, accountDeletionBlock } from '@/lib/account-deletion-guard';
 import {
   sendMagicLinkEmail,
@@ -59,15 +60,6 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      // Une personne invitee prouve deja son adresse par le lien d'invitation
-      // (la route d'acceptation pose emailVerified) : pas d'email de
-      // verification, qui partirait de surcroit avec la mauvaise identite
-      // puisque le compte n'a pas encore son role ni son cabinet (D72).
-      const invited = await prisma.invitation.findFirst({
-        where: { email: user.email.toLowerCase(), status: { in: ['pending', 'accepted'] } },
-        select: { id: true },
-      });
-      if (invited) return;
       await sendVerificationEmail(user.email, url);
     },
     // Verification "souple" : l'email part a l'inscription et reste
@@ -157,27 +149,6 @@ export const auth = betterAuth({
         required: false,
         input: true,
         validator: { input: z.string().trim().min(1).max(200) },
-      },
-      plan: {
-        type: 'string',
-        required: false,
-        input: true,
-        // Format seulement : les plans etant geres dynamiquement (voir
-        // PricingPlan, /dashboard/admin/configuration), un enum fige ici
-        // rejetterait tout plan cree apres coup. La vraie validation - le
-        // plan existe, n'est pas archive - se fait
-        // dans hooks.before ci-dessous pour /sign-up/email et /update-user,
-        // les deux seuls chemins qui ecrivent ce champ.
-        validator: { input: z.string().trim().min(1).max(100) },
-      },
-      billingPeriod: {
-        type: 'string',
-        required: false,
-        defaultValue: 'monthly',
-        input: true,
-        // Synchronise a la main avec BillingPeriod dans @/lib/plans, meme
-        // raison que `plan` ci-dessus.
-        validator: { input: z.enum(['monthly', 'yearly']) },
       },
       // Archivage : voir hooks.before ci-dessous. input:false car seul le
       // hook (cote serveur, via internalAdapter.updateUser) doit pouvoir le
@@ -471,93 +442,22 @@ export const auth = betterAuth({
         : false;
       if (!success) return;
 
-      // Ni /sign-up/email ni /update-user (les deux seuls chemins qui
-      // ecrivent `plan`, voir additionalFields.plan ci-dessus) ne doivent
-      // persister un plan invalide (supprime/archive entre le chargement du
-      // formulaire et la soumission, ou valeur forgee) - le validateur zod
-      // ne verifie que le format. Fait en `after`, pas en `before` : une
-      // APIError levee depuis un hook `before` n'est pas convertie en
-      // reponse HTTP propre pour un appel serveur direct (auth.api.*),
-      // contrairement a `after` (verifie par les tests de ce fichier).
-      let validatedPlan: { planId: string; billingPeriod: 'monthly' | 'yearly' } | null = null;
-      if (ctx.path === '/sign-up/email' || ctx.path === '/update-user') {
-        const requestedPlan = (ctx.body as { plan?: string } | undefined)?.plan;
-        if (requestedPlan !== undefined) {
-          const validPlan = await prisma.pricingPlan.findFirst({
-            where: { planId: requestedPlan, archivedAt: null },
-            select: { id: true },
-          });
-          if (!validPlan) {
-            const userId =
-              ctx.path === '/sign-up/email' ? ctx.context.newSession?.user.id : ctx.context.session?.user.id;
-            if (userId) {
-              await ctx.context.internalAdapter.updateUser(userId, { plan: null });
-            }
-            // /update-user est une action explicite qui doit clairement
-            // echouer ; /sign-up/email continue normalement (voir le bloc
-            // juste en dessous, qui cree toujours le Cabinet) plutot que
-            // d'abandonner tout le compte pour un simple plan invalide.
-            if (ctx.path === '/update-user') {
-              throw new APIError('BAD_REQUEST', {
-                code: 'INVALID_PLAN',
-                message: "Ce plan n'existe pas ou n'est plus disponible.",
-              });
-            }
-          } else {
-            const requestedBilling = (ctx.body as { billingPeriod?: string } | undefined)?.billingPeriod;
-            validatedPlan = { planId: requestedPlan, billingPeriod: requestedBilling === 'yearly' ? 'yearly' : 'monthly' };
-          }
-        }
-      }
-
       // RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md) : l'auto-
-      // inscription cree toujours un Cabinet RH (role par defaut ci-dessus).
-      // On lui cree son Cabinet ici plutot que de le faire poser par le
-      // client, pour la meme raison que role/cabinetId sont input:false.
-      // S'applique aussi a l'inscription faite par la route d'acceptation
-      // d'invitation (qui reutilise ce meme endpoint) : elle nettoie ensuite
-      // ce Cabinet "fantome" en reposant le role/cabinetId de l'invitation
-      // (voir apps/web/src/app/api/invitations/accept/route.ts) - plus
-      // robuste qu'un signal par en-tete, qui ne survit pas de facon fiable
-      // au passage par les before-hooks de better-auth (defuReplaceArrays).
+      // inscription par email cree toujours un Cabinet RH (role par defaut
+      // ci-dessus) et son Cabinet, ici plutot que pose par le client, pour la
+      // meme raison que role/cabinetId sont input:false. Les invitations ne
+      // passent plus par ce chemin (lib/invitation-accept.ts, C6) ; l'inscription
+      // Google/Microsoft est finalisee par api/register/finalize.
+      //
+      // Le plan choisi (D55) n'est pas pose ici : api/register/finalize le pose
+      // sur le cabinet apres l'inscription, pour l'email comme pour OAuth.
       if (ctx.path === '/sign-up/email') {
         const newUser = ctx.context.newSession?.user;
         if (newUser?.role === 'CABINET_RH' && !newUser.cabinetId) {
-          const cabinet = await prisma.cabinet.create({
-            data: {
-              name: newUser.cabinetName?.trim() || `Cabinet de ${newUser.name}`,
-              // D55 : le plan appartient au cabinet. User.plan n'est plus lu.
-              ...(validatedPlan
-                ? { planId: validatedPlan.planId, billingPeriod: validatedPlan.billingPeriod }
-                : {}),
-            },
-          });
-          await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId: cabinet.id });
-          await prisma.auditLog.create({
-            data: { action: 'CABINET_CREATED', actorId: newUser.id, cabinetId: cabinet.id },
-          });
-
-          // D25, D32 : l'abonnement n'est plus cree ici. Le cabinet reste
-          // "en attente de paiement" jusqu'au Stripe Checkout (carte
-          // obligatoire, essai de 30 jours), voir lib/stripe-checkout.ts.
+          const cabinetId = await createCabinetForOwner(newUser, null);
+          await ctx.context.internalAdapter.updateUser(newUser.id, { cabinetId });
         }
         return;
-      }
-
-      if (ctx.path === '/update-user' && validatedPlan) {
-        const sessionUser = ctx.context.session?.user;
-        const cabinetId = sessionUser?.cabinetId;
-        // Seule la finalisation d'une inscription (OAuth) pose le plan, et une
-        // seule fois : un cabinet qui a deja un plan ne peut pas le changer par
-        // ce chemin, sinon n'importe quel client pourrait s'attribuer des
-        // quotas plus eleves sans payer (le changement de plan passe par le
-        // portail Stripe, D25).
-        if (cabinetId && sessionUser?.role === 'CABINET_RH') {
-          await prisma.cabinet.updateMany({
-            where: { id: cabinetId, planId: null },
-            data: { planId: validatedPlan.planId, billingPeriod: validatedPlan.billingPeriod },
-          });
-        }
       }
 
       const session = ctx.context.session;
