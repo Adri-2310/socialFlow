@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Undo2 } from 'lucide-react';
+import { quotaAwareMessage } from '@/lib/quota-messages';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -38,7 +39,9 @@ export function EntrepriseRestore({
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(ERROR_MESSAGES[body?.error] ?? 'Une erreur est survenue. Veuillez réessayer.');
+      setError(
+        quotaAwareMessage(body, ERROR_MESSAGES, 'entreprises', 'Une erreur est survenue. Veuillez réessayer.'),
+      );
       return;
     }
     router.refresh();

@@ -3,6 +3,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { pendingPlanQuotaMessage, quotaAwareMessage } from '@/lib/quota-messages';
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_EMAIL: 'Adresse email invalide.',
@@ -22,7 +23,8 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function InviteGestionnaire({
   quota,
 }: {
-  quota?: { used: number; limit: number | null };
+  // `pendingPlan` : plan d'un downgrade programme dont les quotas s'appliquent deja (D75).
+  quota?: { used: number; limit: number | null; pendingPlan?: string | null };
 }) {
   const router = useRouter();
   const reached = !!quota && quota.limit !== null && quota.used >= quota.limit;
@@ -46,7 +48,9 @@ export function InviteGestionnaire({
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(ERROR_MESSAGES[body?.error] ?? 'Une erreur est survenue. Veuillez réessayer.');
+      setError(
+        quotaAwareMessage(body, ERROR_MESSAGES, 'gestionnaires', 'Une erreur est survenue. Veuillez réessayer.'),
+      );
       return;
     }
 
@@ -103,7 +107,11 @@ export function InviteGestionnaire({
       </form>
 
       {reached && (
-        <p className="mt-2 text-sm text-destructive-text">{ERROR_MESSAGES.QUOTA_EXCEEDED}</p>
+        <p className="mt-2 text-sm text-destructive-text">
+          {quota?.pendingPlan
+            ? pendingPlanQuotaMessage(quota.pendingPlan, 'gestionnaires')
+            : ERROR_MESSAGES.QUOTA_EXCEEDED}
+        </p>
       )}
       {error && <p className="mt-2 text-sm text-destructive-text">{error}</p>}
       {sent && <p className="mt-2 text-sm text-secondary">Invitation envoyée.</p>}

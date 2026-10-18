@@ -76,7 +76,7 @@ export function EntreprisesManager({
   archived: ArchivedEntrepriseRow[];
   gestionnaires: GestionnaireOption[];
   countries: CountryOption[];
-  quota?: { used: number; limit: number | null };
+  quota?: { used: number; limit: number | null; pendingPlan?: string | null };
   readOnly: boolean;
 }) {
   return (

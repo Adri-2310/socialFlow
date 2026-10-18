@@ -91,6 +91,11 @@ model Cabinet {
   // blocage total des connexions, choisi explicitement avec un motif. null avec
   // status "suspendu" = suspension anterieure a ce champ, donc blocage total
   // (comportement d'alors). Remis a null a la reactivation.
+  // D75 : plan vise par un changement programme en fin de periode (D60). Tant
+  // qu'il est en attente, les quotas de ce plan s'appliquent deja aux nouveaux
+  // ajouts (le plus strict des deux). Efface quand le changement est applique,
+  // annule, ou que la periode est renouvelee sans lui. null = aucun.
+  pendingPlanId     String?
   suspensionType    String?
   // Motif saisi par le SuperAdmin ; jamais montre aux clients du cabinet (D29).
   suspensionReason  String?

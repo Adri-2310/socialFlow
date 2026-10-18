@@ -41,7 +41,15 @@ export default async function EntreprisesPage() {
       // Calcule cote serveur : les donnees Intl different entre Node et le
       // navigateur (erreur d'hydratation sinon).
       countries={countryOptions()}
-      quota={quotas.limits ? { used: quotas.entreprises.used, limit: quotas.limits.maxEntreprises } : undefined}
+      quota={
+        quotas.limits
+          ? {
+              used: quotas.entreprises.used,
+              limit: quotas.limits.maxEntreprises,
+              pendingPlan: quotas.limits.pendingPlanName,
+            }
+          : undefined
+      }
       readOnly={cabinet ? isCabinetReadOnly(cabinet) : false}
     />
   );

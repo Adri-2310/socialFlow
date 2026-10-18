@@ -1,7 +1,15 @@
 // @vitest-environment node
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
-import { getCabinetQuotaUsage, isQuotaReached, quotaPercent } from '@/lib/cabinet-quotas';
+import {
+  getCabinetPlanQuotas,
+  getCabinetQuotaUsage,
+  isQuotaReached,
+  quotaExceededBody,
+  quotaPercent,
+  reserveQuotas,
+  stricterLimit,
+} from '@/lib/cabinet-quotas';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 const stamp = Date.now();
@@ -66,6 +74,78 @@ describe('regles pures', () => {
     expect(quotaPercent(9, 3)).toBe(100);
     expect(quotaPercent(5, null)).toBe(0);
     expect(quotaPercent(5, 0)).toBe(0);
+  });
+});
+
+describe('quotas reserves pendant un downgrade programme (D75)', () => {
+  it('prend la limite la plus stricte, null valant illimite', () => {
+    expect(stricterLimit(10, 3)).toBe(3);
+    expect(stricterLimit(3, 10)).toBe(3);
+    expect(stricterLimit(null, 3)).toBe(3);
+    expect(stricterLimit(3, null)).toBe(3);
+    expect(stricterLimit(null, null)).toBeNull();
+
+    expect(
+      reserveQuotas(
+        { maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: null },
+        { maxEntreprises: null, maxUtilisateurs: 2, maxStorageMb: 500 },
+      ),
+    ).toEqual({ maxEntreprises: 25, maxUtilisateurs: 2, maxStorageMb: 500 });
+  });
+
+  it('applique le plus strict du plan actuel et du plan vise, et nomme le plan vise', async () => {
+    const grand = await createPlan({ maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: 5000 });
+    const petit = await createPlan({ maxEntreprises: 5, maxUtilisateurs: 2, maxStorageMb: null });
+    const cabinet = await createCabinet('Reserve', grand);
+    await prisma.cabinet.update({ where: { id: cabinet.id }, data: { pendingPlanId: petit } });
+
+    const quotas = await getCabinetPlanQuotas(cabinet.id);
+    expect(quotas).toMatchObject({ maxEntreprises: 5, maxUtilisateurs: 2, maxStorageMb: 5000, pendingPlanName: petit });
+
+    // Meme limite dans la consommation affichee et dans les controles de creation.
+    const usage = await getCabinetQuotaUsage(cabinet.id);
+    expect(usage.limits).toMatchObject({ maxEntreprises: 5, maxUtilisateurs: 2 });
+  });
+
+  it('ne change rien sans plan en attente, pour le meme plan, ou si le plan vise a disparu', async () => {
+    const grand = await createPlan({ maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: 5000 });
+    const sans = await createCabinet('Sans attente', grand);
+    expect(await getCabinetPlanQuotas(sans.id)).toEqual({ maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: 5000 });
+
+    const meme = await createCabinet('Meme plan', grand);
+    await prisma.cabinet.update({ where: { id: meme.id }, data: { pendingPlanId: grand } });
+    const sameQuotas = await getCabinetPlanQuotas(meme.id);
+    expect(sameQuotas).toEqual({ maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: 5000 });
+
+    const disparu = await createCabinet('Plan disparu', grand);
+    await prisma.cabinet.update({ where: { id: disparu.id }, data: { pendingPlanId: 'vitest-plan-disparu' } });
+    expect(await getCabinetPlanQuotas(disparu.id)).toEqual({ maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: 5000 });
+  });
+
+  it('bloque une creation au quota du plan vise et le dit dans la reponse d erreur', async () => {
+    const grand = await createPlan({ maxEntreprises: 25, maxUtilisateurs: 10, maxStorageMb: 5000 });
+    const petit = await createPlan({ maxEntreprises: 5, maxUtilisateurs: 1, maxStorageMb: null });
+    const cabinet = await createCabinet('Bloque', grand);
+    await prisma.cabinet.update({ where: { id: cabinet.id }, data: { pendingPlanId: petit } });
+    await createUser({ cabinetId: cabinet.id, role: 'GESTIONNAIRE_RH' });
+
+    const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinet.id);
+    // 1 gestionnaire sur 10 au plan actuel, mais 1 sur 1 au plan vise : atteint.
+    expect(isQuotaReached(utilisateurs.used, limits!.maxUtilisateurs)).toBe(true);
+    expect(quotaExceededBody('maxUtilisateurs', 1, 1, limits!.pendingPlanName)).toEqual({
+      error: 'QUOTA_EXCEEDED',
+      quota: 'maxUtilisateurs',
+      limit: 1,
+      used: 1,
+      pendingPlan: petit,
+    });
+    // Sans plan vise, la reponse garde sa forme d'origine.
+    expect(quotaExceededBody('maxUtilisateurs', 1, 1)).toEqual({
+      error: 'QUOTA_EXCEEDED',
+      quota: 'maxUtilisateurs',
+      limit: 1,
+      used: 1,
+    });
   });
 });
 

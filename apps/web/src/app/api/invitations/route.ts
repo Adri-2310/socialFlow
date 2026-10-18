@@ -43,7 +43,12 @@ export async function POST(request: Request) {
   const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinetId);
   if (limits && isQuotaReached(utilisateurs.used, limits.maxUtilisateurs)) {
     return NextResponse.json(
-      quotaExceededBody('maxUtilisateurs', limits.maxUtilisateurs as number, utilisateurs.used),
+      quotaExceededBody(
+        'maxUtilisateurs',
+        limits.maxUtilisateurs as number,
+        utilisateurs.used,
+        limits.pendingPlanName,
+      ),
       { status: 403 },
     );
   }

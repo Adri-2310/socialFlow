@@ -201,7 +201,7 @@ export type EntrepriseError =
   | { error: 'VAT_ALREADY_USED' }
   | { error: 'GESTIONNAIRE_INVALID' }
   | { error: 'NO_ACTIVE_GESTIONNAIRE' }
-  | { error: 'QUOTA_EXCEEDED'; limit: number; used: number }
+  | { error: 'QUOTA_EXCEEDED'; limit: number; used: number; pendingPlan?: string | null }
   | { error: 'ALREADY_ARCHIVED' }
   | { error: 'NOT_ARCHIVED' };
 
@@ -218,7 +218,7 @@ async function quotaError(tx: Tx, cabinetId: string): Promise<EntrepriseError | 
   if (!limits || limits.maxEntreprises === null) return null;
   const used = await tx.entreprise.count({ where: { cabinetId, deletedAt: null } });
   return isQuotaReached(used, limits.maxEntreprises)
-    ? { error: 'QUOTA_EXCEEDED', limit: limits.maxEntreprises, used }
+    ? { error: 'QUOTA_EXCEEDED', limit: limits.maxEntreprises, used, pendingPlan: limits.pendingPlanName }
     : null;
 }
 

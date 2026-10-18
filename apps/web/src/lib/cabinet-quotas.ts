@@ -10,9 +10,14 @@ export type PlanQuotas = {
 
 export type QuotaKey = keyof PlanQuotas;
 
+// Quotas appliques a un cabinet. Pendant un downgrade programme (D75), ce sont les
+// plus stricts du plan actuel et du plan vise ; `pendingPlanName` nomme ce plan
+// pour expliquer pourquoi la limite est plus basse.
+export type EffectiveQuotas = PlanQuotas & { pendingPlanName?: string | null };
+
 export type CabinetQuotaUsage = {
   // null : cabinet sans plan connu, aucun quota applique (voir getCabinetPlanQuotas).
-  limits: PlanQuotas | null;
+  limits: EffectiveQuotas | null;
   // D56 : le quota "utilisateurs" (maxUtilisateurs) ne compte que les
   // gestionnaires non archives, le titulaire (Cabinet RH) n'y figure pas
   // (suspendus compris : ils gardent leur place). Les invitations en attente
@@ -46,18 +51,47 @@ export function quotaPercent(used: number, limit: number | null): number {
 // l'ont deja. Sans plan connu (compte cree sans plan, plan supprime), aucun
 // quota n'est applique plutot que de bloquer un cabinet sur une valeur
 // inventee.
-export async function getCabinetPlanQuotas(cabinetId: string): Promise<PlanQuotas | null> {
+//
+// D75 : tant qu'un changement vers un autre plan est programme, ses quotas
+// s'appliquent deja aux nouveaux ajouts (le plus strict des deux), pour que le
+// cabinet ne depasse pas le plan vise a la date d'effet.
+export async function getCabinetPlanQuotas(cabinetId: string): Promise<EffectiveQuotas | null> {
   const cabinet = await prisma.cabinet.findUnique({
     where: { id: cabinetId },
-    select: { planId: true },
+    select: { planId: true, pendingPlanId: true },
   });
   if (!cabinet?.planId) return null;
 
-  const plan = await prisma.pricingPlan.findUnique({
+  const current = await prisma.pricingPlan.findUnique({
     where: { planId: cabinet.planId },
     select: { maxEntreprises: true, maxUtilisateurs: true, maxStorageMb: true },
   });
-  return plan ?? null;
+  if (!current) return null;
+
+  if (cabinet.pendingPlanId && cabinet.pendingPlanId !== cabinet.planId) {
+    const pending = await prisma.pricingPlan.findUnique({
+      where: { planId: cabinet.pendingPlanId },
+      select: { name: true, maxEntreprises: true, maxUtilisateurs: true, maxStorageMb: true },
+    });
+    if (pending) return { ...reserveQuotas(current, pending), pendingPlanName: pending.name };
+  }
+  return current;
+}
+
+// Limite la plus stricte de deux (null = illimite).
+export function stricterLimit(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return Math.min(a, b);
+}
+
+// Quotas reserves pendant un downgrade programme : le plus strict, quota par quota.
+export function reserveQuotas(current: PlanQuotas, pending: PlanQuotas): PlanQuotas {
+  return {
+    maxEntreprises: stricterLimit(current.maxEntreprises, pending.maxEntreprises),
+    maxUtilisateurs: stricterLimit(current.maxUtilisateurs, pending.maxUtilisateurs),
+    maxStorageMb: stricterLimit(current.maxStorageMb, pending.maxStorageMb),
+  };
 }
 
 export async function getCabinetQuotaUsage(cabinetId: string): Promise<CabinetQuotaUsage> {
@@ -87,6 +121,19 @@ export async function getCabinetQuotaUsage(cabinetId: string): Promise<CabinetQu
 
 // Reponse d'API commune quand un ajout depasserait le quota
 // (CONVENTIONS.md § 3 : 403 QUOTA_EXCEEDED avec le quota concerne).
-export function quotaExceededBody(quota: QuotaKey, limit: number, used: number) {
-  return { error: 'QUOTA_EXCEEDED' as const, quota, limit, used };
+// `pendingPlan` : nom du plan vise par un downgrade programme, quand c'est lui qui
+// fixe la limite (D75) ; l'interface l'explique au lieu de proposer un upgrade.
+export function quotaExceededBody(
+  quota: QuotaKey,
+  limit: number,
+  used: number,
+  pendingPlan?: string | null,
+) {
+  return {
+    error: 'QUOTA_EXCEEDED' as const,
+    quota,
+    limit,
+    used,
+    ...(pendingPlan ? { pendingPlan } : {}),
+  };
 }

@@ -39,7 +39,11 @@ export default async function GestionnairesPage() {
       selfDeleted={selfDeleted}
       userQuota={
         quotas.limits
-          ? { used: quotas.utilisateurs.used, limit: quotas.limits.maxUtilisateurs }
+          ? {
+              used: quotas.utilisateurs.used,
+              limit: quotas.limits.maxUtilisateurs,
+              pendingPlan: quotas.limits.pendingPlanName,
+            }
           : undefined
       }
     />

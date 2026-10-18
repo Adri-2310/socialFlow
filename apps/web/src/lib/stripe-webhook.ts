@@ -71,7 +71,14 @@ async function applyBillingUpdate(
   return prisma.$transaction(async (tx) => {
     const cabinet = await tx.cabinet.findUnique({
       where: { id: cabinetId },
-      select: { billingStatus: true, pastDueSince: true, billingEventAt: true },
+      select: {
+        billingStatus: true,
+        pastDueSince: true,
+        billingEventAt: true,
+        planId: true,
+        pendingPlanId: true,
+        currentPeriodEnd: true,
+      },
     });
     if (!cabinet) return null;
 
@@ -89,9 +96,21 @@ async function applyBillingUpdate(
     if (current === 'DELAI_GRACE') pastDueSince = pastDueSince ?? eventAt;
     else if (current !== 'IMPAYE') pastDueSince = null;
 
+    // D75 : le plan vise par un changement programme n'est plus "en attente"
+    // quand il vient d'etre applique, quand un autre plan s'applique, ou quand la
+    // periode est renouvelee sans lui (changement libere cote Stripe).
+    const planChanged = !!update.planId && update.planId !== cabinet.planId;
+    const pendingApplied = !!update.planId && update.planId === cabinet.pendingPlanId;
+    const renewed =
+      !!update.currentPeriodEnd &&
+      !!cabinet.currentPeriodEnd &&
+      update.currentPeriodEnd.getTime() > cabinet.currentPeriodEnd.getTime();
+    const clearPending = !!cabinet.pendingPlanId && (planChanged || pendingApplied || renewed);
+
     await tx.cabinet.update({
       where: { id: cabinetId },
       data: {
+        ...(clearPending ? { pendingPlanId: null } : {}),
         billingStatus: current,
         pastDueSince,
         billingEventAt: eventAt,

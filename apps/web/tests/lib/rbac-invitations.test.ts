@@ -189,6 +189,35 @@ describe('quota d utilisateurs du plan (D15)', () => {
     });
   });
 
+  it('applique deja le quota du plan vise par un downgrade programme, et l explique (D75)', async () => {
+    const { cj, user } = await creerCabinetRH('quota-downgrade');
+    // Plan actuel a 10 gestionnaires, plan vise a 1 : la limite effective est 1.
+    await prisma.cabinet.update({
+      where: { id: user.cabinetId! },
+      data: { planId: await creerPlan('downgrade-grand', 10), pendingPlanId: await creerPlan('downgrade-petit', 1) },
+    });
+
+    const premier = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-d1') }, cj),
+    );
+    expect(premier.status).toBe(200);
+
+    const second = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-d2') }, cj),
+    );
+    expect(second.status).toBe(403);
+    const body = await second.json();
+    expect(body).toMatchObject({ error: 'QUOTA_EXCEEDED', quota: 'maxUtilisateurs', limit: 1, used: 1 });
+    expect(body.pendingPlan).toContain('downgrade-petit');
+
+    // Le changement annule (plan en attente efface), la place revient.
+    await prisma.cabinet.update({ where: { id: user.cabinetId! }, data: { pendingPlanId: null } });
+    const apres = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-d3') }, cj),
+    );
+    expect(apres.status).toBe(200);
+  });
+
   it('libere la place quand l invitation est revoquee', async () => {
     const { cj, user } = await creerCabinetRH('quota-revoque');
     await prisma.cabinet.update({

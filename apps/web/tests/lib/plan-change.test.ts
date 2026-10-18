@@ -278,6 +278,19 @@ describe('schedulePlanChange (D60)', () => {
     // Rien ne change tout de suite localement : le plan suit Stripe par webhook.
     expect((await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } })).planId).toBe(BIG);
     expect(await audits(cabinet.id)).toEqual(['PLAN_CHANGE_SCHEDULED']);
+    // D75 : le plan vise est memorise pour reserver ses quotas des maintenant.
+    expect((await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } })).pendingPlanId).toBe(SMALL);
+  });
+
+  it('ne reserve rien quand seule la periodicite change, et libere une reservation precedente (D75)', async () => {
+    const cabinet = await createCabinet();
+    await schedulePlanChange(cabinet.id, actorId, { planId: SMALL, billingPeriod: 'monthly' });
+    expect((await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } })).pendingPlanId).toBe(SMALL);
+
+    // Nouveau choix qui remplace le precedent : meme plan, autre periodicite.
+    await schedulePlanChange(cabinet.id, actorId, { planId: BIG, billingPeriod: 'yearly' });
+
+    expect((await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } })).pendingPlanId).toBeNull();
   });
 
   it('change aussi la periodicite d un meme plan (mensuel vers annuel)', async () => {
@@ -445,14 +458,16 @@ describe('changement programme : lecture et annulation', () => {
     expect(await getPendingPlanChange(cabinet.stripeCustomerId!)).toBeNull();
   });
 
-  it('annule un changement programme et l audite', async () => {
+  it('annule un changement programme, libere les quotas reserves et l audite', async () => {
     const cabinet = await createCabinet();
+    await prisma.cabinet.update({ where: { id: cabinet.id }, data: { pendingPlanId: SMALL } });
     subsList.mockResolvedValue({ data: [subscription({ schedule: 'sub_sched_1' })] });
 
     expect(await cancelPlanChange(cabinet.id, actorId)).toEqual({ ok: true });
 
     expect(schedRelease).toHaveBeenCalledWith('sub_sched_1');
     expect(await audits(cabinet.id)).toEqual(['PLAN_CHANGE_CANCELLED']);
+    expect((await prisma.cabinet.findUniqueOrThrow({ where: { id: cabinet.id } })).pendingPlanId).toBeNull();
   });
 
   it('refuse d annuler quand rien n est programme', async () => {

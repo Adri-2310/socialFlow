@@ -256,18 +256,26 @@ export async function schedulePlanChange(
 
     const effectiveAt = new Date(current.end_date * 1000);
 
-    await prisma.auditLog.create({
-      data: {
-        action: 'PLAN_CHANGE_SCHEDULED',
-        cabinetId,
-        actorId,
-        metadata: {
-          from: { planId: cabinet.planId, billingPeriod: cabinet.billingPeriod },
-          to: target,
-          effectiveAt: effectiveAt.toISOString(),
+    // D75 : le plan vise est memorise pour reserver ses quotas des maintenant
+    // (rien a reserver si seul la periodicite change).
+    await prisma.$transaction([
+      prisma.cabinet.update({
+        where: { id: cabinetId },
+        data: { pendingPlanId: target.planId !== cabinet.planId ? target.planId : null },
+      }),
+      prisma.auditLog.create({
+        data: {
+          action: 'PLAN_CHANGE_SCHEDULED',
+          cabinetId,
+          actorId,
+          metadata: {
+            from: { planId: cabinet.planId, billingPeriod: cabinet.billingPeriod },
+            to: target,
+            effectiveAt: effectiveAt.toISOString(),
+          },
         },
-      },
-    });
+      }),
+    ]);
 
     return { ok: true, effectiveAt };
   } catch (error) {
@@ -296,9 +304,13 @@ export async function cancelPlanChange(
     // "Release" : l'abonnement continue tel quel, sans le changement.
     await stripe.subscriptionSchedules.release(scheduleId);
 
-    await prisma.auditLog.create({
-      data: { action: 'PLAN_CHANGE_CANCELLED', cabinetId, actorId },
-    });
+    // D75 : les quotas du plan vise ne sont plus reserves.
+    await prisma.$transaction([
+      prisma.cabinet.update({ where: { id: cabinetId }, data: { pendingPlanId: null } }),
+      prisma.auditLog.create({
+        data: { action: 'PLAN_CHANGE_CANCELLED', cabinetId, actorId },
+      }),
+    ]);
     return { ok: true };
   } catch (error) {
     console.error("Echec de l'annulation du changement de plan", error);
