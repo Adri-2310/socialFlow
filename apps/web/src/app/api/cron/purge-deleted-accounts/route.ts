@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCronAuthorized } from '@/lib/cron-auth';
 import { prisma } from '@/lib/prisma';
 import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 
@@ -13,8 +14,7 @@ import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
 // ont onDelete: Cascade dans schema.prisma, donc equivalent a une vraie
 // suppression de compte.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 

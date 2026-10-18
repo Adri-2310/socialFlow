@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCronAuthorized } from '@/lib/cron-auth';
 import { prisma } from '@/lib/prisma';
 
 // Purge des sessions expirees : better-auth ne les supprime jamais de
@@ -7,8 +8,7 @@ import { prisma } from '@/lib/prisma';
 // verifie via CRON_SECRET comme documente par Vercel pour securiser un
 // endpoint de cron public.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
