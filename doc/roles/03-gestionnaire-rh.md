@@ -13,7 +13,8 @@ Le Gestionnaire RH est le **producteur** de la plateforme : un membre de l'équi
 | Élément | Règle |
 |---|---|
 | Code du rôle | `GESTIONNAIRE_RH` |
-| Création | Uniquement par invitation du Cabinet RH (7 jours) |
+| Création | Uniquement par invitation du Cabinet RH (7 jours) ; compte créé **par mot de passe** sur la page d'invitation, sans Google ni Microsoft (D76) |
+| Connexion | **Portail du cabinet** (`/connexion/<identifiant>`), aux couleurs du cabinet, sans SocialFlow ; `/login` la refuse (D76). Google/Microsoft seulement après liaison du compte depuis le profil |
 | Rattachement | Un seul cabinet (`User.cabinetId`, D7) |
 | Périmètre de données | **Uniquement les entreprises qui lui sont assignées** (table `GestionnaireEntreprise`, N:M) |
 | Compte dans les quotas | Oui (`maxUtilisateurs` du plan) |
