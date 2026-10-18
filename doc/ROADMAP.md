@@ -11,7 +11,7 @@
 | Site public | Landing, fonctionnalités, tarifs, FAQ, contact, à propos, pages légales | ✅ (audit Lighthouse et tests responsive à finir) |
 | Authentification | Better Auth : mot de passe, lien magique, code email, Google, Microsoft, 2FA, vérification d'email, réinitialisation, alertes de sécurité, archivage de compte, rate limit en base, audit de sécurité | ✅ |
 | Console SuperAdmin | Vue d'ensemble, cabinets, utilisateurs, monitoring, audit, facturation Stripe, configuration des plans | ✅ (branche `feature/dashboard`) |
-| Portail Cabinet RH | Vue d'ensemble, gestionnaires, invitations (renvoi, révocation) | 🟡 en cours (non commité) |
+| Portail Cabinet RH | Vue d'ensemble, gestionnaires, entreprises, invitations, remplacement de l'administrateur, facturation et changement de plan, quotas, paramètres, portail de connexion, export, audit | ✅ (18/10 ; reste ce qui dépend des fiches, des PDF et des échéances) |
 
 ## 2. Chantiers
 

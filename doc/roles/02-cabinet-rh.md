@@ -1,7 +1,7 @@
 # Rôle : Cabinet RH
 
-> Statut : **fondations construites** (inscription, création du cabinet, essai Stripe, invitation de gestionnaire) ; **portail en cours** : vue d'ensemble, gestion des gestionnaires et des invitations (13/10).
-> Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D4, D15, D19, D23–D31, D52.
+> Statut : **construit** (18/10/2026) : inscription et essai Stripe, facturation et changement de plan, quotas, équipe de gestionnaires, portefeuille d'entreprises, invitation et remplacement de l'administrateur d'entreprise, paramètres (identité, marque, modèles d'emails, portail de connexion, export des données), journal d'audit, suspension et lecture seule. **Reste** seulement ce qui dépend d'autres modules : PDF à la marque, compteurs de fiches, échéances ONSS, modèles d'emails des fiches, white-label Enterprise (voir § 6 et § 7).
+> Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D4, D15, D19, D23–D31, D52, D55–D78.
 
 ## 1. Mission
 
@@ -138,9 +138,9 @@ Profil (`/profil`) : nom, email (avec confirmation), mot de passe, 2FA, comptes 
 | # | Problème | Correction |
 |---|---|---|
 | C1 | ~~Essai créé sans carte~~ | ✅ Corrigé le 15/10 : `provisionStripeTrial` supprimé ; `POST /api/billing/checkout` crée une **session Stripe Checkout** (carte obligatoire, essai de 30 jours), `POST /api/billing/checkout/confirm` applique l'abonnement au retour sans attendre le webhook, et l'écran `dashboard/cabinet/paiement` (D32) est le seul accès tant que rien n'est payé. **Reste** : supprimer `User.plan` / `User.billingPeriod` |
-| C2 | ~~Plan stocké sur `User.plan` / `User.billingPeriod`~~ ✅ **Corrigé le 18/10 (D73) : plus aucune lecture ni écriture de ces champs ; colonnes supprimées le 19/10 (migration `drop_user_plan`)** | Corrigé le 14/10 (D55) : `Cabinet.planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`. `User.plan` n'est plus lu ; les colonnes seront supprimées avec Stripe Checkout (C1). Reste : transitions par webhook et blocage `423` (chantier C0) |
+| C2 | ~~Plan stocké sur `User.plan` / `User.billingPeriod`~~ ✅ **Corrigé le 18/10 (D73) : plus aucune lecture ni écriture de ces champs ; colonnes supprimées le 18/10 (migration `drop_user_plan`)** | Corrigé le 14/10 (D55) : `Cabinet.planId`, `billingPeriod`, `billingStatus`, `trialEndsAt`, `currentPeriodEnd`. `User.plan` n'est plus lu ; les colonnes seront supprimées avec Stripe Checkout (C1). Reste : transitions par webhook et blocage `423` (chantier C0) |
 | C3 | ~~Jeton d'invitation stocké en clair~~ | Corrigé le 13/10 : `Invitation.tokenHash` = `sha256(token)` (voir `lib/invitations.ts`) |
-| C4 | ~~Acceptation d'invitation : mot de passe uniquement~~ | ❌ **Annulé le 18/10 (D76)** : Google et Microsoft ne s'utilisent **pas** pour créer un compte invité. Les invités créent leur compte par **mot de passe** (page d'invitation), puis se connectent par le **portail de connexion de leur cabinet** (`/connexion/<identifiant>`), où Google et Microsoft ne marchent qu'après liaison du compte. Code d'acceptation OAuth retiré, portail construit le 19/10 |
+| C4 | ~~Acceptation d'invitation : mot de passe uniquement~~ | ❌ **Annulé le 18/10 (D76)** : Google et Microsoft ne s'utilisent **pas** pour créer un compte invité. Les invités créent leur compte par **mot de passe** (page d'invitation), puis se connectent par le **portail de connexion de leur cabinet** (`/connexion/<identifiant>`), où Google et Microsoft ne marchent qu'après liaison du compte. Code d'acceptation OAuth retiré, portail construit le 18/10 |
 | C5 | ~~Pas de renvoi ni de révocation d'invitation~~ | Corrigé le 13/10 (voir § 6) |
 | C6 | ~~Acceptation via inscription + suppression du cabinet « fantôme »~~ | ✅ Corrigé le 18/10 (D73) : le compte est créé par `lib/invitation-accept.ts` (fonctions internes de better-auth), puis rattaché à l'invitation en **une transaction** ; plus de cabinet fantôme, et le compte est supprimé si le rattachement échoue |
 | C7 | Suspension manuelle par le SuperAdmin = blocage total des connexions de tout le cabinet | ✅ **Corrigé le 18/10 (D71)** : lecture seule par défaut (comme l'impayé, D29) avec message adapté à chaque rôle, export autorisé et aucun envoi automatique ; blocage total **optionnel**, choisi explicitement par le SuperAdmin avec un motif obligatoire ; type et motif tracés dans l'audit |
