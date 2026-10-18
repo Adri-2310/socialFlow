@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Loader2, ChevronUp, ChevronDown, Archive } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SuspendCabinetDialog } from '@/components/admin/suspend-cabinet-dialog';
+import type { SuspensionType } from '@/lib/cabinet-suspension';
 import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
 
 export type CabinetRow = {
   id: string;
   name: string;
   status: string;
+  // D71 : nature de la suspension (null si le cabinet n'est pas suspendu).
+  suspensionType?: SuspensionType | null;
   plan: string | null;
   gestionnaireCount: number;
   createdAt: string;
@@ -43,6 +47,16 @@ const STATUS_LABEL: Record<string, string> = {
 // api/admin/cabinets/[id]/route.ts).
 function displayStatus(c: CabinetRow): string {
   return c.deletedAt ? 'archive' : c.status;
+}
+
+// Libelle du badge : une suspension precise sa nature (D71).
+function statusLabel(c: CabinetRow): string {
+  const status = displayStatus(c);
+  if (status === 'suspendu') {
+    if (c.suspensionType === 'READ_ONLY') return 'Suspendu · lecture seule';
+    if (c.suspensionType === 'BLOCKED') return 'Suspendu · bloqué';
+  }
+  return STATUS_LABEL[status] ?? status;
 }
 
 function purgeDate(deletedAt: string): Date {
@@ -123,6 +137,9 @@ export function CabinetsTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [page, setPage] = useState(1);
   const [pendingCabinet, setPendingCabinet] = useState<CabinetRow | null>(null);
+  // Escalade d'une lecture seule vers un blocage total : meme dialogue, type impose.
+  const [pendingBlockCabinet, setPendingBlockCabinet] = useState<CabinetRow | null>(null);
+  const [suspendError, setSuspendError] = useState<string | null>(null);
   const [pendingArchiveCabinet, setPendingArchiveCabinet] = useState<CabinetRow | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -184,22 +201,42 @@ export function CabinetsTable({
     setPage(1);
   }
 
-  async function updateStatus(id: string, status: 'actif' | 'suspendu') {
+  async function updateStatus(
+    id: string,
+    status: 'actif' | 'suspendu',
+    suspension?: { mode: SuspensionType; reason: string },
+  ) {
     setLoadingId(id);
     setError(null);
+    setSuspendError(null);
     try {
       const res = await fetch(`/api/admin/cabinets/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...suspension }),
       });
-      if (!res.ok) throw new Error('request_failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        // Erreur de saisie : on garde le dialogue ouvert pour la corriger.
+        if (body?.error === 'REASON_REQUIRED') {
+          setSuspendError('Un motif est obligatoire pour bloquer les connexions.');
+          return;
+        }
+        if (body?.error === 'REASON_TOO_LONG') {
+          setSuspendError('Le motif est trop long.');
+          return;
+        }
+        throw new Error('request_failed');
+      }
+      setPendingCabinet(null);
+      setPendingBlockCabinet(null);
       router.refresh();
     } catch {
       setError('Une erreur est survenue. Réessayez.');
+      setPendingCabinet(null);
+      setPendingBlockCabinet(null);
     } finally {
       setLoadingId(null);
-      setPendingCabinet(null);
     }
   }
 
@@ -343,7 +380,7 @@ export function CabinetsTable({
                     }`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                    {STATUS_LABEL[displayStatus(c)] ?? displayStatus(c)}
+                    {statusLabel(c)}
                   </span>
                 </td>
                 {!isPreview && (
@@ -368,6 +405,16 @@ export function CabinetsTable({
                       </div>
                     ) : (
                       <div className="flex justify-end gap-2">
+                        {c.status === 'suspendu' && c.suspensionType === 'READ_ONLY' && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingBlockCabinet(c)}
+                            disabled={loadingId === c.id}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Bloquer
+                          </button>
+                        )}
                         {c.status === 'suspendu' ? (
                           <button
                             type="button"
@@ -452,13 +499,29 @@ export function CabinetsTable({
       </div>
 
       {pendingCabinet && (
-        <ConfirmDialog
-          title="Suspendre ce cabinet ?"
-          description={`Le cabinet « ${pendingCabinet.name} » et ses utilisateurs perdront l'accès immédiatement. Cette action est réversible.`}
-          confirmLabel="Suspendre"
+        <SuspendCabinetDialog
+          cabinetName={pendingCabinet.name}
           loading={loadingId === pendingCabinet.id}
-          onCancel={() => setPendingCabinet(null)}
-          onConfirm={() => updateStatus(pendingCabinet.id, 'suspendu')}
+          error={suspendError}
+          onCancel={() => {
+            setPendingCabinet(null);
+            setSuspendError(null);
+          }}
+          onConfirm={(input) => updateStatus(pendingCabinet.id, 'suspendu', input)}
+        />
+      )}
+
+      {pendingBlockCabinet && (
+        <SuspendCabinetDialog
+          cabinetName={pendingBlockCabinet.name}
+          initialMode="BLOCKED"
+          loading={loadingId === pendingBlockCabinet.id}
+          error={suspendError}
+          onCancel={() => {
+            setPendingBlockCabinet(null);
+            setSuspendError(null);
+          }}
+          onConfirm={(input) => updateStatus(pendingBlockCabinet.id, 'suspendu', input)}
         />
       )}
 

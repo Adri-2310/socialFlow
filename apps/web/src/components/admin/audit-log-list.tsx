@@ -13,6 +13,8 @@ export type AuditLogEntry = {
   actorName: string | null;
   cabinetName: string | null;
   targetUserName: string | null;
+  // D71 : type et motif d'une suspension de cabinet.
+  suspension?: { mode: 'READ_ONLY' | 'BLOCKED'; reason: string | null } | null;
 };
 
 const PAGE_SIZE = 25;
@@ -40,7 +42,9 @@ function auditMessage(log: AuditLogEntry): string {
     case 'CABINET_CREATED':
       return `« ${cabinetName} » a créé son compte.`;
     case 'CABINET_SUSPENDED':
-      return `« ${cabinetName} » a été suspendu par ${log.actorName ?? 'un administrateur'}.`;
+      return `« ${cabinetName} » a été suspendu${
+        log.suspension ? (log.suspension.mode === 'READ_ONLY' ? ' en lecture seule' : ' avec blocage des connexions') : ''
+      } par ${log.actorName ?? 'un administrateur'}.${log.suspension?.reason ? ` Motif : ${log.suspension.reason}` : ''}`;
     case 'CABINET_REACTIVATED':
       return `« ${cabinetName} » a été réactivé par ${log.actorName ?? 'un administrateur'}.`;
     case 'CABINET_ARCHIVED':

@@ -72,8 +72,13 @@ function requestPATCH(url: string, body: unknown, cj?: ReturnType<typeof cookieJ
   return new Request(url, { method: 'PATCH', headers, body: JSON.stringify(body) });
 }
 
-function patch(cabinetId: string, status: string, cj?: ReturnType<typeof cookieJar>) {
-  return patchCabinet(requestPATCH(`${APP_URL}/api/admin/cabinets/${cabinetId}`, { status }, cj), {
+function patch(
+  cabinetId: string,
+  status: string,
+  cj?: ReturnType<typeof cookieJar>,
+  extra: Record<string, unknown> = {},
+) {
+  return patchCabinet(requestPATCH(`${APP_URL}/api/admin/cabinets/${cabinetId}`, { status, ...extra }, cj), {
     params: Promise.resolve({ id: cabinetId }),
   });
 }
@@ -126,17 +131,19 @@ describe('PATCH /api/admin/cabinets/[id]', () => {
     expect(res.status).toBe(400);
   });
 
-  it('suspend le cabinet, revoque les sessions actives et journalise', async () => {
+  it('bloque les connexions avec un motif : revoque les sessions actives et journalise le type et le motif (D71)', async () => {
     const { cj: adminCj, user: admin } = await creerSuperAdmin('admin-suspend');
     const { cj: cibleCj, user: cible } = await creerCabinetRH('cible-suspend');
 
     expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeTruthy();
 
-    const res = await patch(cible.cabinetId!, 'suspendu', adminCj);
+    const res = await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'BLOCKED', reason: 'Compte compromis' });
     expect(res.status).toBe(200);
 
     const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cible.cabinetId! } });
     expect(cabinet.status).toBe('suspendu');
+    expect(cabinet.suspensionType).toBe('BLOCKED');
+    expect(cabinet.suspensionReason).toBe('Compte compromis');
 
     // La session ouverte avant la suspension est coupee immediatement.
     expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeFalsy();
@@ -145,12 +152,13 @@ describe('PATCH /api/admin/cabinets/[id]', () => {
       where: { action: 'CABINET_SUSPENDED', cabinetId: cible.cabinetId! },
     });
     expect(log.actorId).toBe(admin.id);
+    expect(log.metadata).toMatchObject({ mode: 'BLOCKED', reason: 'Compte compromis' });
   });
 
   it('bloque une nouvelle connexion par mot de passe sur un cabinet suspendu avec un message explicite', async () => {
     const { cj: adminCj } = await creerSuperAdmin('admin-bloque-mdp');
     const { mail: cibleMail, user: cible } = await creerCabinetRH('cible-bloque-mdp');
-    await patch(cible.cabinetId!, 'suspendu', adminCj);
+    await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'BLOCKED', reason: 'Compte compromis' });
 
     const res = await auth.api.signInEmail({
       body: { email: cibleMail, password: PASSWORD },
@@ -168,7 +176,7 @@ describe('PATCH /api/admin/cabinets/[id]', () => {
   it('bloque une nouvelle connexion par lien magique sur un cabinet suspendu, avec redirection dediee', async () => {
     const { cj: adminCj } = await creerSuperAdmin('admin-bloque-lien');
     const { mail: cibleMail, user: cible } = await creerCabinetRH('cible-bloque-lien');
-    await patch(cible.cabinetId!, 'suspendu', adminCj);
+    await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'BLOCKED', reason: 'Compte compromis' });
 
     await auth.api.signInMagicLink({
       body: { email: cibleMail, callbackURL: '/bienvenue' },
@@ -192,13 +200,16 @@ describe('PATCH /api/admin/cabinets/[id]', () => {
   it('reactive le cabinet, journalise et redonne acces immediatement', async () => {
     const { cj: adminCj, user: admin } = await creerSuperAdmin('admin-reactive');
     const { mail: cibleMail, user: cible } = await creerCabinetRH('cible-reactive');
-    await patch(cible.cabinetId!, 'suspendu', adminCj);
+    await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'BLOCKED', reason: 'Compte compromis' });
 
     const res = await patch(cible.cabinetId!, 'actif', adminCj);
     expect(res.status).toBe(200);
 
     const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cible.cabinetId! } });
     expect(cabinet.status).toBe('actif');
+    // D71 : la reactivation efface le type et le motif.
+    expect(cabinet.suspensionType).toBeNull();
+    expect(cabinet.suspensionReason).toBeNull();
 
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'CABINET_REACTIVATED', cabinetId: cible.cabinetId! },
@@ -211,6 +222,87 @@ describe('PATCH /api/admin/cabinets/[id]', () => {
       asResponse: true,
     });
     expect(connexion.status).toBe(200);
+  });
+
+  it('suspend par defaut en LECTURE SEULE : sessions conservees, connexion possible (D71)', async () => {
+    const { cj: adminCj, user: admin } = await creerSuperAdmin('admin-lecture-seule');
+    const { cj: cibleCj, mail: cibleMail, user: cible } = await creerCabinetRH('cible-lecture-seule');
+
+    const res = await patch(cible.cabinetId!, 'suspendu', adminCj, { reason: '  Verification en cours  ' });
+    expect(res.status).toBe(200);
+
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cible.cabinetId! } });
+    expect(cabinet.status).toBe('suspendu');
+    expect(cabinet.suspensionType).toBe('READ_ONLY');
+    expect(cabinet.suspensionReason).toBe('Verification en cours');
+
+    // Aucune session coupee, et une nouvelle connexion reste possible.
+    expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeTruthy();
+    const connexion = await auth.api.signInEmail({
+      body: { email: cibleMail, password: PASSWORD },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    expect(connexion.status).toBe(200);
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'CABINET_SUSPENDED', cabinetId: cible.cabinetId! },
+    });
+    expect(log.actorId).toBe(admin.id);
+    expect(log.metadata).toMatchObject({ mode: 'READ_ONLY', reason: 'Verification en cours' });
+  });
+
+  it('la lecture seule se passe sans motif', async () => {
+    const { cj: adminCj } = await creerSuperAdmin('admin-sans-motif');
+    const { user: cible } = await creerCabinetRH('cible-sans-motif');
+
+    expect((await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'READ_ONLY' })).status).toBe(200);
+
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cible.cabinetId! } });
+    expect(cabinet.suspensionType).toBe('READ_ONLY');
+    expect(cabinet.suspensionReason).toBeNull();
+  });
+
+  it('refuse un blocage total sans motif, un mode inconnu et un motif trop long (400)', async () => {
+    const { cj: adminCj } = await creerSuperAdmin('admin-validation-suspension');
+    const { user: cible } = await creerCabinetRH('cible-validation-suspension');
+
+    const sansMotif = await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'BLOCKED', reason: '   ' });
+    expect(sansMotif.status).toBe(400);
+    expect((await sansMotif.json()).error).toBe('REASON_REQUIRED');
+
+    const inconnu = await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'AUTRE' });
+    expect(inconnu.status).toBe(400);
+    expect((await inconnu.json()).error).toBe('INVALID_MODE');
+
+    const trop = await patch(cible.cabinetId!, 'suspendu', adminCj, { reason: 'x'.repeat(501) });
+    expect(trop.status).toBe(400);
+    expect((await trop.json()).error).toBe('REASON_TOO_LONG');
+
+    // Rien n'a ete ecrit.
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cible.cabinetId! } });
+    expect(cabinet.status).toBe('actif');
+    expect(cabinet.suspensionType).toBeNull();
+  });
+
+  it('passe d une lecture seule a un blocage total : coupe alors les sessions (D71)', async () => {
+    const { cj: adminCj } = await creerSuperAdmin('admin-escalade');
+    const { cj: cibleCj, user: cible } = await creerCabinetRH('cible-escalade');
+
+    await patch(cible.cabinetId!, 'suspendu', adminCj);
+    expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeTruthy();
+
+    const res = await patch(cible.cabinetId!, 'suspendu', adminCj, { mode: 'BLOCKED', reason: 'Compte compromis' });
+    expect(res.status).toBe(200);
+
+    expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeFalsy();
+    const cabinet = await prisma.cabinet.findUniqueOrThrow({ where: { id: cible.cabinetId! } });
+    expect(cabinet.suspensionType).toBe('BLOCKED');
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'CABINET_SUSPENDED', cabinetId: cible.cabinetId! },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(log.metadata).toMatchObject({ mode: 'BLOCKED', previousMode: 'READ_ONLY' });
   });
 });
 

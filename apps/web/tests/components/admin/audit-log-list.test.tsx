@@ -73,6 +73,23 @@ describe('AuditLogList - formatage des messages', () => {
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
+  it('precise la nature et le motif d une suspension de cabinet (D71)', () => {
+    const base = { id: '1', action: 'CABINET_SUSPENDED', createdAt: new Date().toISOString(), actorName: 'Adrien', cabinetName: 'Alpha', targetUserName: null };
+    render(
+      <AuditLogList
+        logs={[
+          { ...base, id: 'a', suspension: { mode: 'READ_ONLY', reason: null } },
+          { ...base, id: 'b', suspension: { mode: 'BLOCKED', reason: 'Compte compromis' } },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('« Alpha » a été suspendu en lecture seule par Adrien.')).toBeInTheDocument();
+    expect(
+      screen.getByText('« Alpha » a été suspendu avec blocage des connexions par Adrien. Motif : Compte compromis'),
+    ).toBeInTheDocument();
+  });
+
   it.each([
     ['USER_ARCHIVED', 'Julien Lemaire', 'Adrien', /« Julien Lemaire » a été archivé par Adrien \(purge dans \d+ jours\)\./],
     ['USER_RESTORED', 'Julien Lemaire', 'Adrien', '« Julien Lemaire » a été restauré par Adrien.'],

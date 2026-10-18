@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import {
+  SUSPENSION_REASON_MAX,
+  SUSPENSION_TYPES,
+  suspensionTypeOf,
+  type SuspensionType,
+} from '@/lib/cabinet-suspension';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
 type CabinetStatus = (typeof VALID_STATUSES)[number];
 
-// Suspension/reactivation de cabinet par un SuperAdmin (voir
+// Suspension/reactivation de cabinet par un SuperAdmin (D71 ; voir
 // doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md, SPEC_FINAL.md section
 // MONITORING & ADMIN). Meme raison qu'invitations/route.ts pour ne pas
 // reutiliser requireSession() ici : ce Route Handler doit renvoyer un
@@ -27,6 +33,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'INVALID_STATUS' }, { status: 400 });
   }
 
+  // D71 : par defaut la suspension est une LECTURE SEULE ; le blocage total des
+  // connexions est un choix explicite, avec un motif obligatoire.
+  const rawMode = body?.mode;
+  if (rawMode !== undefined && !(SUSPENSION_TYPES as readonly unknown[]).includes(rawMode)) {
+    return NextResponse.json({ error: 'INVALID_MODE' }, { status: 400 });
+  }
+  const mode: SuspensionType = (rawMode as SuspensionType | undefined) ?? 'READ_ONLY';
+  const rawReason = typeof body?.reason === 'string' ? body.reason.trim() : '';
+  if (rawReason.length > SUSPENSION_REASON_MAX) {
+    return NextResponse.json({ error: 'REASON_TOO_LONG' }, { status: 400 });
+  }
+  if (status === 'suspendu' && mode === 'BLOCKED' && !rawReason) {
+    return NextResponse.json({ error: 'REASON_REQUIRED' }, { status: 400 });
+  }
+
   const cabinet = await prisma.cabinet.findUnique({ where: { id: cabinetId } });
   if (!cabinet) {
     return NextResponse.json({ error: 'CABINET_NOT_FOUND' }, { status: 404 });
@@ -36,18 +57,43 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   if (status === 'suspendu') {
-    // Coupe l'acces immediatement (pas seulement a la prochaine connexion) :
-    // le blocage dans hooks.after de auth.ts empeche les NOUVELLES sessions,
-    // mais ne touche pas celles deja actives.
-    await prisma.session.deleteMany({ where: { user: { cabinetId } } });
-    await prisma.cabinet.update({ where: { id: cabinetId }, data: { status: 'suspendu' } });
-    await prisma.auditLog.create({
-      data: { action: 'CABINET_SUSPENDED', actorId: session.user.id, cabinetId },
+    // Le blocage total coupe l'acces immediatement (pas seulement a la prochaine
+    // connexion) : le blocage dans hooks.after de auth.ts empeche les NOUVELLES
+    // sessions, mais ne touche pas celles deja actives. Une lecture seule laisse
+    // les sessions en place.
+    const previous = suspensionTypeOf(cabinet);
+    await prisma.$transaction(async (tx) => {
+      if (mode === 'BLOCKED') {
+        await tx.session.deleteMany({ where: { user: { cabinetId } } });
+      }
+      await tx.cabinet.update({
+        where: { id: cabinetId },
+        data: { status: 'suspendu', suspensionType: mode, suspensionReason: rawReason || null },
+      });
+      // Type et motif dans l'audit (D71) ; le journal du cabinet n'affiche pas
+      // les actions CABINET_*, le motif reste donc interne a l'administration.
+      await tx.auditLog.create({
+        data: {
+          action: 'CABINET_SUSPENDED',
+          actorId: session.user.id,
+          cabinetId,
+          metadata: {
+            mode,
+            ...(rawReason ? { reason: rawReason } : {}),
+            ...(previous ? { previousMode: previous } : {}),
+          },
+        },
+      });
     });
   } else {
-    await prisma.cabinet.update({ where: { id: cabinetId }, data: { status: 'actif' } });
-    await prisma.auditLog.create({
-      data: { action: 'CABINET_REACTIVATED', actorId: session.user.id, cabinetId },
+    await prisma.$transaction(async (tx) => {
+      await tx.cabinet.update({
+        where: { id: cabinetId },
+        data: { status: 'actif', suspensionType: null, suspensionReason: null },
+      });
+      await tx.auditLog.create({
+        data: { action: 'CABINET_REACTIVATED', actorId: session.user.id, cabinetId },
+      });
     });
   }
 

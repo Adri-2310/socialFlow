@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { suspensionTypeOf } from '@/lib/cabinet-suspension';
 import { stripe } from '@/lib/stripe';
 import { monthlyEquivalentFromStripe } from '@/lib/billing';
 import type { CabinetRow } from '@/components/admin/cabinets-table';
@@ -19,6 +20,7 @@ export async function getCabinets() {
     id: c.id,
     name: c.name,
     status: c.status,
+    suspensionType: c.status === 'suspendu' ? suspensionTypeOf(c) : null,
     plan: c.planId,
     gestionnaireCount: c._count.users,
     createdAt: c.createdAt.toISOString(),
@@ -137,7 +139,21 @@ export async function getAuditLogEntries(take: number): Promise<AuditLogEntry[]>
     actorName: log.actor?.name ?? null,
     cabinetName: log.cabinet?.name ?? null,
     targetUserName: log.targetUser?.name ?? null,
+    suspension: suspensionDetail(log.action, log.metadata),
   }));
+}
+
+// Type et motif d'une suspension de cabinet (D71), lus dans les metadonnees de
+// l'audit. Seule l'administration voit le journal global : le motif y reste.
+function suspensionDetail(
+  action: string,
+  metadata: unknown,
+): { mode: 'READ_ONLY' | 'BLOCKED'; reason: string | null } | null {
+  if (action !== 'CABINET_SUSPENDED') return null;
+  const data = (metadata && typeof metadata === 'object' ? metadata : {}) as Record<string, unknown>;
+  // Une suspension journalisee avant D71 n'avait pas de type : blocage total.
+  const mode = data.mode === 'READ_ONLY' ? 'READ_ONLY' : 'BLOCKED';
+  return { mode, reason: typeof data.reason === 'string' ? data.reason : null };
 }
 
 export type BillingRow = {

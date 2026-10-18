@@ -11,6 +11,9 @@ import { isReadOnlyBillingStatus } from '@/lib/billing';
 export const SUSPENSION_TYPES = ['READ_ONLY', 'BLOCKED'] as const;
 export type SuspensionType = (typeof SUSPENSION_TYPES)[number];
 
+// Longueur maximale du motif saisi par le SuperAdmin.
+export const SUSPENSION_REASON_MAX = 500;
+
 export type CabinetSuspensionFields = {
   status: string;
   suspensionType?: string | null;
