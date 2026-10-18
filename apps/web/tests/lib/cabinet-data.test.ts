@@ -38,8 +38,6 @@ async function createUser(data: {
   suspendedBy?: string | null;
   deletedBy?: string | null;
   deletedAt?: Date | null;
-  plan?: string | null;
-  billingPeriod?: string | null;
 }) {
   userCounter += 1;
   const id = `cabinet-data-${stamp}-${userCounter}`;
@@ -155,9 +153,9 @@ describe('getCabinetOverview', () => {
     expect(overview.subscription.trialEndsAt?.getTime()).toBe(trialEndsAt.getTime());
   });
 
-  it('ne tient pas compte du plan figurant sur l utilisateur (D55)', async () => {
+  it('un cabinet sans plan n affiche aucun plan : le plan appartient au cabinet (D55)', async () => {
     const cabinet = await createCabinet(`Cabinet sans plan ${stamp}`);
-    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH', plan: 'enterprise' });
+    await createUser({ cabinetId: cabinet.id, role: 'CABINET_RH' });
 
     const overview = await getCabinetOverview(cabinet.id);
     expect(overview.subscription.planName).toBeNull();
