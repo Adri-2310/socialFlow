@@ -64,11 +64,13 @@ async function creerCabinetRH(label: string, plan?: 'starter' | 'pro' | 'enterpr
   const cj = cookieJar();
   cj.apply(
     await auth.api.signUpEmail({
-      body: { name: `Titulaire ${label}`, cabinetName: `Cabinet ${label}`, email: mail, password: PASSWORD, ...(plan ? { plan } : {}) },
+      body: { name: `Titulaire ${label}`, cabinetName: `Cabinet ${label}`, email: mail, password: PASSWORD },
       asResponse: true,
     }),
   );
   const user = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
+  // D55, D73 : le plan appartient au cabinet et se pose apres l'inscription.
+  if (plan) await prisma.cabinet.update({ where: { id: user.cabinetId! }, data: { planId: plan } });
   return { mail, cj, user };
 }
 
