@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
+import { portalPath } from '@/lib/portal-slug';
 
-export function ResetPasswordForm() {
+// `portal` (D76, D77) : page ouverte depuis le portail d'un cabinet - on y retourne pour se connecter.
+export function ResetPasswordForm({ portal }: { portal?: { slug: string } } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -72,7 +74,7 @@ export function ResetPasswordForm() {
         <button
           type="button"
           onClick={() => {
-            router.push('/login');
+            router.push(portal ? portalPath(portal.slug) : '/login');
             router.refresh();
           }}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"

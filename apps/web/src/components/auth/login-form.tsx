@@ -308,7 +308,7 @@ export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
                   Mot de passe
                 </label>
                 <Link
-                  href="/mot-de-passe-oublie"
+                  href={portal ? `${portalPath(portal.slug)}/mot-de-passe-oublie` : '/mot-de-passe-oublie'}
                   className="text-xs font-medium text-primary hover:underline"
                 >
                   Oublié ?
