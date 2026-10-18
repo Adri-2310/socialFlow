@@ -246,7 +246,7 @@ Tout email part par Resend (pas de SMTP de cabinet, D30) ; pour les emails « au
 | Vérification des nouveaux barèmes officiels | Hebdomadaire | 🆕 |
 | Expiration des invitations et des liens de fiche | Quotidienne | 🆕 |
 
-Toutes **idempotentes** (rejouables sans effet double) et protégées par `CRON_SECRET`.
+Toutes **idempotentes** (rejouables sans effet double) et protégées par `CRON_SECRET`. L'autorisation passe par un seul module, `lib/cron-auth.ts` (`isCronAuthorized`) : un `CRON_SECRET` **absent ou vide refuse tout appel** (sinon « Bearer undefined » passerait) et la comparaison se fait en **temps constant**. Corrigé le 19/10 pour les trois premières routes, qui comparaient directement l'en-tête.
 
 ## 12. Conservation des données
 
