@@ -6,6 +6,7 @@ import { LoginForm } from '@/components/auth/login-form';
 import { translateAuthError } from '@/lib/auth-errors';
 import { buildThemeCss } from '@/lib/branding-rules';
 import { getPortalCabinet } from '@/lib/cabinet-portal';
+import { manifestPath } from '@/lib/portal-pwa';
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ error?: string }>;
@@ -20,6 +21,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: `Connexion — ${cabinet.brandName}`,
     applicationName: cabinet.brandName,
+    // D77 : application installable au nom du cabinet.
+    manifest: manifestPath(slug),
     robots: { index: false, follow: false },
     ...(cabinet.logoUrl ? { icons: { icon: cabinet.logoUrl, shortcut: cabinet.logoUrl } } : {}),
   };
