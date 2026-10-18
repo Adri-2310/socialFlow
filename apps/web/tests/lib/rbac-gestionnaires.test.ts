@@ -19,6 +19,7 @@ vi.mock('@/lib/email', () => ({
 }));
 
 const { auth } = await import('@/lib/auth');
+const { ensureCabinetSlug } = await import('@/lib/cabinet-portal');
 const { prisma } = await import('@/lib/prisma');
 const email = await import('@/lib/email');
 const {
@@ -30,6 +31,12 @@ const {
 );
 const { PATCH: patchAdminUser } = await import('@/app/api/admin/users/[id]/route');
 const { POST: changeGestionnaireEmail } = await import('@/app/api/gestionnaires/[id]/email/route');
+
+// D76 : un gestionnaire ne se connecte que par le portail de son cabinet.
+async function portalHeaders(email: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { email: email.toLowerCase() } });
+  return new Headers({ 'x-sf-portal': await ensureCabinetSlug(user.cabinetId!) });
+}
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';
@@ -243,7 +250,7 @@ describe('suspension d un gestionnaire (D52)', () => {
 
     const connexion = await auth.api.signInEmail({
       body: { email: mail, password: PASSWORD },
-      headers: new Headers(),
+      headers: await portalHeaders(mail),
       asResponse: true,
     });
     expect(connexion.status).toBe(200);
@@ -434,7 +441,7 @@ describe('modification de l email d un gestionnaire (D53)', () => {
     expect(ancienneConnexion.status).toBe(401);
     const nouvelleConnexion = await auth.api.signInEmail({
       body: { email: nouvelle, password: PASSWORD },
-      headers: new Headers(),
+      headers: await portalHeaders(nouvelle),
       asResponse: true,
     });
     expect(nouvelleConnexion.status).toBe(200);
@@ -476,7 +483,7 @@ describe('restauration d un gestionnaire retire (D52)', () => {
 
     const connexion = await auth.api.signInEmail({
       body: { email: mail, password: PASSWORD },
-      headers: new Headers(),
+      headers: await portalHeaders(mail),
       asResponse: true,
     });
     expect(connexion.status).toBe(200);

@@ -8,9 +8,28 @@ import { signIn, twoFactor } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
 import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
 import { PasswordlessLogin } from '@/components/auth/passwordless-login';
+import { PORTAL_COOKIE, PORTAL_HEADER, portalPath } from '@/lib/portal-slug';
 
-export function LoginForm() {
+// `portal` : connexion par le portail d'un cabinet (D76). Le serveur y reconnait le
+// cabinet (en-tete, cookie ou adresse de retour) ; sans lui, un gestionnaire, une
+// entreprise ou un collaborateur est refuse et renvoye vers son portail.
+export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
   const router = useRouter();
+  const portalOptions = portal ? { headers: { [PORTAL_HEADER]: portal.slug } } : undefined;
+  const afterLoginPath = portal ? '/dashboard' : '/bienvenue';
+  // Google et Microsoft passent par une redirection : on y revient par une page du
+  // portail, qui renvoie vers le tableau de bord. Une erreur revient sur le portail.
+  const socialRedirect = portal
+    ? { callbackURL: `${portalPath(portal.slug)}/continuer`, errorCallbackURL: portalPath(portal.slug) }
+    : { callbackURL: '/bienvenue' };
+  const [portalLink, setPortalLink] = useState<string | null>(null);
+
+  // Cookie de portail, lu par le serveur au retour de Google/Microsoft (10 minutes).
+  function announcePortal() {
+    if (portal) {
+      document.cookie = `${PORTAL_COOKIE}=${portal.slug}; path=/; max-age=600; samesite=lax`;
+    }
+  }
   const [mode, setMode] = useState<'password' | 'passwordless'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,9 +47,10 @@ export function LoginForm() {
     setError(null);
     setGoogleLoading(true);
 
+    announcePortal();
     const { error: googleError } = await signIn.social({
       provider: 'google',
-      callbackURL: '/bienvenue',
+      ...socialRedirect,
     });
 
     if (googleError) {
@@ -43,9 +63,10 @@ export function LoginForm() {
     setError(null);
     setMicrosoftLoading(true);
 
+    announcePortal();
     const { error: microsoftError } = await signIn.social({
       provider: 'microsoft',
-      callbackURL: '/bienvenue',
+      ...socialRedirect,
     });
 
     if (microsoftError) {
@@ -59,7 +80,11 @@ export function LoginForm() {
     setError(null);
     setLoading(true);
 
-    const { data, error: signInError } = await signIn.email({ email, password, rememberMe });
+    setPortalLink(null);
+    const { data, error: signInError } = await signIn.email(
+      { email, password, rememberMe },
+      portalOptions,
+    );
 
     setLoading(false);
 
@@ -82,6 +107,11 @@ export function LoginForm() {
         router.push('/erreur-connexion?error=user_suspended_by_cabinet');
         return;
       }
+      // D76 : les identifiants sont bons mais cette page est celle de SocialFlow ; le
+      // message de l'erreur est le chemin du portail du cabinet de la personne.
+      if (signInError.code === 'PORTAL_REQUIRED' && signInError.message?.startsWith('/connexion/')) {
+        setPortalLink(signInError.message);
+      }
       setError(translateAuthError(signInError.code));
       return;
     }
@@ -91,7 +121,7 @@ export function LoginForm() {
       return;
     }
 
-    router.push('/bienvenue');
+    router.push(afterLoginPath);
     router.refresh();
   }
 
@@ -101,8 +131,8 @@ export function LoginForm() {
     setLoading(true);
 
     const { error: verifyError } = useBackupCode
-      ? await twoFactor.verifyBackupCode({ code: twoFactorCode })
-      : await twoFactor.verifyTotp({ code: twoFactorCode });
+      ? await twoFactor.verifyBackupCode({ code: twoFactorCode }, portalOptions)
+      : await twoFactor.verifyTotp({ code: twoFactorCode }, portalOptions);
 
     setLoading(false);
 
@@ -111,7 +141,7 @@ export function LoginForm() {
       return;
     }
 
-    router.push('/bienvenue');
+    router.push(afterLoginPath);
     router.refresh();
   }
 
@@ -244,7 +274,7 @@ export function LoginForm() {
       )}
 
       {mode === 'passwordless' ? (
-        <PasswordlessLogin onBack={() => setMode('password')} />
+        <PasswordlessLogin onBack={() => setMode('password')} portal={portal} />
       ) : (
         <>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -313,6 +343,11 @@ export function LoginForm() {
             </label>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
+            {portalLink && (
+              <Link href={portalLink} className="block text-sm font-semibold text-primary hover:underline">
+                Ouvrir le portail de mon cabinet
+              </Link>
+            )}
 
             <button
               type="submit"
@@ -324,12 +359,19 @@ export function LoginForm() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Pas encore de compte ?{' '}
-            <Link href="/register" className="font-semibold text-primary hover:underline">
-              Créer un compte
-            </Link>
-          </p>
+          {/* Un compte de cabinet client ne se cree pas ici (D76). */}
+          {portal ? (
+            <p className="text-center text-xs text-muted-foreground">
+              Google et Microsoft fonctionnent une fois votre compte lié, depuis votre profil.
+            </p>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">
+              Pas encore de compte ?{' '}
+              <Link href="/register" className="font-semibold text-primary hover:underline">
+                Créer un compte
+              </Link>
+            </p>
+          )}
         </>
       )}
     </div>

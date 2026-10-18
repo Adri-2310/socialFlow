@@ -1,11 +1,7 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import Link from 'next/link';
-import { auth } from '@/lib/auth';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { AcceptInvitationForm } from '@/components/invitations/accept-invitation-form';
-import { AcceptOAuthButtons } from '@/components/invitations/accept-oauth-buttons';
-import { FinalizeOAuthInvitation } from '@/components/invitations/finalize-oauth-invitation';
 import { buildThemeCss } from '@/lib/branding-rules';
 import { getInvitationPreview } from '@/lib/invitation-preview';
 
@@ -41,19 +37,6 @@ export default async function AcceptInvitationPage({
   const { token } = await searchParams;
   const preview = await getInvitationPreview(token);
   const theme = preview ? buildThemeCss(preview) : null;
-
-  // C4 : retour d'une connexion Google/Microsoft. Si l'adresse verifiee du
-  // compte est celle de l'invitation et que le compte est tout neuf (aucun
-  // cabinet), on le rattache ; le serveur revalide tout. Sinon la page normale
-  // reste affichee.
-  const session = preview ? await auth.api.getSession({ headers: await headers() }) : null;
-  const oauthReady =
-    !!preview &&
-    !!session &&
-    session.user.emailVerified &&
-    session.user.email.toLowerCase() === preview.email.toLowerCase() &&
-    !session.user.cabinetId &&
-    (!session.user.role || session.user.role === 'CABINET_RH');
 
   return (
     <div className="flex min-h-screen">
@@ -108,15 +91,10 @@ export default async function AcceptInvitationPage({
                   ? `Créez le compte administrateur de ${preview.entrepriseName}, client de ${preview.brandName}.`
                   : `Créez votre compte gestionnaire RH pour ${preview.brandName}.`}
               </p>
-              <div className="mt-6 space-y-5">
-                {oauthReady ? (
-                  <FinalizeOAuthInvitation token={token} email={preview.email} />
-                ) : (
-                  <>
-                    <AcceptOAuthButtons token={token} />
-                    <AcceptInvitationForm token={token} email={preview.email} />
-                  </>
-                )}
+              {/* D76 : un invite cree son compte par mot de passe, jamais avec Google ni
+                  Microsoft ; il se connecte ensuite par le portail de son cabinet. */}
+              <div className="mt-6">
+                <AcceptInvitationForm token={token} email={preview.email} />
               </div>
               <p className="mt-8 text-center text-xs text-muted-foreground">
                 Propulsé par SocialFlow

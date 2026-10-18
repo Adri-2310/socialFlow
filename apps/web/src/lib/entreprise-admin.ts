@@ -3,6 +3,7 @@ import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { getCustomTemplate } from '@/lib/cabinet-email-templates';
 import { sendEntrepriseInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
+import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
 
 // Administrateur d'une entreprise cliente (D4, D5, roles/04-entreprise-cliente.md
 // § 2) : un seul compte par entreprise, invite par le Cabinet RH uniquement. Le
@@ -175,5 +176,7 @@ export async function sendEntrepriseAdminInvitation(input: {
     input.entrepriseName,
     invitationUrl(input.token),
     template,
+    // D76 : le portail par lequel l'administrateur se reconnectera.
+    { portalUrl: portalUrl(await ensureCabinetSlug(input.cabinetId)) },
   );
 }

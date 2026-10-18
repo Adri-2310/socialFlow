@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { ACCEPT_ERROR_STATUS, acceptInvitationWithPassword } from '@/lib/invitation-accept';
+import { ensureCabinetSlug } from '@/lib/cabinet-portal';
+import { PORTAL_HEADER } from '@/lib/portal-slug';
 
 // Cree le compte de la personne invitee (C6) : role, cabinet et rattachement
 // viennent de l'invitation, jamais du client. Voir lib/invitation-accept.ts.
@@ -17,10 +19,13 @@ export async function POST(request: Request) {
 
   // Ouvre la session : connexion normale avec les identifiants qui viennent
   // d'etre poses (memes controles que toute connexion), dont le Set-Cookie est
-  // transfere a la reponse.
+  // transfere a la reponse. D76 : la personne vient de creer son compte pour CE
+  // cabinet, la connexion passe donc par le portail de ce cabinet.
+  const headers = new Headers(request.headers);
+  headers.set(PORTAL_HEADER, await ensureCabinetSlug(result.cabinetId));
   const signIn = await auth.api.signInEmail({
     body: { email: result.email, password },
-    headers: request.headers,
+    headers,
     asResponse: true,
   });
   if (signIn.status !== 200) {

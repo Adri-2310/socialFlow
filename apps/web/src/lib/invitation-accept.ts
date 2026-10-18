@@ -9,17 +9,15 @@ import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 // execute), et l'application de l'invitation est atomique.
 //
 // Deux entrees :
-//  - acceptInvitationWithPassword : la personne choisit un mot de passe ;
-//  - acceptInvitationWithOAuth : la personne s'est connectee avec Google ou
-//    Microsoft, dont l'email verifie doit etre celui de l'invitation.
+// Une seule voie (D76) : acceptInvitationWithPassword, la personne choisit un mot
+// de passe. Google et Microsoft ne servent jamais a creer un compte invite : ils
+// ne s'utilisent qu'apres liaison du compte, sur le portail du cabinet.
 
 export type AcceptError =
   | 'INVALID_REQUEST'
   | 'INVALID_TOKEN'
   | 'CABINET_READ_ONLY'
   | 'EMAIL_ALREADY_USED'
-  | 'EMAIL_MISMATCH'
-  | 'ACCOUNT_NOT_ELIGIBLE'
   | 'PASSWORD_TOO_SHORT'
   | 'PASSWORD_TOO_LONG';
 
@@ -31,8 +29,6 @@ export const ACCEPT_ERROR_STATUS: Record<AcceptError, number> = {
   PASSWORD_TOO_SHORT: 400,
   PASSWORD_TOO_LONG: 400,
   INVALID_TOKEN: 404,
-  EMAIL_MISMATCH: 403,
-  ACCOUNT_NOT_ELIGIBLE: 409,
   EMAIL_ALREADY_USED: 409,
   CABINET_READ_ONLY: 423,
 };
@@ -165,7 +161,7 @@ function mapRaceError(error: unknown): AcceptError | null {
 }
 
 export type AcceptResult =
-  | { ok: true; userId: string; email: string; cabinetName: string }
+  | { ok: true; userId: string; email: string; cabinetId: string; cabinetName: string }
   | { ok: false; error: AcceptError };
 
 export async function acceptInvitationWithPassword(input: {
@@ -223,44 +219,11 @@ export async function acceptInvitationWithPassword(input: {
     throw error;
   }
 
-  return { ok: true, userId: created.id, email: invitation.email, cabinetName: invitation.cabinetName };
-}
-
-// Acceptation par un compte cree via Google ou Microsoft (C4). `user` est celui
-// de la session. Garde-fous : l'email verifie du fournisseur doit etre celui de
-// l'invitation, et le compte doit etre tout neuf (aucun cabinet, role par
-// defaut) : un compte deja rattache ne peut pas etre detourne vers un autre
-// cabinet (D7).
-export async function acceptInvitationWithOAuth(input: {
-  token: string;
-  user: { id: string; email: string; emailVerified: boolean; cabinetId: string | null; role: string | null };
-}): Promise<AcceptResult> {
-  if (!input.token) return { ok: false, error: 'INVALID_REQUEST' };
-
-  const loaded = await loadAcceptableInvitation(input.token);
-  if (!loaded.ok) return loaded;
-  const { invitation } = loaded;
-  const { user } = input;
-
-  if (!user.emailVerified || user.email.toLowerCase() !== invitation.email) {
-    return { ok: false, error: 'EMAIL_MISMATCH' };
-  }
-  if (user.cabinetId || (user.role && user.role !== 'CABINET_RH')) {
-    return { ok: false, error: 'ACCOUNT_NOT_ELIGIBLE' };
-  }
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      // Relu dans la transaction : le compte n'a pas ete rattache entre-temps.
-      const fresh = await tx.user.findUnique({ where: { id: user.id }, select: { cabinetId: true } });
-      if (!fresh || fresh.cabinetId) throw new InvitationConsumed();
-      await applyInvitation(tx, invitation, user.id);
-    });
-  } catch (error) {
-    const mapped = mapRaceError(error);
-    if (mapped) return { ok: false, error: mapped };
-    throw error;
-  }
-
-  return { ok: true, userId: user.id, email: invitation.email, cabinetName: invitation.cabinetName };
+  return {
+    ok: true,
+    userId: created.id,
+    email: invitation.email,
+    cabinetId: invitation.cabinetId,
+    cabinetName: invitation.cabinetName,
+  };
 }

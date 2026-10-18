@@ -152,6 +152,7 @@ describe('invitation de l administrateur d une entreprise (D4, D5)', () => {
       'Boulangerie Dupont',
       expect.stringContaining('/invitations/accept?token='),
       null,
+      { portalUrl: expect.stringContaining('/connexion/') },
     );
 
     const audit = await prisma.auditLog.findFirstOrThrow({

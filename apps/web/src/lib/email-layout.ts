@@ -139,6 +139,7 @@ export function buildGestionnaireInvitation(input: {
   url: string;
   template?: { subject: string; body: string } | null;
   subjectPrefix?: string;
+  portalUrl?: string;
 }): { subject: string; html: string } {
   return buildInvitation({ type: 'INVITATION_GESTIONNAIRE', ...input });
 }
@@ -152,6 +153,7 @@ export function buildEntrepriseInvitation(input: {
   url: string;
   template?: { subject: string; body: string } | null;
   subjectPrefix?: string;
+  portalUrl?: string;
 }): { subject: string; html: string } {
   return buildInvitation({ type: 'INVITATION_ENTREPRISE', ...input });
 }
@@ -173,7 +175,17 @@ export function buildTemplatePreview(
     entrepriseName: sample.entreprise_nom,
     url: sample.lien,
     template: input.template,
+    // Domaine reserve : ne mene jamais a un vrai site.
+    portalUrl: 'https://portail.invalid/connexion/votre-cabinet',
   });
+}
+
+// Rappel du portail de connexion : apres l'invitation, la personne se connecte par la
+// page du cabinet, pas par SocialFlow (D76). Adresse http(s) uniquement.
+function portalLine(portalUrl: string | undefined, cabinetName: string): string {
+  if (!portalUrl || !/^https?:\/\//.test(portalUrl)) return '';
+  const href = escapeHtml(portalUrl);
+  return `<p style="margin:20px 0 0; font-size:13px; color:#475569;">Pour vous reconnecter par la suite, utilisez le portail de ${cabinetName} : <a href="${href}" style="color:inherit; font-weight:600; text-decoration:underline;">${href}</a></p>`;
 }
 
 function buildInvitation(input: {
@@ -184,6 +196,8 @@ function buildInvitation(input: {
   url: string;
   template?: { subject: string; body: string } | null;
   subjectPrefix?: string;
+  // Portail de connexion du cabinet (D76), pour se reconnecter apres la creation du compte.
+  portalUrl?: string;
 }): { subject: string; html: string } {
   const { brand, inviterName, url, type } = input;
   const theme = emailTheme(brand);
@@ -208,6 +222,7 @@ function buildInvitation(input: {
     ${renderBody(content.body, values)}
     <div style="height:12px;"></div>
     ${ctaButton('Accepter l’invitation', url, theme)}
+    ${portalLine(input.portalUrl, name)}
     <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #e5e7eb; font-size:12px; color:#94a3b8;">Si vous ne connaissez pas ${name} ou n'attendiez pas cette invitation, ignorez simplement cet email.</p>
   `,
     theme,

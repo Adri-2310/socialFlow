@@ -249,6 +249,7 @@ describe('modeles d email du cabinet (D68)', () => {
     expect(res.status).toBe(200);
     const call = vi.mocked(email.sendGestionnaireInvitationEmail).mock.calls[0];
     expect(call[4]).toEqual(valid);
-    expect(call[5]).toBeUndefined();
+    // D76 : le portail du cabinet est rappele dans l'email.
+    expect(call[5]).toEqual({ portalUrl: expect.stringContaining('/connexion/') });
   });
 });

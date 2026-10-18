@@ -282,7 +282,7 @@ export async function sendGestionnaireInvitationEmail(
   inviterName: string,
   url: string,
   template?: { subject: string; body: string } | null,
-  options?: { subjectPrefix?: string },
+  options?: { subjectPrefix?: string; portalUrl?: string },
 ) {
   // Le meme constructeur sert a l'apercu des modeles (lib/email-layout.ts) :
   // l'apercu est exactement l'email recu.
@@ -292,6 +292,7 @@ export async function sendGestionnaireInvitationEmail(
     url,
     template,
     subjectPrefix: options?.subjectPrefix,
+    portalUrl: options?.portalUrl,
   });
 
   const { error } = await resend.emails.send({
@@ -314,7 +315,7 @@ export async function sendEntrepriseInvitationEmail(
   entrepriseName: string,
   url: string,
   template?: { subject: string; body: string } | null,
-  options?: { subjectPrefix?: string },
+  options?: { subjectPrefix?: string; portalUrl?: string },
 ) {
   const { subject, html } = buildEntrepriseInvitation({
     brand,
@@ -323,6 +324,7 @@ export async function sendEntrepriseInvitationEmail(
     url,
     template,
     subjectPrefix: options?.subjectPrefix,
+    portalUrl: options?.portalUrl,
   });
 
   const { error } = await resend.emails.send({

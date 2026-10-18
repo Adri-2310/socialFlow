@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { BrandingForm } from '@/components/cabinet/branding-form';
 import { ExportCard } from '@/components/cabinet/export-card';
+import { PortalForm } from '@/components/cabinet/portal-form';
+import { ensureCabinetSlug } from '@/lib/cabinet-portal';
 import { EmailTemplateEditor } from '@/components/cabinet/email-template-editor';
 import { IdentityForm } from '@/components/cabinet/identity-form';
 import { LogoForm } from '@/components/cabinet/logo-form';
@@ -40,7 +42,7 @@ export default async function CabinetSettingsPage({
   const { onglet } = await searchParams;
   const initialTab = (TAB_IDS as readonly string[]).includes(onglet ?? '') ? (onglet as string) : 'cabinet';
 
-  const [identity, branding, templates, emailBrand, cabinet] = await Promise.all([
+  const [identity, branding, templates, emailBrand, cabinet, portalSlug] = await Promise.all([
     getCabinetIdentity(user.cabinetId),
     getCabinetBranding(user.cabinetId),
     listEmailTemplates(user.cabinetId),
@@ -49,6 +51,8 @@ export default async function CabinetSettingsPage({
       where: { id: user.cabinetId },
       select: { billingStatus: true, status: true, suspensionType: true, logoUrl: true },
     }),
+    // D76 : cree a la premiere visite pour un cabinet qui n'en a pas encore.
+    ensureCabinetSlug(user.cabinetId),
   ]);
   const readOnly = cabinet ? isCabinetReadOnly(cabinet) : false;
 
@@ -65,6 +69,11 @@ export default async function CabinetSettingsPage({
         <>
           <LogoForm logoUrl={cabinet?.logoUrl ?? null} cabinetName={identity.name} readOnly={readOnly} />
           <BrandingForm branding={branding} cabinetName={identity.name} readOnly={readOnly} />
+          <PortalForm
+            slug={portalSlug}
+            baseUrl={process.env.NEXT_PUBLIC_APP_URL ?? ''}
+            readOnly={readOnly}
+          />
         </>
       ),
     },

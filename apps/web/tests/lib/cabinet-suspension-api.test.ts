@@ -24,6 +24,7 @@ const { prisma } = await import('@/lib/prisma');
 const { POST: createInvitation } = await import('@/app/api/invitations/route');
 const { POST: acceptInvitation } = await import('@/app/api/invitations/accept/route');
 const { createInvitationToken } = await import('@/lib/invitations');
+const { ensureCabinetSlug } = await import('@/lib/cabinet-portal');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';
@@ -69,8 +70,14 @@ async function creerMembre(cabinetId: string, role: string, label: string) {
 const suspendre = (cabinetId: string, suspensionType: 'READ_ONLY' | 'BLOCKED' | null) =>
   prisma.cabinet.update({ where: { id: cabinetId }, data: { status: 'suspendu', suspensionType } });
 
-const connexion = (mail: string) =>
-  auth.api.signInEmail({ body: { email: mail, password: PASSWORD }, headers: new Headers(), asResponse: true });
+// `portalSlug` : portail du cabinet (D76). Gestionnaires et entreprises ne se
+// connectent que par lui ; le titulaire se connecte sans.
+const connexion = (mail: string, portalSlug?: string) =>
+  auth.api.signInEmail({
+    body: { email: mail, password: PASSWORD },
+    headers: new Headers(portalSlug ? { 'x-sf-portal': portalSlug } : {}),
+    asResponse: true,
+  });
 
 function inviter(cj: ReturnType<typeof cookieJar>, address: string) {
   return createInvitation(
@@ -88,9 +95,11 @@ describe('suspension manuelle en lecture seule (D71)', () => {
     const gestionnaire = await creerMembre(user.cabinetId!, 'GESTIONNAIRE_RH', 'susp-ro-g');
     const entreprise = await creerMembre(user.cabinetId!, 'ENTREPRISE_CLIENTE', 'susp-ro-e');
     await suspendre(user.cabinetId!, 'READ_ONLY');
+    const slug = await ensureCabinetSlug(user.cabinetId!);
 
-    for (const adresse of [mail, gestionnaire.mail, entreprise.mail]) {
-      expect((await connexion(adresse)).status).toBe(200);
+    expect((await connexion(mail)).status).toBe(200);
+    for (const adresse of [gestionnaire.mail, entreprise.mail]) {
+      expect((await connexion(adresse, slug)).status).toBe(200);
     }
   });
 

@@ -25,6 +25,7 @@ const { POST: acceptInvitation } = await import('@/app/api/invitations/accept/ro
 const { POST: resendInvitation } = await import('@/app/api/invitations/[id]/resend/route');
 const { DELETE: revokeInvitation } = await import('@/app/api/invitations/[id]/route');
 const { hashInvitationToken } = await import('@/lib/invitations');
+const { ensureCabinetSlug } = await import('@/lib/cabinet-portal');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';
@@ -139,6 +140,7 @@ describe('creation d une invitation', () => {
       'Cabinet Test',
       expect.stringContaining('/invitations/accept?token='),
       null,
+      { portalUrl: expect.stringContaining('/connexion/') },
     );
   });
 
@@ -323,9 +325,11 @@ describe('acceptation d une invitation', () => {
     const utilisateur = await prisma.user.findUniqueOrThrow({ where: { email: cibleEmail } });
     expect(utilisateur.name).toBe('Gestionnaire C6');
 
-    // Le compte « mot de passe » cree directement est bien reconnu par la connexion.
+    // Le compte « mot de passe » cree directement est bien reconnu par la connexion
+    // (par le portail de son cabinet, D76).
     const connexion = await auth.api.signInEmail({
       body: { email: cibleEmail, password: PASSWORD },
+      headers: new Headers({ 'x-sf-portal': await ensureCabinetSlug(utilisateur.cabinetId!) }),
       asResponse: true,
     });
     expect(connexion.status).toBe(200);

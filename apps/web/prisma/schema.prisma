@@ -96,6 +96,10 @@ model Cabinet {
   // ajouts (le plus strict des deux). Efface quand le changement est applique,
   // annule, ou que la periode est renouvelee sans lui. null = aucun.
   pendingPlanId     String?
+  // D76 : identifiant du portail de connexion du cabinet (/connexion/<slug>), par
+  // lequel ses gestionnaires, entreprises et collaborateurs se connectent sans voir
+  // SocialFlow. Genere a la demande puis modifiable par le Cabinet RH ; unique.
+  slug              String?         @unique
   suspensionType    String?
   // Motif saisi par le SuperAdmin ; jamais montre aux clients du cabinet (D29).
   suspensionReason  String?
