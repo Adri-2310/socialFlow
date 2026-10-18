@@ -26,7 +26,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 | Écran | Route | Ce qu'il fait |
 |---|---|---|
 | Vue d'ensemble | `/dashboard/admin` | KPIs (cabinets actifs, nouveaux du mois, MRR réel Stripe), répartition par plan, aperçu des 10 derniers cabinets et des 10 dernières entrées d'audit, résumé monitoring |
-| Cabinets | `/dashboard/admin/cabinets` | Liste triable : nom, statut, plan, nombre de gestionnaires, date de création. Actions : suspendre, réactiver, archiver, restaurer |
+| Cabinets | `/dashboard/admin/cabinets` | Liste triable : nom, statut, plan, nombre de gestionnaires, date de création. Actions : suspendre (lecture seule par défaut, blocage total optionnel avec motif, D71), bloquer les connexions d'un cabinet en lecture seule, réactiver, archiver, restaurer |
 | Utilisateurs | `/dashboard/admin/utilisateurs` | Liste de tous les comptes (nom, email, rôle, statut, cabinet). Actions : suspendre, réactiver, archiver, restaurer |
 | Monitoring | `/dashboard/admin/monitoring` | Santé et latence de la base, sessions actives, utilisateurs actifs distincts, cabinets/utilisateurs par statut, top 10 des compteurs du rate limiter |
 | Journal d'audit | `/dashboard/admin/audit` | Historique des actions (acteur, cabinet ou utilisateur visé, date) |
@@ -38,7 +38,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 ### 4.1 Cabinets — `api/admin/cabinets/[id]`
 | Action | Méthode | Effet | Audit |
 |---|---|---|---|
-| Suspendre | `PATCH {status:'suspendu'}` | Supprime toutes les sessions des membres du cabinet, `Cabinet.status = 'suspendu'` ; plus aucune connexion possible | `CABINET_SUSPENDED` |
+| Suspendre (D71) | `PATCH {status:'suspendu', mode?, reason?}` | `mode` = `READ_ONLY` (**par défaut**) : `Cabinet.status = 'suspendu'`, lecture seule (`423` aux écritures), connexions et sessions conservées, motif facultatif. `mode` = `BLOCKED` : motif **obligatoire** (`400 REASON_REQUIRED`), sessions des membres supprimées, plus aucune connexion. Motif limité à 500 caractères (`REASON_TOO_LONG`), mode inconnu → `INVALID_MODE`. Repasser de `READ_ONLY` à `BLOCKED` est possible. Type et motif dans `Cabinet.suspensionType` / `suspensionReason` | `CABINET_SUSPENDED` (métadonnées `mode`, `reason`, `previousMode`) |
 | Réactiver | `PATCH {status:'actif'}` | `Cabinet.status = 'actif'` | `CABINET_REACTIVATED` |
 | Archiver | `DELETE` | Supprime les sessions, `Cabinet.deletedAt = now` ; accès bloqué ; purge définitive après **90 jours** (`CABINET_DELETION_RETENTION_DAYS`, cron `purge-deleted-cabinets` à 4 h) | `CABINET_ARCHIVED` |
 | Restaurer | `PUT` | `deletedAt = null` (le statut suspendu éventuel est conservé) | `CABINET_RESTORED` |
