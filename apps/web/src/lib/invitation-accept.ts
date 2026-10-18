@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { hashInvitationToken } from '@/lib/invitations';
+import { hashInvitationToken, isAdminSeatAvailable } from '@/lib/invitations';
 import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 
 // Acceptation d'une invitation (C4, C6) : cree le compte avec le role et le
@@ -9,17 +9,15 @@ import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 // execute), et l'application de l'invitation est atomique.
 //
 // Deux entrees :
-//  - acceptInvitationWithPassword : la personne choisit un mot de passe ;
-//  - acceptInvitationWithOAuth : la personne s'est connectee avec Google ou
-//    Microsoft, dont l'email verifie doit etre celui de l'invitation.
+// Une seule voie (D76) : acceptInvitationWithPassword, la personne choisit un mot
+// de passe. Google et Microsoft ne servent jamais a creer un compte invite : ils
+// ne s'utilisent qu'apres liaison du compte, sur le portail du cabinet.
 
 export type AcceptError =
   | 'INVALID_REQUEST'
   | 'INVALID_TOKEN'
   | 'CABINET_READ_ONLY'
   | 'EMAIL_ALREADY_USED'
-  | 'EMAIL_MISMATCH'
-  | 'ACCOUNT_NOT_ELIGIBLE'
   | 'PASSWORD_TOO_SHORT'
   | 'PASSWORD_TOO_LONG';
 
@@ -31,8 +29,6 @@ export const ACCEPT_ERROR_STATUS: Record<AcceptError, number> = {
   PASSWORD_TOO_SHORT: 400,
   PASSWORD_TOO_LONG: 400,
   INVALID_TOKEN: 404,
-  EMAIL_MISMATCH: 403,
-  ACCOUNT_NOT_ELIGIBLE: 409,
   EMAIL_ALREADY_USED: 409,
   CABINET_READ_ONLY: 423,
 };
@@ -45,6 +41,8 @@ type LoadedInvitation = {
   cabinetName: string;
   entrepriseId: string | null;
   entrepriseName: string | null;
+  // D78 : administrateur que cette invitation remplace (archive a l'acceptation).
+  replacesAdminId: string | null;
 };
 
 // Format de l'identifiant de fournisseur d'un compte « mot de passe » dans
@@ -76,6 +74,7 @@ export async function loadAcceptableInvitation(
       expiresAt: true,
       cabinetId: true,
       entrepriseId: true,
+      replacesAdminId: true,
       cabinet: {
         select: { name: true, billingStatus: true, status: true, suspensionType: true, deletedAt: true },
       },
@@ -92,7 +91,10 @@ export async function loadAcceptableInvitation(
   }
   if (invitation.entrepriseId) {
     const entreprise = invitation.entreprise;
-    if (!entreprise || entreprise.deletedAt || entreprise.adminUserId) {
+    // D5 : la place doit etre libre - ou tenue par l'administrateur que cette invitation
+    // remplace (D78). Un autre administrateur arrive entre-temps rend le lien invalide.
+    const placeFree = isAdminSeatAvailable(entreprise?.adminUserId, invitation.replacesAdminId);
+    if (!entreprise || entreprise.deletedAt || !placeFree) {
       return { ok: false, error: 'INVALID_TOKEN' };
     }
   }
@@ -111,6 +113,7 @@ export async function loadAcceptableInvitation(
       cabinetName: invitation.cabinet.name,
       entrepriseId: invitation.entrepriseId,
       entrepriseName: invitation.entreprise?.name ?? null,
+      replacesAdminId: invitation.replacesAdminId,
     },
   };
 }
@@ -120,19 +123,60 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 // Rattache le compte a l'invitation : role, cabinet, adresse verifiee (prouvee
 // par le lien), administrateur de l'entreprise (D5), invitation consommee et
 // audit. Dans la transaction de l'appelant.
-async function applyInvitation(tx: Tx, invitation: LoadedInvitation, userId: string) {
+async function applyInvitation(
+  tx: Tx,
+  invitation: LoadedInvitation,
+  userId: string,
+): Promise<{ replacedAdmin: { email: string; name: string } | null }> {
   await tx.user.update({
     where: { id: userId },
     data: { role: invitation.role, cabinetId: invitation.cabinetId, emailVerified: true },
   });
-  // D5 : seulement si l'entreprise n'a pas deja un administrateur (course avec
-  // une autre acceptation).
+  // D5 : seulement si la place est libre, ou tenue par l'administrateur remplace (D78) :
+  // la condition est dans l'ecriture, donc une course avec une autre acceptation ou un
+  // retrait echoue proprement.
+  let replacedAdminId: string | null = null;
   if (invitation.entrepriseId) {
+    const current = await tx.entreprise.findUnique({
+      where: { id: invitation.entrepriseId },
+      select: { adminUserId: true },
+    });
+    const holder = current?.adminUserId ?? null;
+    if (holder && holder !== invitation.replacesAdminId) throw new EntrepriseAdminTaken();
     const { count } = await tx.entreprise.updateMany({
-      where: { id: invitation.entrepriseId, adminUserId: null, deletedAt: null },
+      where: { id: invitation.entrepriseId, adminUserId: holder, deletedAt: null },
       data: { adminUserId: userId },
     });
     if (count === 0) throw new EntrepriseAdminTaken();
+    replacedAdminId = holder;
+  }
+  // D78 : l'ancien administrateur est archive avec ses sessions coupees, dans la meme
+  // transaction (meme traitement que son retrait, lib/entreprise-admin.ts).
+  let replacedAdmin: { email: string; name: string } | null = null;
+  if (replacedAdminId) {
+    replacedAdmin = await tx.user.findUnique({
+      where: { id: replacedAdminId },
+      select: { email: true, name: true },
+    });
+    await tx.session.deleteMany({ where: { userId: replacedAdminId } });
+    await tx.user.update({
+      where: { id: replacedAdminId },
+      data: { deletedAt: new Date(), deletedBy: 'CABINET_RH' },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'USER_ARCHIVED',
+        actorId: userId,
+        cabinetId: invitation.cabinetId,
+        targetUserId: replacedAdminId,
+        metadata: {
+          role: 'ENTREPRISE_CLIENTE',
+          entrepriseId: invitation.entrepriseId,
+          entreprise: invitation.entrepriseName,
+          replacedBy: userId,
+        },
+      },
+    });
   }
   // Filtre sur le statut dans l'ecriture : couvre une double acceptation ou une
   // revocation simultanee.
@@ -155,6 +199,7 @@ async function applyInvitation(tx: Tx, invitation: LoadedInvitation, userId: str
       },
     },
   });
+  return { replacedAdmin };
 }
 
 function mapRaceError(error: unknown): AcceptError | null {
@@ -165,7 +210,17 @@ function mapRaceError(error: unknown): AcceptError | null {
 }
 
 export type AcceptResult =
-  | { ok: true; userId: string; email: string; cabinetName: string }
+  | {
+      ok: true;
+      userId: string;
+      name: string;
+      email: string;
+      cabinetId: string;
+      cabinetName: string;
+      entrepriseName: string | null;
+      // D78 : ancien administrateur desactive par cette acceptation, a prevenir.
+      replacedAdmin: { email: string; name: string } | null;
+    }
   | { ok: false; error: AcceptError };
 
 export async function acceptInvitationWithPassword(input: {
@@ -207,6 +262,7 @@ export async function acceptInvitationWithPassword(input: {
     },
     { method: 'email-password' },
   );
+  let replacedAdmin: { email: string; name: string } | null = null;
   try {
     await authContext.internalAdapter.linkAccount({
       userId: created.id,
@@ -215,7 +271,7 @@ export async function acceptInvitationWithPassword(input: {
       accountId: created.id,
       password: hash,
     });
-    await prisma.$transaction((tx) => applyInvitation(tx, invitation, created.id));
+    ({ replacedAdmin } = await prisma.$transaction((tx) => applyInvitation(tx, invitation, created.id)));
   } catch (error) {
     await prisma.user.delete({ where: { id: created.id } }).catch(() => undefined);
     const mapped = mapRaceError(error);
@@ -223,44 +279,14 @@ export async function acceptInvitationWithPassword(input: {
     throw error;
   }
 
-  return { ok: true, userId: created.id, email: invitation.email, cabinetName: invitation.cabinetName };
-}
-
-// Acceptation par un compte cree via Google ou Microsoft (C4). `user` est celui
-// de la session. Garde-fous : l'email verifie du fournisseur doit etre celui de
-// l'invitation, et le compte doit etre tout neuf (aucun cabinet, role par
-// defaut) : un compte deja rattache ne peut pas etre detourne vers un autre
-// cabinet (D7).
-export async function acceptInvitationWithOAuth(input: {
-  token: string;
-  user: { id: string; email: string; emailVerified: boolean; cabinetId: string | null; role: string | null };
-}): Promise<AcceptResult> {
-  if (!input.token) return { ok: false, error: 'INVALID_REQUEST' };
-
-  const loaded = await loadAcceptableInvitation(input.token);
-  if (!loaded.ok) return loaded;
-  const { invitation } = loaded;
-  const { user } = input;
-
-  if (!user.emailVerified || user.email.toLowerCase() !== invitation.email) {
-    return { ok: false, error: 'EMAIL_MISMATCH' };
-  }
-  if (user.cabinetId || (user.role && user.role !== 'CABINET_RH')) {
-    return { ok: false, error: 'ACCOUNT_NOT_ELIGIBLE' };
-  }
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      // Relu dans la transaction : le compte n'a pas ete rattache entre-temps.
-      const fresh = await tx.user.findUnique({ where: { id: user.id }, select: { cabinetId: true } });
-      if (!fresh || fresh.cabinetId) throw new InvitationConsumed();
-      await applyInvitation(tx, invitation, user.id);
-    });
-  } catch (error) {
-    const mapped = mapRaceError(error);
-    if (mapped) return { ok: false, error: mapped };
-    throw error;
-  }
-
-  return { ok: true, userId: user.id, email: invitation.email, cabinetName: invitation.cabinetName };
+  return {
+    ok: true,
+    userId: created.id,
+    name,
+    email: invitation.email,
+    cabinetId: invitation.cabinetId,
+    cabinetName: invitation.cabinetName,
+    entrepriseName: invitation.entrepriseName,
+    replacedAdmin,
+  };
 }

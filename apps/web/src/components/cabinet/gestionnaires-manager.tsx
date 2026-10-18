@@ -47,7 +47,7 @@ export function GestionnairesManager({
   // Comptes supprimes par la personne elle-meme : information seulement.
   selfDeleted?: SelfDeletedGestionnaireRow[];
   // Places utilisees / maximum du plan (D15) ; absent = aucun quota connu.
-  userQuota?: { used: number; limit: number | null };
+  userQuota?: { used: number; limit: number | null; pendingPlan?: string | null };
 }) {
   return (
     <div className="space-y-6">

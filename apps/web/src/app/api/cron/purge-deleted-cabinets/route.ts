@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCronAuthorized } from '@/lib/cron-auth';
 import { prisma } from '@/lib/prisma';
 import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
 
@@ -13,8 +14,7 @@ import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
 // schema.prisma, donc supprime aussi tous les utilisateurs du cabinet (et
 // leurs Session/Account/TwoFactor en cascade sur User).
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 

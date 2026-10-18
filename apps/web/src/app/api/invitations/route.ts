@@ -5,6 +5,7 @@ import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { getCustomTemplate } from '@/lib/cabinet-email-templates';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
+import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
 import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,7 +44,12 @@ export async function POST(request: Request) {
   const { limits, utilisateurs } = await getCabinetQuotaUsage(cabinetId);
   if (limits && isQuotaReached(utilisateurs.used, limits.maxUtilisateurs)) {
     return NextResponse.json(
-      quotaExceededBody('maxUtilisateurs', limits.maxUtilisateurs as number, utilisateurs.used),
+      quotaExceededBody(
+        'maxUtilisateurs',
+        limits.maxUtilisateurs as number,
+        utilisateurs.used,
+        limits.pendingPlanName,
+      ),
       { status: 403 },
     );
   }
@@ -77,7 +83,10 @@ export async function POST(request: Request) {
   try {
     const brand = await getCabinetEmailBrand(cabinet.id);
     const template = await getCustomTemplate(cabinet.id, 'INVITATION_GESTIONNAIRE');
-    await sendGestionnaireInvitationEmail(email, brand, session.user.name, url, template);
+    await sendGestionnaireInvitationEmail(email, brand, session.user.name, url, template, {
+      // D76 : le portail par lequel le gestionnaire se reconnectera.
+      portalUrl: portalUrl(await ensureCabinetSlug(cabinet.id)),
+    });
   } catch (error) {
     // L'invitation existe deja en base a ce stade (token valide 7 jours) :
     // un echec d'envoi (Resend indisponible, etc.) ne doit pas faire

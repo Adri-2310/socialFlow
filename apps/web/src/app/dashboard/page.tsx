@@ -4,11 +4,21 @@ import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { requireSession } from '@/lib/require-session';
 import { roleDisplayLabel } from '@/lib/role-labels';
+import { getCabinetClientBrand } from '@/lib/cabinet-client-brand';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 
-export const metadata: Metadata = {
+const DEFAULT_METADATA: Metadata = {
   title: 'Tableau de bord — SocialFlow',
   description: 'Espace connecté SocialFlow.',
 };
+
+// D33, D76 : l'onglet d'un gestionnaire ou d'un collaborateur porte le nom de son cabinet.
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const brand = session ? await getCabinetClientBrand(session.user) : null;
+  return brand ? brand.metadata('Tableau de bord') : DEFAULT_METADATA;
+}
 
 export default async function DashboardPage() {
   const { user } = await requireSession();
@@ -31,9 +41,12 @@ export default async function DashboardPage() {
     redirect('/dashboard/entreprise');
   }
 
+  const brand = await getCabinetClientBrand(user);
+
   return (
     <>
-      <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} />
+      {brand?.theme && <style dangerouslySetInnerHTML={{ __html: brand.theme }} />}
+      <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} brand={brand && { name: brand.brandName, logoUrl: brand.logoUrl, logoutHref: brand.logoutHref }} />
       <main>
         <section className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">

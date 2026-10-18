@@ -13,7 +13,8 @@ L'Entreprise cliente est l'**employeur** dont le cabinet gère la paie. Son admi
 |---|---|
 | Code du rôle | `ENTREPRISE_CLIENTE` |
 | Nombre de comptes | **Un seul administrateur** par entreprise (D5) |
-| Création | Invitation du **Cabinet RH** uniquement (D4), liée à une entreprise existante |
+| Création | Invitation du **Cabinet RH** uniquement (D4), liée à une entreprise existante ; compte créé **par mot de passe** sur la page d'invitation, sans Google ni Microsoft (D76) |
+| Connexion | **Portail du cabinet** (`/connexion/<identifiant>`), aux couleurs du cabinet, sans SocialFlow ; `/login` la refuse (D76). Google/Microsoft seulement après liaison du compte depuis le profil |
 | Rattachement | `User.cabinetId` + l'entreprise (`Entreprise.adminUserId`) ; un seul rattachement (D7) |
 | Périmètre | **Sa seule entreprise** : jamais une autre entreprise du cabinet |
 | Quotas | Ne compte pas dans les utilisateurs du cabinet |

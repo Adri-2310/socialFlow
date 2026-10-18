@@ -11,6 +11,7 @@ vi.mock('@/lib/email', () => ({
   sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
   sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendGestionnaireInvitationEmail: vi.fn().mockResolvedValue(undefined),
+  sendWelcomeAccountEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorDisabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -25,6 +26,7 @@ const { POST: acceptInvitation } = await import('@/app/api/invitations/accept/ro
 const { POST: resendInvitation } = await import('@/app/api/invitations/[id]/resend/route');
 const { DELETE: revokeInvitation } = await import('@/app/api/invitations/[id]/route');
 const { hashInvitationToken } = await import('@/lib/invitations');
+const { ensureCabinetSlug } = await import('@/lib/cabinet-portal');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';
@@ -139,6 +141,7 @@ describe('creation d une invitation', () => {
       'Cabinet Test',
       expect.stringContaining('/invitations/accept?token='),
       null,
+      { portalUrl: expect.stringContaining('/connexion/') },
     );
   });
 
@@ -187,6 +190,35 @@ describe('quota d utilisateurs du plan (D15)', () => {
       limit: 1,
       used: 1,
     });
+  });
+
+  it('applique deja le quota du plan vise par un downgrade programme, et l explique (D75)', async () => {
+    const { cj, user } = await creerCabinetRH('quota-downgrade');
+    // Plan actuel a 10 gestionnaires, plan vise a 1 : la limite effective est 1.
+    await prisma.cabinet.update({
+      where: { id: user.cabinetId! },
+      data: { planId: await creerPlan('downgrade-grand', 10), pendingPlanId: await creerPlan('downgrade-petit', 1) },
+    });
+
+    const premier = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-d1') }, cj),
+    );
+    expect(premier.status).toBe(200);
+
+    const second = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-d2') }, cj),
+    );
+    expect(second.status).toBe(403);
+    const body = await second.json();
+    expect(body).toMatchObject({ error: 'QUOTA_EXCEEDED', quota: 'maxUtilisateurs', limit: 1, used: 1 });
+    expect(body.pendingPlan).toContain('downgrade-petit');
+
+    // Le changement annule (plan en attente efface), la place revient.
+    await prisma.cabinet.update({ where: { id: user.cabinetId! }, data: { pendingPlanId: null } });
+    const apres = await createInvitation(
+      requestJSON(`${APP_URL}/api/invitations`, { email: testEmail('quota-d3') }, cj),
+    );
+    expect(apres.status).toBe(200);
   });
 
   it('libere la place quand l invitation est revoquee', async () => {
@@ -254,6 +286,17 @@ describe('acceptation d une invitation', () => {
     expect(res.status).toBe(200);
     expect(res.headers.getSetCookie().length).toBeGreaterThan(0);
 
+    // D76 : la reponse porte l'adresse du portail, et un email de bienvenue la rappelle.
+    const slug = await ensureCabinetSlug(cabinetUser.cabinetId!);
+    expect((await res.json()).portalUrl).toContain(`/connexion/${slug}`);
+    expect(email.sendWelcomeAccountEmail).toHaveBeenCalledWith(
+      cibleEmail,
+      expect.objectContaining({ name: expect.any(String) }),
+      'Gestionnaire Test',
+      expect.stringContaining(`/connexion/${slug}`),
+      null,
+    );
+
     const nouvelUtilisateur = await prisma.user.findUniqueOrThrow({ where: { email: cibleEmail } });
     expect(nouvelUtilisateur.role).toBe('GESTIONNAIRE_RH');
     expect(nouvelUtilisateur.cabinetId).toBe(cabinetUser.cabinetId);
@@ -294,9 +337,11 @@ describe('acceptation d une invitation', () => {
     const utilisateur = await prisma.user.findUniqueOrThrow({ where: { email: cibleEmail } });
     expect(utilisateur.name).toBe('Gestionnaire C6');
 
-    // Le compte « mot de passe » cree directement est bien reconnu par la connexion.
+    // Le compte « mot de passe » cree directement est bien reconnu par la connexion
+    // (par le portail de son cabinet, D76).
     const connexion = await auth.api.signInEmail({
       body: { email: cibleEmail, password: PASSWORD },
+      headers: new Headers({ 'x-sf-portal': await ensureCabinetSlug(utilisateur.cabinetId!) }),
       asResponse: true,
     });
     expect(connexion.status).toBe(200);

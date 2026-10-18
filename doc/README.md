@@ -18,8 +18,8 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 | # | Rôle | Statut |
 |---|---|---|
 | 1 | [SuperAdmin](roles/01-superadmin.md) | Construit en grande partie |
-| 2 | [Cabinet RH](roles/02-cabinet-rh.md) | En cours |
-| 3 | [Gestionnaire RH](roles/03-gestionnaire-rh.md) | À construire |
+| 2 | [Cabinet RH](roles/02-cabinet-rh.md) | Construit (reste ce qui dépend d'autres modules) |
+| 3 | [Gestionnaire RH](roles/03-gestionnaire-rh.md) | Prochain chantier (invitation et acceptation faites) |
 | 4 | [Entreprise cliente](roles/04-entreprise-cliente.md) | À construire |
 | 5 | [Collaborateur](roles/05-collaborateur.md) | À construire |
 

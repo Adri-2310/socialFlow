@@ -20,9 +20,10 @@ export function entrepriseErrorResponse(result: EntrepriseError) {
     case 'ENTREPRISE_NOT_FOUND':
       return NextResponse.json({ error: result.error }, { status: 404 });
     case 'QUOTA_EXCEEDED':
-      return NextResponse.json(quotaExceededBody('maxEntreprises', result.limit, result.used), {
-        status: 403,
-      });
+      return NextResponse.json(
+        quotaExceededBody('maxEntreprises', result.limit, result.used, result.pendingPlan),
+        { status: 403 },
+      );
     case 'GESTIONNAIRE_INVALID':
     case 'NO_ACTIVE_GESTIONNAIRE':
       return NextResponse.json(

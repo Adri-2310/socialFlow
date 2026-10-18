@@ -1,6 +1,7 @@
 # Rôle : Gestionnaire RH
 
 > Statut : **invitation et acceptation construites** ; tout le métier (salariés, prestations, fiches, DIMONA) reste à construire.
+> **Acquis du chantier Cabinet RH, à réutiliser** : portail de connexion du cabinet et refus de `/login` (D76) ; marque du cabinet sur les pages communes via `lib/cabinet-client-brand.ts` et `AppHeader` (D77) ; périmètre par `GestionnaireEntreprise`, avec une entreprise non assignée ou d'un autre cabinet **introuvable (404)** (voir `inviteEntrepriseAdmin`, option `onlyAssignedTo`) ; le gestionnaire peut **remplacer l'administrateur** d'une entreprise assignée, jamais inviter un premier administrateur (D78) ; écriture refusée en lecture seule du cabinet (`requireApiSession`, `writable: true`, D29, D71). Aujourd'hui son `/dashboard` est une page d'attente à la marque du cabinet ; l'espace `/dashboard/gestionnaire` reste à créer.
 > Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D6, D9–D14, D27, D37–D42.
 > ⚠️ Les éléments de législation belge marqués **[à vérifier]** doivent être confirmés sur les sources officielles (SPF Finances, ONSS) avant implémentation.
 
@@ -13,7 +14,8 @@ Le Gestionnaire RH est le **producteur** de la plateforme : un membre de l'équi
 | Élément | Règle |
 |---|---|
 | Code du rôle | `GESTIONNAIRE_RH` |
-| Création | Uniquement par invitation du Cabinet RH (7 jours) |
+| Création | Uniquement par invitation du Cabinet RH (7 jours) ; compte créé **par mot de passe** sur la page d'invitation, sans Google ni Microsoft (D76) |
+| Connexion | **Portail du cabinet** (`/connexion/<identifiant>`), aux couleurs du cabinet, sans SocialFlow ; `/login` la refuse (D76). Google/Microsoft seulement après liaison du compte depuis le profil |
 | Rattachement | Un seul cabinet (`User.cabinetId`, D7) |
 | Périmètre de données | **Uniquement les entreprises qui lui sont assignées** (table `GestionnaireEntreprise`, N:M) |
 | Compte dans les quotas | Oui (`maxUtilisateurs` du plan) |

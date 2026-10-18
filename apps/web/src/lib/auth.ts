@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { createCabinetForOwner } from '@/lib/cabinet-provision';
 import { isLoginBlocked } from '@/lib/cabinet-suspension';
+import { portalPath, portalSlugFromRequest } from '@/lib/portal-slug';
+import { checkPortalAccess } from '@/lib/portal-guard';
 import { ACCOUNT_DELETION_BLOCKED_CODE, accountDeletionBlock } from '@/lib/account-deletion-guard';
 import {
   sendMagicLinkEmail,
@@ -26,6 +28,18 @@ const OAUTH_PROVIDER_LABELS: Record<string, string> = {
   google: 'Google',
   microsoft: 'Microsoft',
 };
+
+// Chemins qui ouvrent une session (D76) : seuls ceux-la passent par le controle du
+// portail. Un simple rafraichissement de session (get-session) n'en fait pas partie.
+const SESSION_CREATING_PATHS = [
+  '/sign-in/email',
+  '/sign-in/email-otp',
+  '/magic-link/verify',
+  '/callback/',
+  '/two-factor/verify-totp',
+  '/two-factor/verify-otp',
+  '/two-factor/verify-backup-code',
+];
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
@@ -89,6 +103,12 @@ export const auth = betterAuth({
   account: {
     accountLinking: {
       allowDifferentEmails: true,
+      // D76 : une connexion Google/Microsoft ne lie JAMAIS un compte existant d'elle-meme
+      // (meme adresse verifiee). La liaison est volontaire, depuis le profil
+      // (linkSocial, non concerne par cette option), et c'est elle qui rend ensuite
+      // la connexion par Google/Microsoft possible. Ferme aussi la prise de controle
+      // d'un compte par un fournisseur qui annoncerait la meme adresse.
+      disableImplicitLinking: true,
     },
   },
   onAPIError: {
@@ -396,6 +416,49 @@ export const auth = betterAuth({
           throw new APIError('FORBIDDEN', {
             code: 'CABINET_SUSPENDED',
             message: 'Ce cabinet a ete suspendu.',
+          });
+        }
+      }
+
+      // D76 : portail de connexion du cabinet. Seulement aux chemins qui OUVRENT une
+      // session (pas a un simple rafraichissement, qui ne doit jamais deconnecter).
+      // Un gestionnaire, une entreprise ou un collaborateur n'entre que par le
+      // portail de son cabinet ; le portail n'accepte que ses comptes.
+      if (freshSession && SESSION_CREATING_PATHS.some((p) => ctx.path === p || ctx.path.startsWith(`${p}`))) {
+        const verdict = await checkPortalAccess(
+          { role: freshSession.user.role, cabinetId: freshSession.user.cabinetId },
+          portalSlugFromRequest({
+            headers: ctx.headers,
+            callbackURL:
+              (ctx.body as { callbackURL?: unknown } | undefined)?.callbackURL ??
+              (ctx.query as { callbackURL?: unknown } | undefined)?.callbackURL,
+          }),
+        );
+        if (!verdict.ok) {
+          await ctx.context.internalAdapter.deleteSession(freshSession.session.token);
+          deleteSessionCookie(ctx, true);
+          ctx.context.setNewSession(null);
+
+          const code = verdict.reason;
+          // Les redirections (lien magique, Google/Microsoft) ne portent qu'un
+          // code ; la page d'erreur y ajoute le portail a utiliser.
+          if (ctx.path === '/magic-link/verify' || ctx.path.startsWith('/callback/')) {
+            const errorURL = ctx.context.options.onAPIError?.errorURL || '/erreur-connexion';
+            const separator = errorURL.includes('?') ? '&' : '?';
+            const portal =
+              verdict.reason === 'PORTAL_REQUIRED' && verdict.portalSlug
+                ? `&portal=${encodeURIComponent(verdict.portalSlug)}`
+                : '';
+            throw ctx.redirect(`${errorURL}${separator}error=${code.toLowerCase()}${portal}`);
+          }
+          // Reponse d'API : le message d'un PORTAL_REQUIRED est le chemin du portail
+          // du cabinet de la personne (elle a prouve ses identifiants).
+          throw new APIError('FORBIDDEN', {
+            code,
+            message:
+              verdict.reason === 'PORTAL_REQUIRED' && verdict.portalSlug
+                ? portalPath(verdict.portalSlug)
+                : 'Ce portail n’est pas celui de votre compte.',
           });
         }
       }

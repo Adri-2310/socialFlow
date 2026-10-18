@@ -26,6 +26,9 @@ async function createCabinet(data: {
   status?: string;
   billingEventAt?: Date | null;
   pastDueSince?: Date | null;
+  planId?: string | null;
+  pendingPlanId?: string | null;
+  currentPeriodEnd?: Date | null;
 } = {}) {
   counter += 1;
   const cabinet = await prisma.cabinet.create({
@@ -96,6 +99,7 @@ const stateOf = (id: string) =>
       trialEndsAt: true,
       currentPeriodEnd: true,
       planId: true,
+      pendingPlanId: true,
       billingPeriod: true,
       cancelAtPeriodEnd: true,
       status: true,
@@ -195,6 +199,75 @@ describe('suivi de l abonnement', () => {
     expect(state.billingStatus).toBe('ACTIF');
     expect(state.planId).toBe('pro');
     expect(state.billingPeriod).toBe('yearly');
+  });
+
+  it('un changement programme applique par Stripe efface le plan en attente (D75)', async () => {
+    const cabinet = await createCabinet({
+      billingStatus: 'ACTIF',
+      planId: 'pro',
+      pendingPlanId: 'starter',
+      currentPeriodEnd: new Date((NOW + DAY) * 1000),
+    });
+
+    await send(
+      makeEvent(
+        'customer.subscription.updated',
+        subscription(cabinet.stripeCustomerId, 'active', {
+          items: {
+            data: [{ current_period_end: NOW + 31 * DAY, price: { metadata: { planId: 'starter', billingPeriod: 'monthly' } } }],
+          },
+        }),
+      ),
+    );
+
+    const state = await stateOf(cabinet.id);
+    expect(state.planId).toBe('starter');
+    expect(state.pendingPlanId).toBeNull();
+  });
+
+  it('garde le plan en attente tant que la periode n est pas renouvelee (D75)', async () => {
+    const cabinet = await createCabinet({
+      billingStatus: 'ACTIF',
+      planId: 'pro',
+      pendingPlanId: 'starter',
+      currentPeriodEnd: new Date((NOW + 30 * DAY) * 1000),
+    });
+
+    // Evenement sans rapport (resiliation reprise) : meme plan, meme periode.
+    await send(
+      makeEvent(
+        'customer.subscription.updated',
+        subscription(cabinet.stripeCustomerId, 'active', {
+          cancel_at_period_end: false,
+          items: { data: [{ current_period_end: NOW + 30 * DAY, price: { metadata: { planId: 'pro' } } }] },
+        }),
+      ),
+    );
+
+    expect((await stateOf(cabinet.id)).pendingPlanId).toBe('starter');
+  });
+
+  it('efface le plan en attente quand la periode est renouvelee sans le changement (D75)', async () => {
+    const cabinet = await createCabinet({
+      billingStatus: 'ACTIF',
+      planId: 'pro',
+      pendingPlanId: 'starter',
+      currentPeriodEnd: new Date((NOW + DAY) * 1000),
+    });
+
+    // Renouvellement au meme plan : le changement a ete libere cote Stripe.
+    await send(
+      makeEvent(
+        'customer.subscription.updated',
+        subscription(cabinet.stripeCustomerId, 'active', {
+          items: { data: [{ current_period_end: NOW + 31 * DAY, price: { metadata: { planId: 'pro' } } }] },
+        }),
+      ),
+    );
+
+    const state = await stateOf(cabinet.id);
+    expect(state.planId).toBe('pro');
+    expect(state.pendingPlanId).toBeNull();
   });
 
   it('suit la resiliation programmee et sa reprise depuis Stripe (D59)', async () => {

@@ -30,12 +30,20 @@ const MESSAGES: Record<string, string> = {
   USER_SUSPENDED: 'Ce compte a été suspendu. Contactez le support pour plus d’informations.',
   USER_SUSPENDED_BY_CABINET:
     'Votre accès a été suspendu par votre cabinet. Contactez le responsable de votre cabinet pour le réactiver.',
+  // D76 : portail de connexion du cabinet.
+  PORTAL_REQUIRED:
+    'Votre compte se connecte par le portail de votre cabinet, pas par cette page. Utilisez le lien de connexion que votre cabinet vous a donné.',
+  WRONG_PORTAL: 'Ce portail n’est pas celui de votre compte. Utilisez le lien de connexion de votre cabinet.',
   INVALID_PLAN: "Ce plan n'existe pas ou n'est plus disponible. Choisissez-en un autre.",
 
   // Codes de redirection du flux OAuth (connexion Google/Microsoft) - minuscules,
   // distincts des codes d'API ci-dessus.
+  // D76 : la liaison automatique est desactivee ; elle se fait depuis le profil.
   account_not_linked:
-    "Un compte existe déjà avec cet email mais n'est pas encore vérifié. Connectez-vous avec votre mot de passe, puis liez ce fournisseur depuis le tableau de bord.",
+    'Ce compte existe, mais il n’est pas encore lié à ce fournisseur. Connectez-vous avec votre mot de passe, puis liez Google ou Microsoft depuis votre profil.',
+  portal_required:
+    'Votre compte se connecte par le portail de votre cabinet, pas par cette page. Utilisez le lien de connexion que votre cabinet vous a donné.',
+  wrong_portal: 'Ce portail n’est pas celui de votre compte. Utilisez le lien de connexion de votre cabinet.',
   "email_doesn't_match":
     "L'email de ce compte ne correspond pas à celui de votre compte SocialFlow.",
   account_already_linked_to_different_user: 'Ce compte est déjà lié à un autre utilisateur.',

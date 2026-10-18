@@ -5,6 +5,7 @@ import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { getCustomTemplate } from '@/lib/cabinet-email-templates';
 import { sendGestionnaireInvitationEmail } from '@/lib/email';
 import { sendEntrepriseAdminInvitation } from '@/lib/entreprise-admin';
+import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
 
 // Renvoie une invitation non acceptee (roles/02-cabinet-rh.md § 4.2) : nouveau
@@ -105,6 +106,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         session.user.name,
         invitationUrl(token),
         template,
+        { portalUrl: portalUrl(await ensureCabinetSlug(cabinetId)) },
       );
     }
   } catch (error) {

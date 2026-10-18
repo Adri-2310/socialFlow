@@ -5,11 +5,20 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, KeyRound, Link2, Loader2, Mail, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
+import { PORTAL_HEADER, portalPath } from '@/lib/portal-slug';
 
 type Step = 'email' | 'sent' | 'otp';
 
-export function PasswordlessLogin({ onBack }: { onBack: () => void }) {
+// `portal` : connexion par le portail d'un cabinet (D76), voir login-form.tsx.
+export function PasswordlessLogin({
+  onBack,
+  portal,
+}: {
+  onBack: () => void;
+  portal?: { slug: string };
+}) {
   const router = useRouter();
+  const portalOptions = portal ? { headers: { [PORTAL_HEADER]: portal.slug } } : undefined;
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -21,9 +30,11 @@ export function PasswordlessLogin({ onBack }: { onBack: () => void }) {
     setError(null);
     setLoadingAction('link');
 
+    // L'adresse de retour du lien dit au serveur par quel portail on entre, meme si
+    // l'email est ouvert dans un autre navigateur.
     const { error: linkError } = await authClient.signIn.magicLink({
       email,
-      callbackURL: '/bienvenue',
+      callbackURL: portal ? `${portalPath(portal.slug)}/continuer` : '/bienvenue',
     });
 
     setLoadingAction(null);
@@ -60,7 +71,7 @@ export function PasswordlessLogin({ onBack }: { onBack: () => void }) {
     setError(null);
     setLoadingAction('verify');
 
-    const { error: verifyError } = await authClient.signIn.emailOtp({ email, otp: code });
+    const { error: verifyError } = await authClient.signIn.emailOtp({ email, otp: code }, portalOptions);
 
     setLoadingAction(null);
 
@@ -69,7 +80,7 @@ export function PasswordlessLogin({ onBack }: { onBack: () => void }) {
       return;
     }
 
-    router.push('/bienvenue');
+    router.push(portal ? '/dashboard' : '/bienvenue');
     router.refresh();
   }
 

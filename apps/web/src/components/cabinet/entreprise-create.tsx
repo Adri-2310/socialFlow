@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Building2, Plus } from 'lucide-react';
+import { pendingPlanQuotaMessage } from '@/lib/quota-messages';
 import {
   EMPTY_ENTREPRISE,
   EntrepriseFormDialog,
@@ -20,7 +21,7 @@ export function EntrepriseCreate({
 }: {
   countries: CountryOption[];
   gestionnaires: GestionnaireOption[];
-  quota?: { used: number; limit: number | null };
+  quota?: { used: number; limit: number | null; pendingPlan?: string | null };
   readOnly: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -61,8 +62,14 @@ export function EntrepriseCreate({
 
       {reached && (
         <p className="mt-3 text-sm text-destructive-text">
-          Le quota d&apos;entreprises de votre plan est atteint : archivez-en une ou passez à un plan
-          supérieur.
+          {quota?.pendingPlan ? (
+            pendingPlanQuotaMessage(quota.pendingPlan, 'entreprises')
+          ) : (
+            <>
+              Le quota d&apos;entreprises de votre plan est atteint : archivez-en une ou passez à un plan
+              supérieur.
+            </>
+          )}
         </p>
       )}
       {readOnly && (

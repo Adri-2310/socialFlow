@@ -5,8 +5,12 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2, Mail, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-errors';
+import { portalPath } from '@/lib/portal-slug';
 
-export function ForgotPasswordForm() {
+// `portal` (D76, D77) : demande faite depuis le portail d'un cabinet - le lien de l'email ramene
+// sur une page de CE portail, et « Retour » y retourne, sans page SocialFlow.
+export function ForgotPasswordForm({ portal }: { portal?: { slug: string } } = {}) {
+  const backHref = portal ? portalPath(portal.slug) : '/login';
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +23,7 @@ export function ForgotPasswordForm() {
 
     const { error: resetError } = await authClient.requestPasswordReset({
       email,
-      redirectTo: '/reinitialiser-mot-de-passe',
+      redirectTo: portal ? `${portalPath(portal.slug)}/reinitialiser-mot-de-passe` : '/reinitialiser-mot-de-passe',
     });
 
     setLoading(false);
@@ -46,7 +50,7 @@ export function ForgotPasswordForm() {
           </p>
         </div>
         <Link
-          href="/login"
+          href={backHref}
           className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
         >
           <ArrowLeft className="h-4 w-4" /> Retour à la connexion
@@ -88,7 +92,7 @@ export function ForgotPasswordForm() {
       </button>
 
       <Link
-        href="/login"
+        href={backHref}
         className="flex items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="h-4 w-4" /> Retour à la connexion

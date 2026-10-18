@@ -21,8 +21,6 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   role          String?   @default("CABINET_RH")
-  plan          String?
-  billingPeriod String?
   sessions      Session[]
   accounts      Account[]
 
@@ -93,6 +91,15 @@ model Cabinet {
   // blocage total des connexions, choisi explicitement avec un motif. null avec
   // status "suspendu" = suspension anterieure a ce champ, donc blocage total
   // (comportement d'alors). Remis a null a la reactivation.
+  // D75 : plan vise par un changement programme en fin de periode (D60). Tant
+  // qu'il est en attente, les quotas de ce plan s'appliquent deja aux nouveaux
+  // ajouts (le plus strict des deux). Efface quand le changement est applique,
+  // annule, ou que la periode est renouvelee sans lui. null = aucun.
+  pendingPlanId     String?
+  // D76 : identifiant du portail de connexion du cabinet (/connexion/<slug>), par
+  // lequel ses gestionnaires, entreprises et collaborateurs se connectent sans voir
+  // SocialFlow. Genere a la demande puis modifiable par le Cabinet RH ; unique.
+  slug              String?         @unique
   suspensionType    String?
   // Motif saisi par le SuperAdmin ; jamais montre aux clients du cabinet (D29).
   suspensionReason  String?
@@ -269,6 +276,11 @@ model Invitation {
   // deviendra l'administrateur. null pour une invitation de gestionnaire.
   entrepriseId String?
   entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  // D78 : invitation de REMPLACEMENT - l'administrateur en place au moment de l'envoi. Il
+  // reste actif jusqu'a l'acceptation, qui l'archive dans la meme transaction. null pour
+  // une premiere invitation. Pas de cle etrangere : l'id sert de preuve que l'admin n'a
+  // pas change entre-temps.
+  replacesAdminId String?
 
   @@index([email])
   @@index([entrepriseId])

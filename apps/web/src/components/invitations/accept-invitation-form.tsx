@@ -2,7 +2,7 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_REQUEST: 'Formulaire incomplet.',
@@ -22,6 +22,9 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // D76 : apres la creation du compte, on affiche l'adresse du portail avant d'entrer.
+  const [portal, setPortal] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,8 +55,59 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
       return;
     }
 
-    router.push('/dashboard');
-    router.refresh();
+    const body = await res.json().catch(() => null);
+    const raw = typeof body?.portalUrl === 'string' ? body.portalUrl : '';
+    if (!raw) {
+      router.push('/dashboard');
+      router.refresh();
+      return;
+    }
+    setPortal(raw.startsWith('/') ? `${window.location.origin}${raw}` : raw);
+  }
+
+  async function copyPortal() {
+    if (!portal) return;
+    try {
+      await navigator.clipboard.writeText(portal);
+      setCopied(true);
+    } catch {
+      // Presse-papiers indisponible : l'adresse reste affichee, on ne bloque rien.
+    }
+  }
+
+  if (portal) {
+    return (
+      <div className="space-y-5" role="status">
+        <h2 className="text-lg font-semibold text-foreground">Votre compte est créé</h2>
+        <p className="text-sm text-muted-foreground">
+          Pour vous reconnecter par la suite, utilisez toujours le portail de votre cabinet. Notez
+          cette adresse ou ajoutez-la à vos favoris ; nous vous l’envoyons aussi par email.
+        </p>
+        <div className="flex items-center gap-2 rounded-lg border border-input bg-muted px-3 py-2">
+          <span aria-label="Adresse du portail" className="min-w-0 flex-1 break-all text-sm text-foreground">
+            {portal}
+          </span>
+          <button
+            type="button"
+            onClick={copyPortal}
+            className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? 'Copié' : 'Copier'}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            router.push('/dashboard');
+            router.refresh();
+          }}
+          className="flex w-full items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"
+        >
+          Accéder à mon espace
+        </button>
+      </div>
+    );
   }
 
   return (

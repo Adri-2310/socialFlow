@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { ACCEPT_ERROR_STATUS, acceptInvitationWithPassword } from '@/lib/invitation-accept';
+import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
+import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
+import { sendAdminReplacedEmail, sendWelcomeAccountEmail } from '@/lib/email';
+import { PORTAL_HEADER } from '@/lib/portal-slug';
 
 // Cree le compte de la personne invitee (C6) : role, cabinet et rattachement
 // viennent de l'invitation, jamais du client. Voir lib/invitation-accept.ts.
@@ -17,19 +21,47 @@ export async function POST(request: Request) {
 
   // Ouvre la session : connexion normale avec les identifiants qui viennent
   // d'etre poses (memes controles que toute connexion), dont le Set-Cookie est
-  // transfere a la reponse.
+  // transfere a la reponse. D76 : la personne vient de creer son compte pour CE
+  // cabinet, la connexion passe donc par le portail de ce cabinet.
+  const slug = await ensureCabinetSlug(result.cabinetId);
+  const portal = portalUrl(slug);
+  const headers = new Headers(request.headers);
+  headers.set(PORTAL_HEADER, slug);
   const signIn = await auth.api.signInEmail({
     body: { email: result.email, password },
-    headers: request.headers,
+    headers,
     asResponse: true,
   });
+  // D76 : email de bienvenue au nom du cabinet, avec l'adresse de son portail. Jamais
+  // bloquant : le compte existe, un echec d'envoi ne doit pas faire echouer l'acceptation.
+  try {
+    const brand = await getCabinetEmailBrand(result.cabinetId);
+    await sendWelcomeAccountEmail(result.email, brand, result.name, portal, result.entrepriseName);
+  } catch (error) {
+    console.error("Echec de l'envoi de l'email de bienvenue", error);
+  }
+  // D78 : l'ancien administrateur, desactive par cette acceptation, en est prevenu.
+  if (result.replacedAdmin && result.entrepriseName) {
+    try {
+      const brand = await getCabinetEmailBrand(result.cabinetId);
+      await sendAdminReplacedEmail(
+        result.replacedAdmin.email,
+        brand,
+        result.replacedAdmin.name,
+        result.entrepriseName,
+      );
+    } catch (error) {
+      console.error("Echec de l'envoi de l'email a l'ancien administrateur", error);
+    }
+  }
+
   if (signIn.status !== 200) {
     // Le compte existe et l'invitation est consommee : la personne se connecte
     // normalement ; on ne fait pas echouer l'acceptation pour autant.
-    return NextResponse.json({ success: true, cabinetName: result.cabinetName, signedIn: false });
+    return NextResponse.json({ success: true, cabinetName: result.cabinetName, portalUrl: portal, signedIn: false });
   }
 
-  const response = NextResponse.json({ success: true, cabinetName: result.cabinetName, signedIn: true });
+  const response = NextResponse.json({ success: true, cabinetName: result.cabinetName, portalUrl: portal, signedIn: true });
   for (const cookie of signIn.headers.getSetCookie()) {
     response.headers.append('set-cookie', cookie);
   }

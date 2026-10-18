@@ -21,6 +21,10 @@ function AdminBlock({ entreprise: e, readOnly }: { entreprise: EntrepriseRow; re
         {e.admin ? (
           <p className="truncate text-muted-foreground">
             {e.admin.name} · {e.admin.email}
+            {e.adminInvitation &&
+              ` · remplaçant invité : ${e.adminInvitation.email} (${
+                e.adminInvitation.status === 'pending' ? `expire le ${formatDate(e.adminInvitation.expiresAt)}` : 'invitation expirée'
+              })`}
           </p>
         ) : e.adminInvitation ? (
           <p className="text-muted-foreground">
@@ -33,12 +37,33 @@ function AdminBlock({ entreprise: e, readOnly }: { entreprise: EntrepriseRow; re
         )}
       </div>
       {e.admin && (
-        <EntrepriseAdminRemove
-          entrepriseId={e.id}
-          entrepriseName={e.name}
-          adminName={e.admin.name}
-          readOnly={readOnly}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* D78 : remplacement sans interruption - l'administrateur actuel reste actif jusqu'a
+              l'acceptation. Une invitation de remplacement en cours se renvoie ou se revoque. */}
+          {e.adminInvitation ? (
+            !readOnly && (
+              <InvitationActions
+                invitationId={e.adminInvitation.id}
+                email={e.adminInvitation.email}
+                status={e.adminInvitation.status}
+              />
+            )
+          ) : (
+            <EntrepriseAdminInvite
+              entrepriseId={e.id}
+              name={e.name}
+              defaultEmail=""
+              readOnly={readOnly}
+              replace
+            />
+          )}
+          <EntrepriseAdminRemove
+            entrepriseId={e.id}
+            entrepriseName={e.name}
+            adminName={e.admin.name}
+            readOnly={readOnly}
+          />
+        </div>
       )}
       {!e.admin &&
         (e.adminInvitation ? (
@@ -76,7 +101,7 @@ export function EntreprisesManager({
   archived: ArchivedEntrepriseRow[];
   gestionnaires: GestionnaireOption[];
   countries: CountryOption[];
-  quota?: { used: number; limit: number | null };
+  quota?: { used: number; limit: number | null; pendingPlan?: string | null };
   readOnly: boolean;
 }) {
   return (

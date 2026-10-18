@@ -68,6 +68,12 @@ export function QuotaUsage({ data }: { data: CabinetQuotaUsage }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-sm font-bold text-foreground">Quotas de votre plan</h2>
+      {limits?.pendingPlanName && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Le changement vers le plan {limits.pendingPlanName}, programmé en fin de période, limite déjà
+          vos nouveaux ajouts à ses quotas.
+        </p>
+      )}
 
       {limits === null ? (
         <p className="mt-3 text-sm text-muted-foreground">

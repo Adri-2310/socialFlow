@@ -3,6 +3,7 @@ import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { getCustomTemplate } from '@/lib/cabinet-email-templates';
 import { sendEntrepriseInvitationEmail } from '@/lib/email';
 import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
+import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
 
 // Administrateur d'une entreprise cliente (D4, D5, roles/04-entreprise-cliente.md
 // § 2) : un seul compte par entreprise, invite par le Cabinet RH uniquement. Le
@@ -16,7 +17,9 @@ export type EntrepriseAdminError =
   | { error: 'ENTREPRISE_ALREADY_HAS_ADMIN' }
   // D7 : un email = un seul rattachement.
   | { error: 'EMAIL_ALREADY_USED' }
-  | { error: 'INVITATION_ALREADY_PENDING' };
+  | { error: 'INVITATION_ALREADY_PENDING' }
+  // D78 : remplacement demande sur une entreprise sans administrateur en place.
+  | { error: 'ENTREPRISE_HAS_NO_ADMIN' };
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -26,11 +29,15 @@ async function lockEntreprise(tx: Tx, entrepriseId: string) {
   await tx.$queryRaw`SELECT id FROM entreprise WHERE id = ${entrepriseId} FOR UPDATE`;
 }
 
+// `replace` (D78) : invitation de REMPLACEMENT d'un administrateur en place, qui reste actif
+// jusqu'a l'acceptation (aucune periode sans administrateur). `onlyAssignedTo` : pour un
+// gestionnaire, l'entreprise doit lui etre assignee (sinon introuvable, 404).
 export async function inviteEntrepriseAdmin(
   cabinetId: string,
   actor: { id: string; name: string },
   entrepriseId: string,
   email: string,
+  options: { replace?: boolean; onlyAssignedTo?: string } = {},
 ): Promise<
   | { ok: true; invitationId: string; entrepriseName: string; token: string }
   | ({ ok: false } & EntrepriseAdminError)
@@ -40,7 +47,12 @@ export async function inviteEntrepriseAdmin(
   const result = await prisma.$transaction(async (tx) => {
     // Entreprise d'un autre cabinet ou archivee : introuvable.
     const entreprise = await tx.entreprise.findFirst({
-      where: { id: entrepriseId, cabinetId, deletedAt: null },
+      where: {
+        id: entrepriseId,
+        cabinetId,
+        deletedAt: null,
+        ...(options.onlyAssignedTo ? { gestionnaires: { some: { userId: options.onlyAssignedTo } } } : {}),
+      },
       select: { id: true, name: true, adminUserId: true },
     });
     if (!entreprise) return { ok: false as const, error: 'ENTREPRISE_NOT_FOUND' as const };
@@ -51,12 +63,15 @@ export async function inviteEntrepriseAdmin(
       where: { id: entreprise.id },
       select: { adminUserId: true, adminUser: { select: { deletedAt: true } } },
     });
-    if (fresh.adminUserId) {
-      // Un administrateur dont le compte est archive (par le SuperAdmin ou par
-      // lui-meme) ne bloque plus : on libere la place pour le suivant.
-      if (!fresh.adminUser?.deletedAt) {
-        return { ok: false as const, error: 'ENTREPRISE_ALREADY_HAS_ADMIN' as const };
-      }
+    // Administrateur reellement en place : un compte archive (par le SuperAdmin ou par
+    // lui-meme) ne compte plus.
+    const inPlace = fresh.adminUserId && !fresh.adminUser?.deletedAt ? fresh.adminUserId : null;
+    if (options.replace) {
+      if (!inPlace) return { ok: false as const, error: 'ENTREPRISE_HAS_NO_ADMIN' as const };
+    } else if (inPlace) {
+      return { ok: false as const, error: 'ENTREPRISE_ALREADY_HAS_ADMIN' as const };
+    } else if (fresh.adminUserId) {
+      // Place liberee pour le suivant.
       await tx.entreprise.update({ where: { id: entreprise.id }, data: { adminUserId: null } });
     }
 
@@ -85,6 +100,7 @@ export async function inviteEntrepriseAdmin(
         entrepriseId: entreprise.id,
         invitedById: actor.id,
         expiresAt: invitationExpiry(),
+        replacesAdminId: options.replace ? inPlace : null,
       },
       select: { id: true },
     });
@@ -99,6 +115,7 @@ export async function inviteEntrepriseAdmin(
           role: ENTREPRISE_ADMIN_ROLE,
           entrepriseId: entreprise.id,
           entreprise: entreprise.name,
+          ...(options.replace ? { replacesAdminId: inPlace } : {}),
         },
       },
     });
@@ -175,5 +192,7 @@ export async function sendEntrepriseAdminInvitation(input: {
     input.entrepriseName,
     invitationUrl(input.token),
     template,
+    // D76 : le portail par lequel l'administrateur se reconnectera.
+    { portalUrl: portalUrl(await ensureCabinetSlug(input.cabinetId)) },
   );
 }

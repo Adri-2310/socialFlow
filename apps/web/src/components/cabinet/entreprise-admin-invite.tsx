@@ -9,6 +9,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email.',
   INVITATION_ALREADY_PENDING: 'Une invitation est déjà en attente pour cette adresse ou cette entreprise.',
   ENTREPRISE_ALREADY_HAS_ADMIN: 'Cette entreprise a déjà un administrateur.',
+  ENTREPRISE_HAS_NO_ADMIN: 'Cette entreprise n’a pas d’administrateur à remplacer.',
   ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable.',
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à inviter un administrateur.",
@@ -18,17 +19,21 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 // Invitation de l'administrateur d'une entreprise (D4, D5) : un seul par
 // entreprise, le serveur reste seul juge (409 s'il en existe deja un).
+// `replace` (D78) : invite le remplacant ; l'administrateur actuel reste actif jusqu'a
+// l'acceptation, puis il est desactive automatiquement.
 export function EntrepriseAdminInvite({
   entrepriseId,
   name,
   defaultEmail,
   readOnly,
+  replace = false,
 }: {
   entrepriseId: string;
   name: string;
   // Email de contact de l'entreprise, propose par defaut.
   defaultEmail: string;
   readOnly: boolean;
+  replace?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -44,7 +49,7 @@ export function EntrepriseAdminInvite({
     const res = await fetch(`/api/cabinet/entreprises/${entrepriseId}/admin-invitation`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(replace ? { email, replace: true } : { email }),
     });
 
     setLoading(false);
@@ -65,11 +70,11 @@ export function EntrepriseAdminInvite({
         type="button"
         disabled={readOnly}
         onClick={() => setOpen(true)}
-        aria-label={`Inviter l'administrateur de ${name}`}
+        aria-label={replace ? `Remplacer l'administrateur de ${name}` : `Inviter l'administrateur de ${name}`}
         className="flex min-h-10 items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:px-2.5 sm:py-1.5"
       >
         <UserPlus className="h-3.5 w-3.5" />
-        Inviter l’administrateur
+        {replace ? 'Remplacer' : 'Inviter l’administrateur'}
       </button>
     );
   }
@@ -86,7 +91,7 @@ export function EntrepriseAdminInvite({
             autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            aria-label={`Email de l'administrateur de ${name}`}
+            aria-label={replace ? `Email du remplaçant de l'administrateur de ${name}` : `Email de l'administrateur de ${name}`}
             placeholder="admin@entreprise.be"
             className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm"
           />
@@ -112,6 +117,11 @@ export function EntrepriseAdminInvite({
           </button>
         </div>
       </div>
+      {replace && (
+        <p className="text-xs text-muted-foreground">
+          L’administrateur actuel garde son accès jusqu’à ce que le remplaçant accepte l’invitation, puis il est désactivé.
+        </p>
+      )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
     </form>
   );

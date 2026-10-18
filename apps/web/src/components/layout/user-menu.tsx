@@ -11,7 +11,17 @@ import { signOut } from '@/lib/auth-client';
 // le bloc avatar + nom + role (comme l'ancienne topbar statique de
 // DashboardShell), pas une icone hamburger separee - distinct du hamburger
 // mobile de DashboardShell, qui lui ouvre/ferme la sidebar de nav.
-export function UserMenu({ userName, roleLabel }: { userName: string; roleLabel: string }) {
+// `logoutHref` : ou aller apres la deconnexion. Un compte de cabinet client revient sur
+// le portail de son cabinet (D76) et non sur une page SocialFlow.
+export function UserMenu({
+  userName,
+  roleLabel,
+  logoutHref,
+}: {
+  userName: string;
+  roleLabel: string;
+  logoutHref?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -35,7 +45,7 @@ export function UserMenu({ userName, roleLabel }: { userName: string; roleLabel:
   async function handleLogout() {
     setLoggingOut(true);
     await signOut();
-    router.push('/au-revoir');
+    router.push(logoutHref ?? '/au-revoir');
     router.refresh();
   }
 

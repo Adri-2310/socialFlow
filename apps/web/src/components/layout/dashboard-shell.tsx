@@ -68,6 +68,7 @@ export function DashboardShell({
   userName,
   brandName,
   logoUrl,
+  logoutHref,
   children,
 }: {
   role: ShellRole;
@@ -77,6 +78,8 @@ export function DashboardShell({
   brandName?: string | null;
   // Logo du cabinet (D33) : remplace le logo SocialFlow. URL publique (Blob).
   logoUrl?: string | null;
+  // Destination apres deconnexion (D76) : le portail du cabinet pour ses clients.
+  logoutHref?: string;
   children: ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -183,7 +186,7 @@ export function DashboardShell({
           <h1 className="truncate text-base font-bold text-foreground">{activeItem.label}</h1>
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
-            <UserMenu userName={userName} roleLabel={roleLabel} />
+            <UserMenu userName={userName} roleLabel={roleLabel} logoutHref={logoutHref} />
           </div>
         </header>
         <main className="space-y-6 p-4 sm:p-6">{children}</main>

@@ -21,7 +21,8 @@ Un salarié sans compte reçoit tout de même toutes ses fiches. Le compte appor
 | Élément | Règle |
 |---|---|
 | Code du rôle | `COLLABORATEUR` |
-| Création | Invitation du gestionnaire assigné uniquement, à l'email du dossier |
+| Création | Invitation du gestionnaire assigné uniquement, à l'email du dossier ; compte créé **par mot de passe** sur la page d'invitation, sans Google ni Microsoft (D76) |
+| Connexion | **Portail du cabinet** (`/connexion/<identifiant>`), aux couleurs du cabinet, sans SocialFlow ; `/login` la refuse (D76). Google/Microsoft seulement après liaison du compte depuis le profil |
 | Rattachement | Un seul dossier salarié, donc une seule entreprise (D7) |
 | Périmètre | **Uniquement ses propres données** |
 | Branding | Aux couleurs du cabinet (D33) |

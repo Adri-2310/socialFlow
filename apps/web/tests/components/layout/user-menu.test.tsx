@@ -89,4 +89,15 @@ describe('UserMenu', () => {
     expect(pushMock).toHaveBeenCalledWith('/au-revoir');
     expect(refreshMock).toHaveBeenCalled();
   });
+
+  it('ramene un compte de cabinet client sur le portail de son cabinet apres la deconnexion (D76)', async () => {
+    render(<UserMenu userName="Marie Client" roleLabel="Entreprise cliente" logoutHref="/connexion/mon-cabinet" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu du compte' }));
+    fireEvent.click(screen.getByRole('button', { name: /Se déconnecter/ }));
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled());
+    expect(pushMock).toHaveBeenCalledWith('/connexion/mon-cabinet');
+    expect(pushMock).not.toHaveBeenCalledWith('/au-revoir');
+  });
 });

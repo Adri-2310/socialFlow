@@ -7,6 +7,7 @@ import { requireSession } from '@/lib/require-session';
 import { prisma } from '@/lib/prisma';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { buildThemeCss } from '@/lib/branding-rules';
+import { ensureCabinetSlug, portalPath } from '@/lib/cabinet-portal';
 
 const CABINET_BRAND_SELECT = {
   displayName: true,
@@ -42,6 +43,8 @@ export default async function EntrepriseLayout({ children }: { children: ReactNo
       })
     : null;
   const theme = cabinet ? buildThemeCss(cabinet) : null;
+  // D76 : apres deconnexion, retour sur le portail du cabinet.
+  const logoutHref = user.cabinetId ? portalPath(await ensureCabinetSlug(user.cabinetId)) : undefined;
 
   return (
     <DashboardShell
@@ -49,6 +52,7 @@ export default async function EntrepriseLayout({ children }: { children: ReactNo
       userName={user.name}
       brandName={cabinet?.displayName ?? null}
       logoUrl={cabinet?.logoUrl ?? null}
+      logoutHref={logoutHref}
     >
       {/* Couleurs du cabinet : valeurs #rrggbb validees a l'enregistrement. */}
       {theme && <style dangerouslySetInnerHTML={{ __html: theme }} />}

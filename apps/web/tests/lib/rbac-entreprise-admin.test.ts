@@ -12,6 +12,8 @@ vi.mock('@/lib/email', () => ({
   sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendGestionnaireInvitationEmail: vi.fn().mockResolvedValue(undefined),
   sendEntrepriseInvitationEmail: vi.fn().mockResolvedValue(undefined),
+  sendAdminReplacedEmail: vi.fn().mockResolvedValue(undefined),
+  sendWelcomeAccountEmail: vi.fn().mockResolvedValue(undefined),
   sendGestionnaireAccessChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendTwoFactorEnabledEmail: vi.fn().mockResolvedValue(undefined),
@@ -152,6 +154,7 @@ describe('invitation de l administrateur d une entreprise (D4, D5)', () => {
       'Boulangerie Dupont',
       expect.stringContaining('/invitations/accept?token='),
       null,
+      { portalUrl: expect.stringContaining('/connexion/') },
     );
 
     const audit = await prisma.auditLog.findFirstOrThrow({
@@ -466,5 +469,196 @@ describe('remplacement de l administrateur (D5)', () => {
     const { entreprise: etrangere, admin } = await entrepriseAvecAdmin('rem-etranger');
     expect((await retirer(etrangere.id, cj)).status).toBe(404);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).deletedAt).toBeNull();
+  });
+});
+
+describe('remplacement sans interruption (D78)', () => {
+  const remplacer = (entrepriseId: string, address: unknown, cj?: Jar) =>
+    inviteRoute(
+      json('POST', `${APP_URL}/api/cabinet/entreprises/${entrepriseId}/admin-invitation`, cj, {
+        email: address,
+        replace: true,
+      }),
+      ctx(entrepriseId),
+    );
+
+  /** Entreprise dont l'administrateur a accepte son invitation. */
+  async function entrepriseAvecAdmin(label: string) {
+    const { cj, user } = await creerCabinetRH(label);
+    const entreprise = await creerEntreprise(user.cabinetId!);
+    const adresse = testEmail(`${label}-admin`);
+    await inviter(entreprise.id, adresse, cj);
+    const adminJar = cookieJar();
+    adminJar.apply(await accepter(dernierJeton(adresse)));
+    const admin = await prisma.user.findUniqueOrThrow({ where: { email: adresse } });
+    return { cj, user, entreprise, adminJar, admin };
+  }
+
+  it('l ancien administrateur reste actif tant que le remplacant n a pas accepte', async () => {
+    const { cj, entreprise, admin, adminJar } = await entrepriseAvecAdmin('d78-attente');
+    const nouveau = testEmail('d78-attente-nouveau');
+
+    const res = await remplacer(entreprise.id, nouveau, cj);
+    expect(res.status).toBe(201);
+
+    const invitation = await prisma.invitation.findFirstOrThrow({ where: { email: nouveau } });
+    expect(invitation.replacesAdminId).toBe(admin.id);
+    expect(invitation.entrepriseId).toBe(entreprise.id);
+
+    const lue = await prisma.entreprise.findUniqueOrThrow({ where: { id: entreprise.id } });
+    expect(lue.adminUserId).toBe(admin.id);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).deletedAt).toBeNull();
+    expect(await prisma.session.count({ where: { userId: admin.id } })).toBeGreaterThan(0);
+    expect((await auth.api.getSession({ headers: adminJar.headers() }))?.user.id).toBe(admin.id);
+  });
+
+  it('a l acceptation : le remplacant devient administrateur, l ancien est archive et deconnecte', async () => {
+    const { cj, user, entreprise, admin } = await entrepriseAvecAdmin('d78-accept');
+    const nouveau = testEmail('d78-accept-nouveau');
+    await remplacer(entreprise.id, nouveau, cj);
+
+    expect((await accepter(dernierJeton(nouveau), 'Remplacant')).status).toBe(200);
+
+    const remplacant = await prisma.user.findUniqueOrThrow({ where: { email: nouveau } });
+    const lue = await prisma.entreprise.findUniqueOrThrow({ where: { id: entreprise.id } });
+    expect(lue.adminUserId).toBe(remplacant.id);
+    const ancien = await prisma.user.findUniqueOrThrow({ where: { id: admin.id } });
+    expect(ancien.deletedAt).not.toBeNull();
+    expect(ancien.deletedBy).toBe('CABINET_RH');
+    expect(await prisma.session.count({ where: { userId: admin.id } })).toBe(0);
+
+    const audit = await prisma.auditLog.findFirst({
+      where: { cabinetId: user.cabinetId!, action: 'USER_ARCHIVED', targetUserId: admin.id },
+    });
+    expect(audit).not.toBeNull();
+    expect((audit!.metadata as { replacedBy?: string }).replacedBy).toBe(remplacant.id);
+
+    // L'ancien administrateur en est prevenu, au nom du cabinet.
+    expect(email.sendAdminReplacedEmail).toHaveBeenCalledWith(
+      admin.email,
+      expect.objectContaining({ name: expect.any(String) }),
+      admin.name,
+      'Boulangerie Dupont',
+    );
+  });
+
+  it('une premiere acceptation ne previent personne', async () => {
+    vi.mocked(email.sendAdminReplacedEmail).mockClear();
+    await entrepriseAvecAdmin('d78-premiere');
+    expect(email.sendAdminReplacedEmail).not.toHaveBeenCalled();
+  });
+
+  it('refuse un remplacement sans administrateur en place (409) et une invitation ordinaire quand il y en a un', async () => {
+    const { cj, user } = await creerCabinetRH('d78-regles');
+    const vide = await creerEntreprise(user.cabinetId!);
+    const sansAdmin = await remplacer(vide.id, testEmail('d78-regles-a'), cj);
+    expect(sansAdmin.status).toBe(409);
+    expect((await sansAdmin.json()).error).toBe('ENTREPRISE_HAS_NO_ADMIN');
+
+    const { cj: cjPourvu, entreprise } = await entrepriseAvecAdmin('d78-regles-pourvu');
+    const ordinaire = await inviter(entreprise.id, testEmail('d78-regles-b'), cjPourvu);
+    expect(ordinaire.status).toBe(409);
+    expect((await ordinaire.json()).error).toBe('ENTREPRISE_ALREADY_HAS_ADMIN');
+  });
+
+  it('un seul remplacement a la fois, et pas avec l adresse de l ancien administrateur', async () => {
+    const { cj, entreprise, admin } = await entrepriseAvecAdmin('d78-unique');
+
+    const memeAdresse = await remplacer(entreprise.id, admin.email, cj);
+    expect(memeAdresse.status).toBe(409);
+    expect((await memeAdresse.json()).error).toBe('EMAIL_ALREADY_USED');
+
+    expect((await remplacer(entreprise.id, testEmail('d78-unique-1'), cj)).status).toBe(201);
+    const second = await remplacer(entreprise.id, testEmail('d78-unique-2'), cj);
+    expect(second.status).toBe(409);
+    expect((await second.json()).error).toBe('INVITATION_ALREADY_PENDING');
+  });
+
+  it('revoquer le remplacement garde l ancien administrateur en place', async () => {
+    const { cj, entreprise, admin } = await entrepriseAvecAdmin('d78-revoque');
+    const nouveau = testEmail('d78-revoque-nouveau');
+    await remplacer(entreprise.id, nouveau, cj);
+    const invitation = await prisma.invitation.findFirstOrThrow({ where: { email: nouveau } });
+
+    expect((await revoquer(invitation.id, cj)).status).toBe(200);
+
+    expect((await accepter(dernierJeton(nouveau))).status).toBe(404);
+    const lue = await prisma.entreprise.findUniqueOrThrow({ where: { id: entreprise.id } });
+    expect(lue.adminUserId).toBe(admin.id);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).deletedAt).toBeNull();
+  });
+
+  it('le lien devient invalide si un autre administrateur a ete pose entre-temps', async () => {
+    const { cj, user, entreprise } = await entrepriseAvecAdmin('d78-course');
+    const nouveau = testEmail('d78-course-nouveau');
+    await remplacer(entreprise.id, nouveau, cj);
+
+    const intrus = await creerGestionnaire(user.cabinetId!, 'd78-course-intrus');
+    await prisma.entreprise.update({ where: { id: entreprise.id }, data: { adminUserId: intrus.user.id } });
+
+    expect((await accepter(dernierJeton(nouveau))).status).toBe(404);
+    expect(await prisma.user.findUnique({ where: { email: nouveau } })).toBeNull();
+  });
+
+  it('la page d acceptation montre le cabinet pour un lien de remplacement, tant que la place est celle de l ancien', async () => {
+    const { cj, user, entreprise } = await entrepriseAvecAdmin('d78-apercu');
+    const nouveau = testEmail('d78-apercu-nouveau');
+    await remplacer(entreprise.id, nouveau, cj);
+    const jeton = dernierJeton(nouveau);
+
+    // Bug constate : l'entreprise a deja un administrateur (celui que l'on remplace), et la
+    // page affichait quand meme « invitation invalide » sans la marque du cabinet.
+    const apercu = await getInvitationPreview(jeton);
+    expect(apercu).not.toBeNull();
+    expect(apercu?.entrepriseName).toBe(entreprise.name);
+    expect(apercu?.email).toBe(nouveau);
+
+    // Un AUTRE administrateur pose entre-temps : le lien redevient invalide.
+    const intrus = await creerGestionnaire(user.cabinetId!, 'd78-apercu-intrus');
+    await prisma.entreprise.update({ where: { id: entreprise.id }, data: { adminUserId: intrus.user.id } });
+    expect(await getInvitationPreview(jeton)).toBeNull();
+  });
+
+  it('un gestionnaire assigne peut remplacer, mais pas inviter un premier administrateur', async () => {
+    const { user, entreprise } = await entrepriseAvecAdmin('d78-gest');
+    const g = await creerGestionnaire(user.cabinetId!, 'd78-gest-g');
+    await prisma.gestionnaireEntreprise.create({ data: { entrepriseId: entreprise.id, userId: g.user.id } });
+
+    const nouveau = testEmail('d78-gest-nouveau');
+    expect((await remplacer(entreprise.id, nouveau, g.cj)).status).toBe(201);
+    const invitation = await prisma.invitation.findFirstOrThrow({ where: { email: nouveau } });
+    expect(invitation.invitedById).toBe(g.user.id);
+
+    // Sans `replace`, un gestionnaire reste refuse (D70).
+    const premiere = await inviter(entreprise.id, testEmail('d78-gest-autre'), g.cj);
+    expect(premiere.status).toBe(403);
+  });
+
+  it('un gestionnaire non assigne ne trouve pas l entreprise (404)', async () => {
+    const { user, entreprise } = await entrepriseAvecAdmin('d78-gest-hors');
+    const g = await creerGestionnaire(user.cabinetId!, 'd78-gest-hors-g');
+
+    const res = await remplacer(entreprise.id, testEmail('d78-gest-hors-n'), g.cj);
+    expect(res.status).toBe(404);
+    expect(await prisma.invitation.count({ where: { email: testEmail('d78-gest-hors-n') } })).toBe(0);
+  });
+
+  it('un gestionnaire d un autre cabinet ne trouve pas l entreprise (404)', async () => {
+    const { entreprise } = await entrepriseAvecAdmin('d78-gest-etranger');
+    const { user: autreTitulaire } = await creerCabinetRH('d78-gest-etranger-autre');
+    const g = await creerGestionnaire(autreTitulaire.cabinetId!, 'd78-gest-etranger-g');
+
+    const res = await remplacer(entreprise.id, testEmail('d78-gest-etranger-n'), g.cj);
+    expect(res.status).toBe(404);
+  });
+
+  it('le portefeuille expose l invitation de remplacement a cote de l administrateur en place', async () => {
+    const { cj, user, entreprise, admin } = await entrepriseAvecAdmin('d78-liste');
+    const nouveau = testEmail('d78-liste-nouveau');
+    await remplacer(entreprise.id, nouveau, cj);
+
+    const ligne = (await getEntreprises(user.cabinetId!)).find((e) => e.id === entreprise.id)!;
+    expect(ligne.admin?.email).toBe(admin.email);
+    expect(ligne.adminInvitation).toMatchObject({ email: nouveau, status: 'pending' });
   });
 });

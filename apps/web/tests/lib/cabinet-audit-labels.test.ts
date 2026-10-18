@@ -72,6 +72,15 @@ describe('parseBrusselsDayStart', () => {
   });
 });
 
+describe('export des donnees du cabinet (D74)', () => {
+  it('est liste dans le journal du cabinet avec sa phrase', () => {
+    expect(isCabinetAuditAction('DATA_EXPORTED')).toBe(true);
+    expect(
+      describeAuditEntry({ targetName: null, email: null, previousEmail: null, newEmail: null, action: 'DATA_EXPORTED' }),
+    ).toBe('Les données du cabinet ont été exportées');
+  });
+});
+
 describe('actions sur les entreprises clientes', () => {
   const base = { targetName: null, email: null, previousEmail: null, newEmail: null };
 

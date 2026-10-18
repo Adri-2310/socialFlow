@@ -9,8 +9,14 @@ vi.mock('resend', () => ({
 }));
 
 const { emailTheme, formatFrom, safeSenderName, senderAddress } = await import('@/lib/email-brand');
-const { sendGestionnaireInvitationEmail, sendGestionnaireAccessChangedEmail, sendMagicLinkEmail } =
-  await import('@/lib/email');
+const {
+  sendGestionnaireInvitationEmail,
+  sendEntrepriseInvitationEmail,
+  sendGestionnaireAccessChangedEmail,
+  sendMagicLinkEmail,
+  sendWelcomeAccountEmail,
+  sendAdminReplacedEmail,
+} = await import('@/lib/email');
 
 const brand = {
   name: 'Alicia Cabinet',
@@ -85,6 +91,76 @@ describe('emails au nom du cabinet', () => {
     expect(mail.html).not.toContain('Tous droits réservés');
     expect(mail.html).toContain('bgcolor="#008734" class="email-header"');
     expect(mail.html).not.toContain('linear-gradient');
+  });
+
+  it('invitation : rappelle le portail de connexion du cabinet (D76)', async () => {
+    await sendGestionnaireInvitationEmail('bruno@test.com', brand, 'Alicia', 'https://app/accept?token=x', null, {
+      portalUrl: 'https://app.test/connexion/alicia-cabinet',
+    });
+
+    const html = send.mock.calls[0][0].html as string;
+    expect(html).toContain('Pour vous reconnecter par la suite, utilisez le portail de Alicia Cabinet');
+    expect(html).toContain('href="https://app.test/connexion/alicia-cabinet"');
+    // Le portail vient apres le bouton d'acceptation, pas a sa place.
+    expect(html.indexOf('Accepter l’invitation')).toBeLessThan(html.indexOf('/connexion/alicia-cabinet'));
+  });
+
+  it('invitation d un administrateur d entreprise : meme rappel du portail', async () => {
+    await sendEntrepriseInvitationEmail(
+      'admin@client.be',
+      brand,
+      'Alicia',
+      'Boulangerie Dupont',
+      'https://app/accept?token=x',
+      null,
+      { portalUrl: 'https://app.test/connexion/alicia-cabinet' },
+    );
+
+    const html = send.mock.calls[0][0].html as string;
+    expect(html).toContain('https://app.test/connexion/alicia-cabinet');
+    expect(html).toContain('Accédez à l’espace de Boulangerie Dupont');
+  });
+
+  it('invitation : pas de ligne de portail sans adresse, ni pour une adresse qui n est pas http(s)', async () => {
+    await sendGestionnaireInvitationEmail('bruno@test.com', brand, 'Alicia', 'https://app/accept?token=x');
+    expect(send.mock.calls[0][0].html).not.toContain('Pour vous reconnecter');
+
+    send.mockClear();
+    await sendGestionnaireInvitationEmail('bruno@test.com', brand, 'Alicia', 'https://app/accept?token=x', null, {
+      portalUrl: 'javascript:alert(1)',
+    });
+    expect(send.mock.calls[0][0].html).not.toContain('Pour vous reconnecter');
+    expect(send.mock.calls[0][0].html).not.toContain('javascript:');
+  });
+
+  it('bienvenue : au nom du cabinet, avec l adresse du portail (D76)', async () => {
+    await sendWelcomeAccountEmail('bruno@test.com', brand, 'Bruno <b>', 'https://app.test/connexion/alicia-cabinet');
+
+    const sent = send.mock.calls[0][0];
+    expect(sent.subject).toBe('Bienvenue chez Alicia Cabinet');
+    expect(sent.html).toContain('href="https://app.test/connexion/alicia-cabinet"');
+    expect(sent.html).toContain('Ouvrir mon portail');
+    expect(sent.html).not.toContain('Bruno <b>');
+    expect(sent.html).toContain('Bruno &lt;b&gt;');
+  });
+
+  it('ancien administrateur : prevenu au nom du cabinet, sans rien du remplacant (D78)', async () => {
+    await sendAdminReplacedEmail('ancien@client.be', brand, 'Marie <i>', 'Boulangerie & Fils');
+
+    const sent = send.mock.calls[0][0];
+    expect(sent.to).toBe('ancien@client.be');
+    expect(sent.subject).toBe('Votre accès à l’espace de Boulangerie & Fils a été remplacé');
+    expect(sent.html).toContain('Alicia Cabinet a désigné un nouvel administrateur');
+    expect(sent.html).toContain('Marie &lt;i&gt;');
+    expect(sent.html).toContain('Boulangerie &amp; Fils');
+    expect(sent.html).not.toContain('Marie <i>');
+  });
+
+  it('bienvenue : sans lien pour une adresse qui n est pas http(s)', async () => {
+    await sendWelcomeAccountEmail('bruno@test.com', brand, 'Bruno', 'javascript:alert(1)');
+
+    expect(send.mock.calls[0][0].html).not.toContain('javascript:');
+    expect(send.mock.calls[0][0].html).not.toContain('Ouvrir mon portail');
   });
 
   it('echappe le nom du cabinet dans le HTML et neutralise le sujet', async () => {

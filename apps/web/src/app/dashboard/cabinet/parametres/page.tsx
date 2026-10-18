@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { BrandingForm } from '@/components/cabinet/branding-form';
+import { ExportCard } from '@/components/cabinet/export-card';
+import { PortalForm } from '@/components/cabinet/portal-form';
+import { ensureCabinetSlug } from '@/lib/cabinet-portal';
 import { EmailTemplateEditor } from '@/components/cabinet/email-template-editor';
 import { IdentityForm } from '@/components/cabinet/identity-form';
 import { LogoForm } from '@/components/cabinet/logo-form';
@@ -21,7 +24,7 @@ export const metadata: Metadata = {
   description: 'Identité de votre cabinet.',
 };
 
-const TAB_IDS = ['cabinet', 'apparence', 'emails'] as const;
+const TAB_IDS = ['cabinet', 'apparence', 'emails', 'donnees'] as const;
 
 export default async function CabinetSettingsPage({
   searchParams,
@@ -39,7 +42,7 @@ export default async function CabinetSettingsPage({
   const { onglet } = await searchParams;
   const initialTab = (TAB_IDS as readonly string[]).includes(onglet ?? '') ? (onglet as string) : 'cabinet';
 
-  const [identity, branding, templates, emailBrand, cabinet] = await Promise.all([
+  const [identity, branding, templates, emailBrand, cabinet, portalSlug] = await Promise.all([
     getCabinetIdentity(user.cabinetId),
     getCabinetBranding(user.cabinetId),
     listEmailTemplates(user.cabinetId),
@@ -48,6 +51,8 @@ export default async function CabinetSettingsPage({
       where: { id: user.cabinetId },
       select: { billingStatus: true, status: true, suspensionType: true, logoUrl: true },
     }),
+    // D76 : cree a la premiere visite pour un cabinet qui n'en a pas encore.
+    ensureCabinetSlug(user.cabinetId),
   ]);
   const readOnly = cabinet ? isCabinetReadOnly(cabinet) : false;
 
@@ -64,6 +69,11 @@ export default async function CabinetSettingsPage({
         <>
           <LogoForm logoUrl={cabinet?.logoUrl ?? null} cabinetName={identity.name} readOnly={readOnly} />
           <BrandingForm branding={branding} cabinetName={identity.name} readOnly={readOnly} />
+          <PortalForm
+            slug={portalSlug}
+            baseUrl={process.env.NEXT_PUBLIC_APP_URL ?? ''}
+            readOnly={readOnly}
+          />
         </>
       ),
     },
@@ -92,6 +102,12 @@ export default async function CabinetSettingsPage({
         </>
       ),
     },
+    {
+      id: 'donnees',
+      label: 'Données',
+      // Disponible en lecture seule : on peut toujours emporter ses données (D28).
+      content: <ExportCard readOnly={readOnly} />,
+    },
   ];
 
   return (
@@ -99,7 +115,7 @@ export default async function CabinetSettingsPage({
       <div>
         <h2 className="text-xl font-bold tracking-tight text-foreground">Paramètres</h2>
         <p className="text-sm text-muted-foreground">
-          L’identité, l’apparence et les emails de votre cabinet, tels que les voient vos clients.
+          L’identité, l’apparence et les emails de votre cabinet, tels que les voient vos clients, et l’export de vos données.
         </p>
       </div>
       <SettingsTabs tabs={tabs} initialTab={initialTab} />

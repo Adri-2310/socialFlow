@@ -3,6 +3,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Loader2 } from 'lucide-react';
+import { quotaAwareMessage } from '@/lib/quota-messages';
 import type { CountryOption } from '@/lib/countries';
 
 export type EntrepriseFormValues = {
@@ -142,7 +143,7 @@ export function EntrepriseFormDialog({
 
       if (!res.ok) {
         if (body?.fields) setFieldErrors(body.fields);
-        else setError(ERROR_MESSAGES[body?.error] ?? FALLBACK);
+        else setError(quotaAwareMessage(body, ERROR_MESSAGES, 'entreprises', FALLBACK));
         return;
       }
 

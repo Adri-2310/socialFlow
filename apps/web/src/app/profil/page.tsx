@@ -9,21 +9,32 @@ import { requireSession } from '@/lib/require-session';
 import { roleDisplayLabel } from '@/lib/role-labels';
 import { prisma } from '@/lib/prisma';
 import { isSubscriptionBlockingDeletion } from '@/lib/account-deletion-guard';
+import { getCabinetClientBrand } from '@/lib/cabinet-client-brand';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 
 const BILLING_LABELS: Record<string, string> = {
   monthly: 'Mensuelle',
   yearly: 'Annuelle',
 };
 
-export const metadata: Metadata = {
+const DEFAULT_METADATA: Metadata = {
   title: 'Mon profil — SocialFlow',
   description: 'Gérez vos informations et paramètres de compte.',
 };
+
+// D33, D76 : l'onglet d'un compte de cabinet client porte le nom de son cabinet.
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const brand = session ? await getCabinetClientBrand(session.user) : null;
+  return brand ? brand.metadata('Mon profil') : DEFAULT_METADATA;
+}
 
 // Page commune a tous les roles (pas de requireSession({role}) : accessible
 // a n'importe quel utilisateur connecte, y compris SuperAdmin).
 export default async function ProfilPage() {
   const { user } = await requireSession();
+  const brand = await getCabinetClientBrand(user);
 
   // D55 : la formule et la periode appartiennent au cabinet, pas a la personne.
   const cabinet = user.cabinetId
@@ -41,13 +52,20 @@ export default async function ProfilPage() {
 
   return (
     <>
-      <AppHeader userName={user.name} roleLabel={roleDisplayLabel(user.role)} />
+      {brand?.theme && <style dangerouslySetInnerHTML={{ __html: brand.theme }} />}
+      <AppHeader
+        userName={user.name}
+        roleLabel={roleDisplayLabel(user.role)}
+        brand={brand && { name: brand.brandName, logoUrl: brand.logoUrl, logoutHref: brand.logoutHref }}
+      />
       <main>
         <section className="mx-auto max-w-2xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-border/60 bg-card/60 p-8 shadow-xl backdrop-blur-xl">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Mon profil</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Vos informations et paramètres de compte SocialFlow.
+              {brand
+                ? `Vos informations et paramètres de compte ${brand.brandName}.`
+                : 'Vos informations et paramètres de compte SocialFlow.'}
             </p>
 
             <dl className="mt-6 space-y-3 text-sm">
@@ -61,7 +79,7 @@ export default async function ProfilPage() {
               </div>
               <div className="flex justify-between border-b border-border/60 pb-3">
                 <dt className="text-muted-foreground">Rôle</dt>
-                <dd className="font-medium text-foreground">{user.role}</dd>
+                <dd className="font-medium text-foreground">{roleDisplayLabel(user.role)}</dd>
               </div>
               {cabinet && (
                 <div className="flex justify-between border-b border-border/60 pb-3">
@@ -75,18 +93,23 @@ export default async function ProfilPage() {
                   {user.emailVerified ? 'Oui' : 'Non'}
                 </dd>
               </div>
-              <div className="flex justify-between border-b border-border/60 pb-3">
-                <dt className="text-muted-foreground">Formule</dt>
-                <dd className="font-medium text-foreground">{plan?.name ?? 'Aucune'}</dd>
-              </div>
-              <div className="flex justify-between border-b border-border/60 pb-3">
-                <dt className="text-muted-foreground">Facturation</dt>
-                <dd className="font-medium text-foreground">
-                  {cabinet?.billingPeriod
-                    ? (BILLING_LABELS[cabinet.billingPeriod] ?? cabinet.billingPeriod)
-                    : '—'}
-                </dd>
-              </div>
+              {/* D55 : formule et facturation sont l'affaire du cabinet, pas de ses clients. */}
+              {!brand && (
+                <>
+                  <div className="flex justify-between border-b border-border/60 pb-3">
+                    <dt className="text-muted-foreground">Formule</dt>
+                    <dd className="font-medium text-foreground">{plan?.name ?? 'Aucune'}</dd>
+                  </div>
+                  <div className="flex justify-between border-b border-border/60 pb-3">
+                    <dt className="text-muted-foreground">Facturation</dt>
+                    <dd className="font-medium text-foreground">
+                      {cabinet?.billingPeriod
+                        ? (BILLING_LABELS[cabinet.billingPeriod] ?? cabinet.billingPeriod)
+                        : '—'}
+                    </dd>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between pb-3">
                 <dt className="text-muted-foreground">Membre depuis</dt>
                 <dd className="font-medium text-foreground">{memberSince}</dd>
