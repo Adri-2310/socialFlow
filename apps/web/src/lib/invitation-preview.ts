@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { hashInvitationToken } from '@/lib/invitations';
+import { hashInvitationToken, isAdminSeatAvailable } from '@/lib/invitations';
 
 // Ce que la page d'acceptation d'une invitation montre du cabinet qui invite
 // (D33) : son nom, son logo et sa couleur, pour que le futur gestionnaire le
@@ -29,6 +29,7 @@ export async function getInvitationPreview(
       email: true,
       status: true,
       expiresAt: true,
+      replacesAdminId: true,
       entreprise: { select: { name: true, deletedAt: true, adminUserId: true } },
       cabinet: {
         select: {
@@ -49,10 +50,15 @@ export async function getInvitationPreview(
   }
   const cabinet = invitation.cabinet;
   if (cabinet.deletedAt) return null;
-  // Meme regle que l'acceptation (D5) : entreprise archivee ou deja pourvue
-  // d'un administrateur = lien invalide.
+  // Meme regle que l'acceptation (D5, D78) : entreprise archivee, ou deja pourvue d'un
+  // administrateur AUTRE que celui que cette invitation remplace = lien invalide.
   const entreprise = invitation.entreprise;
-  if (entreprise && (entreprise.deletedAt || entreprise.adminUserId)) return null;
+  if (
+    entreprise &&
+    (entreprise.deletedAt || !isAdminSeatAvailable(entreprise.adminUserId, invitation.replacesAdminId))
+  ) {
+    return null;
+  }
 
   return {
     email: invitation.email,

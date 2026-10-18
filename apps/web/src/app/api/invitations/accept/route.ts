@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { ACCEPT_ERROR_STATUS, acceptInvitationWithPassword } from '@/lib/invitation-accept';
 import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendWelcomeAccountEmail } from '@/lib/email';
+import { sendAdminReplacedEmail, sendWelcomeAccountEmail } from '@/lib/email';
 import { PORTAL_HEADER } from '@/lib/portal-slug';
 
 // Cree le compte de la personne invitee (C6) : role, cabinet et rattachement
@@ -39,6 +39,20 @@ export async function POST(request: Request) {
     await sendWelcomeAccountEmail(result.email, brand, result.name, portal, result.entrepriseName);
   } catch (error) {
     console.error("Echec de l'envoi de l'email de bienvenue", error);
+  }
+  // D78 : l'ancien administrateur, desactive par cette acceptation, en est prevenu.
+  if (result.replacedAdmin && result.entrepriseName) {
+    try {
+      const brand = await getCabinetEmailBrand(result.cabinetId);
+      await sendAdminReplacedEmail(
+        result.replacedAdmin.email,
+        brand,
+        result.replacedAdmin.name,
+        result.entrepriseName,
+      );
+    } catch (error) {
+      console.error("Echec de l'envoi de l'email a l'ancien administrateur", error);
+    }
   }
 
   if (signIn.status !== 200) {

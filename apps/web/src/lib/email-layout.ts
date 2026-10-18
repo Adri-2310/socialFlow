@@ -222,6 +222,32 @@ export function buildWelcomeAccount(input: {
   return { subject: `Bienvenue chez ${brand.name}`, html };
 }
 
+// Prevenu l'ancien administrateur d'une entreprise (D78) : son acces a ete remplace. Au nom
+// du cabinet ; aucune donnee du remplacant n'y figure.
+export function buildAdminReplaced(input: {
+  brand: CabinetEmailBrand;
+  name: string;
+  entrepriseName: string;
+}): { subject: string; html: string } {
+  const { brand } = input;
+  const theme = emailTheme(brand);
+  const accent = theme?.headerBg ?? '#6d28d9';
+  const cabinet = escapeHtml(brand.name);
+  const entreprise = escapeHtml(input.entrepriseName);
+
+  const html = emailShell(
+    `
+    <p style="margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:${accent};">Accès au compte</p>
+    <h1 style="margin:0 0 12px; font-size:21px; font-weight:700; color:#0f172a;">Votre accès a été remplacé</h1>
+    <p style="margin:0 0 12px; color:#475569;">Bonjour ${escapeHtml(input.name)},</p>
+    <p style="margin:0; color:#475569;">${cabinet} a désigné un nouvel administrateur pour l’espace de ${entreprise}. Votre compte est désormais désactivé et vous ne pouvez plus vous y connecter. Si vous pensez qu’il s’agit d’une erreur, contactez ${cabinet}.</p>
+  `,
+    theme,
+  );
+
+  return { subject: `Votre accès à l’espace de ${input.entrepriseName} a été remplacé`, html };
+}
+
 function buildInvitation(input: {
   type: TemplateType;
   brand: CabinetEmailBrand;

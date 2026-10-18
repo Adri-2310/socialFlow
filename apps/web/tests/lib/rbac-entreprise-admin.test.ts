@@ -12,6 +12,7 @@ vi.mock('@/lib/email', () => ({
   sendDeleteAccountVerificationEmail: vi.fn().mockResolvedValue(undefined),
   sendGestionnaireInvitationEmail: vi.fn().mockResolvedValue(undefined),
   sendEntrepriseInvitationEmail: vi.fn().mockResolvedValue(undefined),
+  sendAdminReplacedEmail: vi.fn().mockResolvedValue(undefined),
   sendWelcomeAccountEmail: vi.fn().mockResolvedValue(undefined),
   sendGestionnaireAccessChangedEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordChangedEmail: vi.fn().mockResolvedValue(undefined),
@@ -531,6 +532,20 @@ describe('remplacement sans interruption (D78)', () => {
     });
     expect(audit).not.toBeNull();
     expect((audit!.metadata as { replacedBy?: string }).replacedBy).toBe(remplacant.id);
+
+    // L'ancien administrateur en est prevenu, au nom du cabinet.
+    expect(email.sendAdminReplacedEmail).toHaveBeenCalledWith(
+      admin.email,
+      expect.objectContaining({ name: expect.any(String) }),
+      admin.name,
+      'Boulangerie Dupont',
+    );
+  });
+
+  it('une premiere acceptation ne previent personne', async () => {
+    vi.mocked(email.sendAdminReplacedEmail).mockClear();
+    await entrepriseAvecAdmin('d78-premiere');
+    expect(email.sendAdminReplacedEmail).not.toHaveBeenCalled();
   });
 
   it('refuse un remplacement sans administrateur en place (409) et une invitation ordinaire quand il y en a un', async () => {
@@ -583,6 +598,25 @@ describe('remplacement sans interruption (D78)', () => {
 
     expect((await accepter(dernierJeton(nouveau))).status).toBe(404);
     expect(await prisma.user.findUnique({ where: { email: nouveau } })).toBeNull();
+  });
+
+  it('la page d acceptation montre le cabinet pour un lien de remplacement, tant que la place est celle de l ancien', async () => {
+    const { cj, user, entreprise } = await entrepriseAvecAdmin('d78-apercu');
+    const nouveau = testEmail('d78-apercu-nouveau');
+    await remplacer(entreprise.id, nouveau, cj);
+    const jeton = dernierJeton(nouveau);
+
+    // Bug constate : l'entreprise a deja un administrateur (celui que l'on remplace), et la
+    // page affichait quand meme « invitation invalide » sans la marque du cabinet.
+    const apercu = await getInvitationPreview(jeton);
+    expect(apercu).not.toBeNull();
+    expect(apercu?.entrepriseName).toBe(entreprise.name);
+    expect(apercu?.email).toBe(nouveau);
+
+    // Un AUTRE administrateur pose entre-temps : le lien redevient invalide.
+    const intrus = await creerGestionnaire(user.cabinetId!, 'd78-apercu-intrus');
+    await prisma.entreprise.update({ where: { id: entreprise.id }, data: { adminUserId: intrus.user.id } });
+    expect(await getInvitationPreview(jeton)).toBeNull();
   });
 
   it('un gestionnaire assigne peut remplacer, mais pas inviter un premier administrateur', async () => {

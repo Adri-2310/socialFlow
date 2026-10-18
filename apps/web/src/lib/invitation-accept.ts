@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { hashInvitationToken } from '@/lib/invitations';
+import { hashInvitationToken, isAdminSeatAvailable } from '@/lib/invitations';
 import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 
 // Acceptation d'une invitation (C4, C6) : cree le compte avec le role et le
@@ -93,8 +93,7 @@ export async function loadAcceptableInvitation(
     const entreprise = invitation.entreprise;
     // D5 : la place doit etre libre - ou tenue par l'administrateur que cette invitation
     // remplace (D78). Un autre administrateur arrive entre-temps rend le lien invalide.
-    const placeFree =
-      !entreprise?.adminUserId || entreprise.adminUserId === invitation.replacesAdminId;
+    const placeFree = isAdminSeatAvailable(entreprise?.adminUserId, invitation.replacesAdminId);
     if (!entreprise || entreprise.deletedAt || !placeFree) {
       return { ok: false, error: 'INVALID_TOKEN' };
     }
@@ -124,7 +123,11 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 // Rattache le compte a l'invitation : role, cabinet, adresse verifiee (prouvee
 // par le lien), administrateur de l'entreprise (D5), invitation consommee et
 // audit. Dans la transaction de l'appelant.
-async function applyInvitation(tx: Tx, invitation: LoadedInvitation, userId: string) {
+async function applyInvitation(
+  tx: Tx,
+  invitation: LoadedInvitation,
+  userId: string,
+): Promise<{ replacedAdmin: { email: string; name: string } | null }> {
   await tx.user.update({
     where: { id: userId },
     data: { role: invitation.role, cabinetId: invitation.cabinetId, emailVerified: true },
@@ -149,7 +152,12 @@ async function applyInvitation(tx: Tx, invitation: LoadedInvitation, userId: str
   }
   // D78 : l'ancien administrateur est archive avec ses sessions coupees, dans la meme
   // transaction (meme traitement que son retrait, lib/entreprise-admin.ts).
+  let replacedAdmin: { email: string; name: string } | null = null;
   if (replacedAdminId) {
+    replacedAdmin = await tx.user.findUnique({
+      where: { id: replacedAdminId },
+      select: { email: true, name: true },
+    });
     await tx.session.deleteMany({ where: { userId: replacedAdminId } });
     await tx.user.update({
       where: { id: replacedAdminId },
@@ -191,6 +199,7 @@ async function applyInvitation(tx: Tx, invitation: LoadedInvitation, userId: str
       },
     },
   });
+  return { replacedAdmin };
 }
 
 function mapRaceError(error: unknown): AcceptError | null {
@@ -209,6 +218,8 @@ export type AcceptResult =
       cabinetId: string;
       cabinetName: string;
       entrepriseName: string | null;
+      // D78 : ancien administrateur desactive par cette acceptation, a prevenir.
+      replacedAdmin: { email: string; name: string } | null;
     }
   | { ok: false; error: AcceptError };
 
@@ -251,6 +262,7 @@ export async function acceptInvitationWithPassword(input: {
     },
     { method: 'email-password' },
   );
+  let replacedAdmin: { email: string; name: string } | null = null;
   try {
     await authContext.internalAdapter.linkAccount({
       userId: created.id,
@@ -259,7 +271,7 @@ export async function acceptInvitationWithPassword(input: {
       accountId: created.id,
       password: hash,
     });
-    await prisma.$transaction((tx) => applyInvitation(tx, invitation, created.id));
+    ({ replacedAdmin } = await prisma.$transaction((tx) => applyInvitation(tx, invitation, created.id)));
   } catch (error) {
     await prisma.user.delete({ where: { id: created.id } }).catch(() => undefined);
     const mapped = mapRaceError(error);
@@ -275,5 +287,6 @@ export async function acceptInvitationWithPassword(input: {
     cabinetId: invitation.cabinetId,
     cabinetName: invitation.cabinetName,
     entrepriseName: invitation.entrepriseName,
+    replacedAdmin,
   };
 }

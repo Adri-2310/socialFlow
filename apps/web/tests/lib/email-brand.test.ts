@@ -15,6 +15,7 @@ const {
   sendGestionnaireAccessChangedEmail,
   sendMagicLinkEmail,
   sendWelcomeAccountEmail,
+  sendAdminReplacedEmail,
 } = await import('@/lib/email');
 
 const brand = {
@@ -141,6 +142,18 @@ describe('emails au nom du cabinet', () => {
     expect(sent.html).toContain('Ouvrir mon portail');
     expect(sent.html).not.toContain('Bruno <b>');
     expect(sent.html).toContain('Bruno &lt;b&gt;');
+  });
+
+  it('ancien administrateur : prevenu au nom du cabinet, sans rien du remplacant (D78)', async () => {
+    await sendAdminReplacedEmail('ancien@client.be', brand, 'Marie <i>', 'Boulangerie & Fils');
+
+    const sent = send.mock.calls[0][0];
+    expect(sent.to).toBe('ancien@client.be');
+    expect(sent.subject).toBe('Votre accès à l’espace de Boulangerie & Fils a été remplacé');
+    expect(sent.html).toContain('Alicia Cabinet a désigné un nouvel administrateur');
+    expect(sent.html).toContain('Marie &lt;i&gt;');
+    expect(sent.html).toContain('Boulangerie &amp; Fils');
+    expect(sent.html).not.toContain('Marie <i>');
   });
 
   it('bienvenue : sans lien pour une adresse qui n est pas http(s)', async () => {
