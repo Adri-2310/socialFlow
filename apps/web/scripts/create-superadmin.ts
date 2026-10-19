@@ -50,4 +50,10 @@ async function main(): Promise<number> {
   }
 }
 
-main().then((code) => process.exit(code));
+// Pas de process.exit() immédiat : sous Windows, quitter pendant que les sockets se
+// ferment fait planter Node (assertion libuv) et npm signale un échec à tort. On
+// laisse la boucle se vider ; la minuterie (non bloquante) n'est qu'un filet.
+main().then((code) => {
+  process.exitCode = code;
+  setTimeout(() => process.exit(code), 5000).unref();
+});
