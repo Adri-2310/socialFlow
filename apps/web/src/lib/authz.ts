@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiSession } from '@/lib/api-guard';
+import { prisma } from '@/lib/prisma';
+import type { Prisma } from '../../generated/prisma/client';
 
 // Matrice des permissions en code (doc/PERMISSIONS.md). Chaque ligne du document
 // est une action ; son identifiant sert dans les routes et dans les tests.
@@ -73,14 +75,19 @@ export const ACTIONS = {
   'audit.voir': rule("Journal d'audit", [A, S, D, D, D]),
   'abonnement.gerer': rule('Gérer son abonnement (portail Stripe)', [D, A, D, D, D]),
   'cabinet.personnaliser': rule("Branding et modèles d'emails", [D, A, D, D, D], { write: true }),
+  'cabinet.exporter': rule('Exporter les données du cabinet', [D, A, D, D, D]),
   'compte.gerer': rule('Profil, mot de passe, 2FA, comptes liés', [A, A, A, A, A], { twoFactorExempt: true }),
 
   // --- Équipe et portefeuille ---
   'gestionnaire.inviter': rule('Inviter / renvoyer / révoquer un gestionnaire', [D, A, D, D, D], { write: true }),
   'gestionnaire.desactiver': rule('Désactiver un gestionnaire', [D, A, D, D, D], { write: true }),
+  'gestionnaire.modifier-email': rule("Corriger l'adresse d'un gestionnaire", [D, A, D, D, D], { write: true }),
   'entreprise.gerer': rule('Créer / modifier / archiver une entreprise', [D, A, D, D, D], { write: true }),
   'entreprise.assigner': rule('Assigner des gestionnaires à une entreprise', [D, A, D, D, D], { write: true }),
   'entreprise.inviter-admin': rule("Inviter l'admin d'une entreprise", [D, A, D, D, D], { write: true }),
+  'entreprise.retirer-admin': rule("Retirer l'admin d'une entreprise", [D, A, D, D, D], { write: true }),
+  // D78 : le gestionnaire assigné peut remplacer l'admin, jamais inviter le premier.
+  'entreprise.remplacer-admin': rule("Remplacer l'admin d'une entreprise", [D, A, S, D, D], { write: true }),
   'entreprise.lister': rule('Voir la liste des entreprises', [D, A, S, S, D]),
 
   // --- Dossiers salariés ---
@@ -135,9 +142,76 @@ export function levelFor(action: ActionId, role: string | null | undefined): Lev
 type Guard = Awaited<ReturnType<typeof requireApiSession>>;
 type Session = NonNullable<Guard['session']>;
 
+// Périmètre de données d'une session (doc/FONCTIONNEMENT.md § 4), déduit à chaque
+// requête de la base et jamais d'une liste stockée dans la session ni envoyée par
+// le client :
+//   platform    SuperAdmin : la plateforme, jamais les données métier (D8)
+//   cabinet     Cabinet RH : son cabinet
+//   entreprises Gestionnaire : les entreprises (non archivées) qui lui sont assignées
+//   entreprise  Entreprise cliente : sa seule entreprise
+//   self        Collaborateur : son seul compte
+export type Scope =
+  | { kind: 'platform' }
+  | { kind: 'cabinet'; cabinetId: string }
+  | { kind: 'entreprises'; cabinetId: string; entrepriseIds: string[] }
+  | { kind: 'entreprise'; cabinetId: string; entrepriseId: string }
+  | { kind: 'self'; userId: string };
+
+type ScopeUser = { id: string; role?: string | null; cabinetId?: string | null };
+
+// Renvoie null quand le compte n'a aucun périmètre exploitable (rôle inconnu,
+// pas de cabinet, administrateur sans entreprise) : l'accès est alors refusé.
+export async function resolveScope(user: ScopeUser): Promise<Scope | null> {
+  switch (user.role) {
+    case 'SUPER_ADMIN':
+      return { kind: 'platform' };
+    case 'COLLABORATEUR':
+      return { kind: 'self', userId: user.id };
+    case 'CABINET_RH':
+      return user.cabinetId ? { kind: 'cabinet', cabinetId: user.cabinetId } : null;
+    case 'GESTIONNAIRE_RH': {
+      if (!user.cabinetId) return null;
+      const assignments = await prisma.gestionnaireEntreprise.findMany({
+        where: { userId: user.id, entreprise: { cabinetId: user.cabinetId, deletedAt: null } },
+        select: { entrepriseId: true },
+      });
+      return {
+        kind: 'entreprises',
+        cabinetId: user.cabinetId,
+        entrepriseIds: assignments.map((a) => a.entrepriseId),
+      };
+    }
+    case 'ENTREPRISE_CLIENTE': {
+      if (!user.cabinetId) return null;
+      const entreprise = await prisma.entreprise.findFirst({
+        where: { adminUserId: user.id, cabinetId: user.cabinetId, deletedAt: null },
+        select: { id: true },
+      });
+      return entreprise ? { kind: 'entreprise', cabinetId: user.cabinetId, entrepriseId: entreprise.id } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+// Filtre Prisma des entreprises visibles dans un périmètre. Fermé par défaut :
+// un périmètre sans entreprises (plateforme, collaborateur) ne voit rien.
+export function entrepriseWhere(scope: Scope): Prisma.EntrepriseWhereInput {
+  switch (scope.kind) {
+    case 'cabinet':
+      return { cabinetId: scope.cabinetId };
+    case 'entreprises':
+      return { cabinetId: scope.cabinetId, id: { in: scope.entrepriseIds } };
+    case 'entreprise':
+      return { cabinetId: scope.cabinetId, id: scope.entrepriseId };
+    default:
+      return { id: { in: [] } };
+  }
+}
+
 export type AuthzResult =
-  | { session: Session; level: Exclude<Level, 'DENY'>; response?: never }
-  | { session?: never; level?: never; response: NextResponse };
+  | { session: Session; level: Exclude<Level, 'DENY'>; scope: Scope; response?: never }
+  | { session?: never; level?: never; scope?: never; response: NextResponse };
 
 // Contrôle d'accès d'une route d'API (doc/CONVENTIONS.md § 3, étapes 1 et 2).
 // Ordre des refus : session (401), rôle selon la matrice (403), lecture seule du
@@ -145,12 +219,13 @@ export type AuthzResult =
 // cabinet requis pour tout autre rôle (403).
 //
 // `level` dit comment la route doit lire les données : SCOPED = filtrer par
-// périmètre, COUNTERS = compteurs et statuts uniquement.
+// périmètre, COUNTERS = compteurs et statuts uniquement. `scope` est ce périmètre
+// (voir Scope) ; un compte sans périmètre exploitable est refusé (403).
 //
 // Usage :
 //   const authz = await authorize(request, 'entreprise.gerer');
 //   if (authz.response) return authz.response;
-//   const { session } = authz;
+//   const { session, scope } = authz;
 export async function authorize(
   request: Request,
   action: ActionId,
@@ -175,5 +250,10 @@ export async function authorize(
     return { response: NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 }) };
   }
 
-  return { session, level: rule.levels[role] as Exclude<Level, 'DENY'> };
+  const scope = await resolveScope(session.user);
+  if (!scope) {
+    return { response: NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 }) };
+  }
+
+  return { session, level: rule.levels[role] as Exclude<Level, 'DENY'>, scope };
 }

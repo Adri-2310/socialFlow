@@ -21,6 +21,7 @@ Périmètres : **Cabinet RH** = son cabinet ; **Gestionnaire** = entreprises qui
 | Journal d'audit | ✅ global | 🔸 son cabinet | ❌ | ❌ | ❌ |
 | Gérer son abonnement (portail Stripe) | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Branding et modèles d'emails | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Exporter les données du cabinet | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Profil, mot de passe, 2FA, comptes liés | ✅ (2FA obligatoire) | ✅ | ✅ | ✅ | ✅ |
 
 ## Équipe et portefeuille
@@ -29,10 +30,15 @@ Périmètres : **Cabinet RH** = son cabinet ; **Gestionnaire** = entreprises qui
 |---|---|---|---|---|---|
 | Inviter / renvoyer / révoquer un gestionnaire | ❌ | ✅ (quota) | ❌ | ❌ | ❌ |
 | Désactiver un gestionnaire | ❌ | ✅ si toutes ses entreprises restent couvertes | ❌ | ❌ | ❌ |
+| Corriger l'adresse d'un gestionnaire | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Créer / modifier / archiver une entreprise | ❌ | ✅ (quota) | ❌ | ❌ | ❌ |
 | Assigner des gestionnaires à une entreprise | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Inviter l'admin d'une entreprise | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Retirer l'admin d'une entreprise | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Remplacer l'admin d'une entreprise | ❌ | ✅ | 🔸 | ❌ | ❌ |
 | Voir la liste des entreprises | ❌ | ✅ | 🔸 | 🔸 la sienne | ❌ |
+
+D78 : le gestionnaire assigné ne peut que **remplacer** l'administrateur d'une entreprise (jamais inviter un premier administrateur) ; une entreprise qui ne lui est pas assignée est introuvable (404).
 
 ## Dossiers salariés
 

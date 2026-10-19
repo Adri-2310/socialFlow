@@ -6,9 +6,17 @@ import path from 'node:path';
 const getSession = vi.fn();
 vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
 const cabinetFindUnique = vi.fn();
-vi.mock('@/lib/prisma', () => ({ prisma: { cabinet: { findUnique: cabinetFindUnique } } }));
+const assignmentsFindMany = vi.fn();
+const entrepriseFindFirst = vi.fn();
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    cabinet: { findUnique: cabinetFindUnique },
+    gestionnaireEntreprise: { findMany: assignmentsFindMany },
+    entreprise: { findFirst: entrepriseFindFirst },
+  },
+}));
 
-const { ACTIONS, ROLES, authorize, levelFor } = await import('@/lib/authz');
+const { ACTIONS, ROLES, authorize, levelFor, resolveScope, entrepriseWhere } = await import('@/lib/authz');
 type ActionId = keyof typeof ACTIONS;
 type Role = (typeof ROLES)[number];
 
@@ -101,6 +109,8 @@ const READ_ONLY_CABINET = { billingStatus: 'IMPAYE', status: 'actif', suspension
 beforeEach(() => {
   getSession.mockReset();
   cabinetFindUnique.mockReset().mockResolvedValue(READ_WRITE_CABINET);
+  assignmentsFindMany.mockReset().mockResolvedValue([{ entrepriseId: 'e1' }]);
+  entrepriseFindFirst.mockReset().mockResolvedValue({ id: 'e1' });
 });
 
 describe('authorize', () => {
@@ -231,5 +241,97 @@ describe('authorize', () => {
   it('couvre les cinq rôles', () => {
     const roles: Role[] = ['SUPER_ADMIN', 'CABINET_RH', 'GESTIONNAIRE_RH', 'ENTREPRISE_CLIENTE', 'COLLABORATEUR'];
     expect([...ROLES]).toEqual(roles);
+  });
+});
+
+// --- Périmètre (scope) --------------------------------------------------------
+
+describe('authorize : périmètre de la session', () => {
+  it.each([
+    ['SUPER_ADMIN', 'audit.voir', { kind: 'platform' }],
+    ['CABINET_RH', 'entreprise.lister', { kind: 'cabinet', cabinetId: 'c1' }],
+    ['GESTIONNAIRE_RH', 'entreprise.lister', { kind: 'entreprises', cabinetId: 'c1', entrepriseIds: ['e1'] }],
+    ['ENTREPRISE_CLIENTE', 'entreprise.lister', { kind: 'entreprise', cabinetId: 'c1', entrepriseId: 'e1' }],
+    ['COLLABORATEUR', 'compte.gerer', { kind: 'self', userId: 'u1' }],
+  ] as const)('%s : %s', async (role, action, expected) => {
+    sessionFor(role);
+    const res = await authorize(request, action);
+    expect(res.response).toBeUndefined();
+    expect(res.scope).toEqual(expected);
+  });
+
+  it('refuse une entreprise cliente sans entreprise', async () => {
+    entrepriseFindFirst.mockResolvedValue(null);
+    sessionFor('ENTREPRISE_CLIENTE');
+    const res = await authorize(request, 'entreprise.lister');
+    expect(res.response?.status).toBe(403);
+    expect(await res.response?.json()).toEqual({ error: 'FORBIDDEN' });
+  });
+
+  it('ne lit la base que pour les gestionnaires et les entreprises clientes', async () => {
+    for (const role of ['SUPER_ADMIN', 'CABINET_RH', 'COLLABORATEUR'] as const) {
+      sessionFor(role);
+      await authorize(request, 'compte.gerer');
+    }
+    expect(assignmentsFindMany).not.toHaveBeenCalled();
+    expect(entrepriseFindFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveScope', () => {
+  it('refuse un rôle inconnu ou un compte sans cabinet', async () => {
+    expect(await resolveScope({ id: 'u', role: null, cabinetId: 'c1' })).toBeNull();
+    expect(await resolveScope({ id: 'u', role: 'ADMIN', cabinetId: 'c1' })).toBeNull();
+    for (const role of ['CABINET_RH', 'GESTIONNAIRE_RH', 'ENTREPRISE_CLIENTE']) {
+      expect(await resolveScope({ id: 'u', role, cabinetId: null })).toBeNull();
+    }
+  });
+
+  it('filtre les assignations sur le cabinet et les entreprises non archivées', async () => {
+    await resolveScope({ id: 'g1', role: 'GESTIONNAIRE_RH', cabinetId: 'c1' });
+    expect(assignmentsFindMany).toHaveBeenCalledWith({
+      where: { userId: 'g1', entreprise: { cabinetId: 'c1', deletedAt: null } },
+      select: { entrepriseId: true },
+    });
+  });
+});
+
+describe('entrepriseWhere', () => {
+  it('borne chaque périmètre', () => {
+    expect(entrepriseWhere({ kind: 'cabinet', cabinetId: 'c1' })).toEqual({ cabinetId: 'c1' });
+    expect(entrepriseWhere({ kind: 'entreprises', cabinetId: 'c1', entrepriseIds: ['e1', 'e2'] })).toEqual({
+      cabinetId: 'c1',
+      id: { in: ['e1', 'e2'] },
+    });
+    expect(entrepriseWhere({ kind: 'entreprise', cabinetId: 'c1', entrepriseId: 'e1' })).toEqual({
+      cabinetId: 'c1',
+      id: 'e1',
+    });
+  });
+
+  it('ne laisse rien voir à la plateforme ni au collaborateur (D8)', () => {
+    expect(entrepriseWhere({ kind: 'platform' })).toEqual({ id: { in: [] } });
+    expect(entrepriseWhere({ kind: 'self', userId: 'u1' })).toEqual({ id: { in: [] } });
+  });
+
+  it('un gestionnaire sans assignation ne voit aucune entreprise', () => {
+    expect(entrepriseWhere({ kind: 'entreprises', cabinetId: 'c1', entrepriseIds: [] })).toEqual({
+      cabinetId: 'c1',
+      id: { in: [] },
+    });
+  });
+});
+
+describe('lignes ajoutées avec D78 et les routes du cabinet', () => {
+  it('le gestionnaire peut remplacer l admin mais pas en inviter un (D78)', () => {
+    expect(levelFor('entreprise.remplacer-admin', 'GESTIONNAIRE_RH')).toBe('SCOPED');
+    expect(levelFor('entreprise.inviter-admin', 'GESTIONNAIRE_RH')).toBe('DENY');
+    expect(levelFor('entreprise.retirer-admin', 'GESTIONNAIRE_RH')).toBe('DENY');
+  });
+
+  it('l export du cabinet reste possible en lecture seule, contrairement aux écritures', () => {
+    expect('write' in ACTIONS['cabinet.exporter']).toBe(false);
+    expect(ACTIONS['entreprise.retirer-admin']).toMatchObject({ write: true });
+    expect(ACTIONS['gestionnaire.modifier-email']).toMatchObject({ write: true });
   });
 });
