@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { sendGestionnaireAccessChangedEmail, type GestionnaireAccessChange } from '@/lib/email';
@@ -50,9 +50,9 @@ async function uncoveredResponse(cabinetId: string, userId: string) {
 
 // Suspend ou reactive un gestionnaire (reversible).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'gestionnaire.desactiver');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 
@@ -142,9 +142,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // par api/cron/purge-deleted-accounts). L'email reste reserve jusqu'a la purge (D7).
 // Restaurable par le cabinet pendant GESTIONNAIRE_RESTORE_WINDOW_DAYS (PUT).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'gestionnaire.desactiver');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 
@@ -179,9 +179,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 // GESTIONNAIRE_RESTORE_WINDOW_DAYS jours (D52). Meme convention que
 // api/admin/users/[id] : PUT = restauration.
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'gestionnaire.desactiver');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 

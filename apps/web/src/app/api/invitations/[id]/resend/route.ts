@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
 import { getCustomTemplate } from '@/lib/cabinet-email-templates';
@@ -12,9 +12,12 @@ import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/in
 // jeton et nouvelle date d'expiration ; l'ancien lien cesse de fonctionner
 // puisque seul le hash du jeton courant est conserve (C3).
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  // Revocation/renvoi communs a tous les types d'invitation (gestionnaire, admin
+  // d'entreprise) : meme regle aujourd'hui (Cabinet RH seul). Si les lignes
+  // gestionnaire.inviter et entreprise.inviter-admin divergent, choisir selon le type.
+  const authz = await authorize(request, 'gestionnaire.inviter');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 
