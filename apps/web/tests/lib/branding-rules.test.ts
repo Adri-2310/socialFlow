@@ -121,4 +121,35 @@ describe('buildThemeCss', () => {
     expect(values.every((v) => /^#[0-9a-f]{6}$/.test(v))).toBe(true);
     expect(css).not.toMatch(/[<>"']|url\(|expression|javascript/i);
   });
+
+  it('accepte une couleur valide en majuscules', () => {
+    const css = buildThemeCss({ primaryColor: '#1E3A8A', secondaryColor: null })!;
+
+    expect(css).toContain('--primary:#1E3A8A');
+  });
+
+  it.each(['red', '#fff', '#12345g', '#1e3a8a00', ''])(
+    'ignore la valeur invalide %j au rendu',
+    (invalid) => {
+      expect(buildThemeCss({ primaryColor: invalid, secondaryColor: null })).toBeNull();
+      expect(buildThemeCss({ primaryColor: null, secondaryColor: invalid })).toBeNull();
+    },
+  );
+
+  it('ne garde que la couleur valide quand l autre est invalide', () => {
+    const css = buildThemeCss({ primaryColor: '#1e3a8a', secondaryColor: 'red' })!;
+
+    expect(css).toContain('--primary:#1e3a8a');
+    expect(css).not.toContain('--secondary');
+  });
+
+  it('bloque une tentative d injection CSS/HTML', () => {
+    const injection = 'red;}</style><script>alert(1)</script>';
+
+    expect(buildThemeCss({ primaryColor: injection, secondaryColor: null })).toBeNull();
+
+    const css = buildThemeCss({ primaryColor: '#1e3a8a', secondaryColor: injection })!;
+    expect(css).not.toMatch(/[<>]|script|alert|red/i);
+    expect(css).not.toContain('--secondary');
+  });
 });

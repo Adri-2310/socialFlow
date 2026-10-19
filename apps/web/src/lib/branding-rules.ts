@@ -84,15 +84,24 @@ export function validateBranding(input: {
   };
 }
 
-// CSS du theme du cabinet. Les valeurs sont des couleurs #rrggbb deja
-// validees (jamais du texte libre) : aucune injection possible. En theme
-// sombre, la couleur est eclaircie au besoin pour rester lisible, et le texte
-// pose dessus est choisi pour garder un contraste suffisant.
+function safeColor(value: string | null): string | null {
+  return value !== null && isHexColor(value) ? value : null;
+}
+
+// CSS du theme du cabinet. Le resultat est injecte dans une balise <style>
+// (dangerouslySetInnerHTML) : chaque couleur est donc revalidee ici en
+// #rrggbb, meme si elle a deja ete validee a l'ecriture (defense en
+// profondeur : une valeur arrivee en base par un autre chemin ne doit jamais
+// atteindre le HTML). Une valeur invalide est ignoree, sans CSS produit pour
+// elle. En theme sombre, la couleur est eclaircie au besoin pour rester
+// lisible, et le texte pose dessus est choisi pour garder un contraste
+// suffisant.
 export function buildThemeCss(branding: {
   primaryColor: string | null;
   secondaryColor: string | null;
 }): string | null {
-  const { primaryColor, secondaryColor } = branding;
+  const primaryColor = safeColor(branding.primaryColor);
+  const secondaryColor = safeColor(branding.secondaryColor);
   if (!primaryColor && !secondaryColor) return null;
 
   const declare = (dark: boolean) => {
