@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { resetEmailTemplate, saveEmailTemplate } from '@/lib/cabinet-email-templates';
 import { isTemplateType, validateTemplate } from '@/lib/email-templates';
 
@@ -7,12 +7,11 @@ import { isTemplateType, validateTemplate } from '@/lib/email-templates';
 // defaut. Reserve au Cabinet RH, pour son cabinet (cabinetId de la session).
 // Ecriture : refusee en lecture seule (423, D29). Le type vient de l'URL mais
 // n'est accepte que s'il figure dans la liste fermee des modeles.
-const guardOptions = { role: 'CABINET_RH', cabinet: true, writable: true } as const;
 
 export async function PUT(request: Request, { params }: { params: Promise<{ type: string }> }) {
-  const guard = await requireApiSession(request, guardOptions);
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const { type } = await params;
   if (!isTemplateType(type)) {
@@ -36,9 +35,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ type: string }> }) {
-  const guard = await requireApiSession(request, guardOptions);
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const { type } = await params;
   if (!isTemplateType(type)) {

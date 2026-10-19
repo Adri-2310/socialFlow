@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { brandingSchema, validateBranding } from '@/lib/branding-rules';
 import { updateCabinetBranding } from '@/lib/cabinet-branding';
 
@@ -8,13 +8,9 @@ import { updateCabinetBranding } from '@/lib/cabinet-branding';
 // lecture seule (423, D29). Les couleurs sont validees cote serveur (format
 // et contraste) : le formulaire n'est qu'une aide.
 export async function PATCH(request: Request) {
-  const guard = await requireApiSession(request, {
-    role: 'CABINET_RH',
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const parsed = brandingSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { buildCabinetExport, exportFilename } from '@/lib/cabinet-export';
 import { prisma } from '@/lib/prisma';
 
@@ -9,9 +9,9 @@ import { prisma } from '@/lib/prisma';
 // Chaque export est journalise (action sensible). Le cabinet vient de la
 // session, jamais de la requete.
 export async function GET(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.exporter');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const now = new Date();
   const data = await buildCabinetExport(cabinetId, now);
