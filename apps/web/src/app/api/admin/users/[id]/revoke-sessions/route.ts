@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 
 // D21 : outil de support. Deconnecte le compte partout (appareil perdu, doute
 // sur un acces) sans le suspendre : l'utilisateur peut se reconnecter ensuite.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'utilisateur.support');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const { id: userId } = await params;
 

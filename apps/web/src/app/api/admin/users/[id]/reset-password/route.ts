@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureCabinetSlug, isPortalRole, portalPath } from '@/lib/cabinet-portal';
@@ -8,9 +8,9 @@ import { ensureCabinetSlug, isPortalRole, portalPath } from '@/lib/cabinet-porta
 // standard (meme flux et meme email que « Mot de passe oublie »). Le SuperAdmin
 // ne voit et ne fixe jamais de mot de passe.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'utilisateur.support');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const { id: userId } = await params;
 

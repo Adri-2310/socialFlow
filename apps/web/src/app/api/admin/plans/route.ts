@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 import { stripeUnitAmountCents } from '@/lib/billing';
@@ -68,9 +68,9 @@ function parseBody(body: unknown): PlanCreateBody | null {
 // PricingPlan (donc visible sur /tarifs) sans contrepartie Stripe reelle
 // derriere - si Stripe echoue, rien n'est ecrit en base.
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'plan.gerer');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const body = parseBody(await request.json().catch(() => null));
   if (!body) {
