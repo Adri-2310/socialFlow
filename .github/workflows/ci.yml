@@ -1,0 +1,75 @@
+# Intégration continue (doc/TESTS.md § 6) : qualité du code et tests.
+#
+# Les fusions vers `dev` se font en local (git merge puis git push) : le
+# déclencheur `push` rejoue donc la suite après chaque fusion poussée, et
+# `pull_request` bloque une fusion via une PR si la protection de branche
+# exige les jobs `qualite` et `tests`.
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/web
+
+jobs:
+  # Sans secret : tourne aussi sur une PR venue d'un fork.
+  qualite:
+    name: qualite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        working-directory: .
+      - run: npm run lint
+      - run: npm run type-check
+
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Les secrets ne sont pas fournis aux PR venues d'un fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Une seule base Neon de test, nettoyée par préfixe : deux exécutions
+    # simultanées s'effaceraient mutuellement leurs données. On les met en file.
+    concurrency:
+      group: neon-test-db
+      cancel-in-progress: false
+    env:
+      # Base dédiée aux tests (branche Neon `test`), jamais la base de dev.
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.TEST_DATABASE_URL_UNPOOLED }}
+      # Valeurs factices : Stripe et l'envoi d'emails sont simulés dans les tests,
+      # mais ces variables doivent exister pour que les modules se chargent.
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-secret-factice-0123456789abcdef0123456789abcdef
+      CRON_SECRET: ci-cron-secret-factice
+      STRIPE_SECRET_KEY: sk_test_ci_factice
+      STRIPE_WEBHOOK_SECRET: whsec_ci_factice
+      RESEND_API_KEY: re_ci_factice
+      RESEND_FROM_EMAIL: ci@example.invalid
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        working-directory: .
+      # Aligne le schéma de la base de test sur les migrations du code testé.
+      - run: npx prisma migrate deploy
+      # --retry=1 : un test instable connu (stripe-webhook) est relancé une fois.
+      - run: npm test -- --retry=1
