@@ -76,9 +76,11 @@ export const ACTIONS = {
   'abonnement.gerer': rule('Gérer son abonnement (portail Stripe)', [D, A, D, D, D]),
   'cabinet.personnaliser': rule("Branding et modèles d'emails", [D, A, D, D, D], { write: true }),
   'cabinet.exporter': rule('Exporter les données du cabinet', [D, A, D, D, D]),
+  'cabinet.consulter': rule('Voir le tableau de bord du cabinet', [D, A, D, D, D]),
   'compte.gerer': rule('Profil, mot de passe, 2FA, comptes liés', [A, A, A, A, A], { twoFactorExempt: true }),
 
   // --- Équipe et portefeuille ---
+  'gestionnaire.lister': rule("Voir l'équipe de gestionnaires", [D, A, D, D, D]),
   'gestionnaire.inviter': rule('Inviter / renvoyer / révoquer un gestionnaire', [D, A, D, D, D], { write: true }),
   'gestionnaire.desactiver': rule('Désactiver un gestionnaire', [D, A, D, D, D], { write: true }),
   'gestionnaire.modifier-email': rule("Corriger l'adresse d'un gestionnaire", [D, A, D, D, D], { write: true }),

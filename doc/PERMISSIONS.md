@@ -22,12 +22,14 @@ Périmètres : **Cabinet RH** = son cabinet ; **Gestionnaire** = entreprises qui
 | Gérer son abonnement (portail Stripe) | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Branding et modèles d'emails | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Exporter les données du cabinet | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Voir le tableau de bord du cabinet | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Profil, mot de passe, 2FA, comptes liés | ✅ (2FA obligatoire) | ✅ | ✅ | ✅ | ✅ |
 
 ## Équipe et portefeuille
 
 | Action | SuperAdmin | Cabinet RH | Gestionnaire | Entreprise | Collaborateur |
 |---|---|---|---|---|---|
+| Voir l'équipe de gestionnaires | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Inviter / renvoyer / révoquer un gestionnaire | ❌ | ✅ (quota) | ❌ | ❌ | ❌ |
 | Désactiver un gestionnaire | ❌ | ✅ si toutes ses entreprises restent couvertes | ❌ | ❌ | ❌ |
 | Corriger l'adresse d'un gestionnaire | ❌ | ✅ | ❌ | ❌ | ❌ |
