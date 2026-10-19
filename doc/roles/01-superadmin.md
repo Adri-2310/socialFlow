@@ -19,7 +19,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 | Connexion | Méthodes Better Auth communes à tous les rôles (mot de passe, lien magique, code email, Google, Microsoft) |
 | Point d'entrée | `/dashboard` redirige vers `/dashboard/admin` |
 | Garde des pages | `requireSession({ role: 'SUPER_ADMIN' })` dans `app/dashboard/admin/layout.tsx` (redirige sinon vers `/dashboard`) |
-| Garde des API | Chaque route `api/admin/*` vérifie la session (401) puis `role === 'SUPER_ADMIN'` (403), en JSON |
+| Garde des API | Chaque route `api/admin/*` passe par `requireApiSession(request, { role: 'SUPER_ADMIN' })` (`lib/api-guard.ts`) : session (401) puis rôle (403), en JSON |
 
 ## 3. Écrans existants
 

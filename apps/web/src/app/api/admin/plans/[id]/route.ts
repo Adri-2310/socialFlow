@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 import { stripeUnitAmountCents } from '@/lib/billing';
@@ -140,13 +140,9 @@ async function setPlanStripeActive(planId: string, active: boolean) {
 // echoue, on ne veut pas se retrouver avec un prix affiche qui ne correspond
 // a aucun Price reellement facturable.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const { id: planId } = await params;
 
@@ -183,13 +179,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // lib/pricing.ts), sans supprimer la ligne ni casser les cabinets deja sur ce
 // plan (lecture directe par planId dans profil/page.tsx, non filtree).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const { id: planId } = await params;
 
@@ -218,13 +210,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 // Restaure un plan archive : reactive le Product+Price Stripe existants (les
 // memes objets, jamais de recreation) et le remet sur /tarifs.
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const { id: planId } = await params;
 

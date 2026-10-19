@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
@@ -10,13 +10,9 @@ type UserStatus = (typeof VALID_STATUSES)[number];
 // plus large puisqu'il touche tous les utilisateurs du cabinet). Ne bloque
 // que ce compte precis, sans affecter les autres membres de son cabinet.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const { id: userId } = await params;
 
@@ -71,13 +67,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // admin, et la purge reelle (api/cron/purge-deleted-accounts) s'applique deja
 // a toute ligne deletedAt, peu importe qui l'a posee.
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const { id: userId } = await params;
 
@@ -108,13 +100,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const { id: userId } = await params;
 

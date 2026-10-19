@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireApiSession } from '@/lib/api-guard';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 import { stripeUnitAmountCents } from '@/lib/billing';
@@ -68,13 +68,9 @@ function parseBody(body: unknown): PlanCreateBody | null {
 // PricingPlan (donc visible sur /tarifs) sans contrepartie Stripe reelle
 // derriere - si Stripe echoue, rien n'est ecrit en base.
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  if (guard.response) return guard.response;
+  const { session } = guard;
 
   const body = parseBody(await request.json().catch(() => null));
   if (!body) {
