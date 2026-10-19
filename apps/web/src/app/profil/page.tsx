@@ -32,7 +32,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // Page commune a tous les roles (pas de requireSession({role}) : accessible
 // a n'importe quel utilisateur connecte, y compris SuperAdmin).
-export default async function ProfilPage() {
+export default async function ProfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ '2fa'?: string }>;
+}) {
+  const { '2fa': twoFactorParam } = await searchParams;
   const { user } = await requireSession();
   const brand = await getCabinetClientBrand(user);
 
@@ -123,6 +128,13 @@ export default async function ProfilPage() {
                 emailVerified={user.emailVerified ?? false}
               />
               <LinkedAccounts />
+              {/* D20 : redirection depuis la console SuperAdmin (voir requireSession). */}
+              {twoFactorParam === 'requise' && user.role === 'SUPER_ADMIN' && !user.twoFactorEnabled && (
+                <p role="alert" className="rounded-lg border border-border/60 bg-muted/50 p-4 text-sm text-foreground">
+                  La double authentification est obligatoire pour accéder à la console d’administration.
+                  Activez-la ci-dessous pour continuer.
+                </p>
+              )}
               <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
               {user.role === 'CABINET_RH' && <InviteGestionnaire />}
             </div>

@@ -68,7 +68,7 @@ function parseBody(body: unknown): PlanCreateBody | null {
 // PricingPlan (donc visible sur /tarifs) sans contrepartie Stripe reelle
 // derriere - si Stripe echoue, rien n'est ecrit en base.
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 

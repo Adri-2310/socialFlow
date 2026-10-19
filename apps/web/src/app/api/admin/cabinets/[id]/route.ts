@@ -17,7 +17,7 @@ type CabinetStatus = (typeof VALID_STATUSES)[number];
 // reutiliser requireSession() ici : ce Route Handler doit renvoyer un
 // 401/403 JSON, pas une redirection HTML.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 
@@ -101,7 +101,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // utilisateurs - voir CABINET_DELETION_RETENTION_DAYS et
 // api/cron/purge-deleted-cabinets pour la purge reelle et differee).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 
@@ -131,7 +131,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 // n'est pas touche par l'archivage (voir DELETE ci-dessus), donc reste
 // coherent tel quel.
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 

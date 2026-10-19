@@ -10,7 +10,11 @@ const { requireApiSession } = await import('@/lib/api-guard');
 
 const request = new Request('http://localhost/api/test');
 
-function sessionFor(user: { role?: string | null; cabinetId?: string | null }) {
+function sessionFor(user: {
+  role?: string | null;
+  cabinetId?: string | null;
+  twoFactorEnabled?: boolean | null;
+}) {
   getSession.mockResolvedValue({ user: { id: 'u1', name: 'Test', ...user } });
 }
 
@@ -94,5 +98,42 @@ describe('requireApiSession', () => {
     const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', writable: true });
     expect(guard.response).toBeUndefined();
     expect(cabinetFindUnique).not.toHaveBeenCalled();
+  });
+
+  describe('twoFactor (D20)', () => {
+    it.each([false, null, undefined])(
+      'renvoie 403 TWO_FACTOR_REQUIRED quand la 2FA est %s',
+      async (twoFactorEnabled) => {
+        sessionFor({ role: 'SUPER_ADMIN', twoFactorEnabled });
+        const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
+        expect(guard.response?.status).toBe(403);
+        expect(await guard.response?.json()).toEqual({ error: 'TWO_FACTOR_REQUIRED' });
+      },
+    );
+
+    it('laisse passer un SuperAdmin dont la 2FA est activee', async () => {
+      sessionFor({ role: 'SUPER_ADMIN', twoFactorEnabled: true });
+      const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
+      expect(guard.response).toBeUndefined();
+    });
+
+    it('n exige pas la 2FA sans l option twoFactor', async () => {
+      sessionFor({ role: 'SUPER_ADMIN', twoFactorEnabled: false });
+      const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+      expect(guard.response).toBeUndefined();
+    });
+
+    it('un autre role recoit FORBIDDEN et rien sur la 2FA', async () => {
+      sessionFor({ role: 'CABINET_RH', twoFactorEnabled: false });
+      const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
+      expect(guard.response?.status).toBe(403);
+      expect(await guard.response?.json()).toEqual({ error: 'FORBIDDEN' });
+    });
+
+    it('ne touche pas les autres roles qui n exigent pas la 2FA', async () => {
+      sessionFor({ role: 'CABINET_RH', cabinetId: 'c1', twoFactorEnabled: false });
+      const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
+      expect(guard.response).toBeUndefined();
+    });
   });
 });

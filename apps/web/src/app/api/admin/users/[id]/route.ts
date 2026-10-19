@@ -10,7 +10,7 @@ type UserStatus = (typeof VALID_STATUSES)[number];
 // plus large puisqu'il touche tous les utilisateurs du cabinet). Ne bloque
 // que ce compte precis, sans affecter les autres membres de son cabinet.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 
@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // admin, et la purge reelle (api/cron/purge-deleted-accounts) s'applique deja
 // a toute ligne deletedAt, peu importe qui l'a posee.
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 
@@ -100,7 +100,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN' });
+  const guard = await requireApiSession(request, { role: 'SUPER_ADMIN', twoFactor: true });
   if (guard.response) return guard.response;
   const { session } = guard;
 

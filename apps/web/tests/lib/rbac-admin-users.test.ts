@@ -52,7 +52,7 @@ async function creerSuperAdmin(label: string) {
   // pose : cabinetId: null le rendrait sinon orphelin, invisible au
   // nettoyage afterAll (voir meme commentaire dans rbac-admin-cabinets.test.ts).
   const cabinetId = user.cabinetId!;
-  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null, twoFactorEnabled: true } });
   await prisma.cabinet.delete({ where: { id: cabinetId } });
   return { mail, cj, user };
 }
@@ -97,6 +97,22 @@ describe('PATCH /api/admin/users/[id] (suspension)', () => {
     const { user: cible } = await creerCabinetRH('user-patch-non-admin-cible');
     const res = await patch(cible.id, 'suspendu', cj);
     expect(res.status).toBe(403);
+  });
+
+  // D20 : la 2FA est obligatoire pour toute route de la console.
+  it('refuse un SuperAdmin sans 2FA, puis l accepte une fois la 2FA activee', async () => {
+    const { cj: adminCj, user: admin } = await creerSuperAdmin('admin-patch-sans-2fa');
+    await prisma.user.update({ where: { id: admin.id }, data: { twoFactorEnabled: false } });
+    const { user: cible } = await creerCabinetRH('cible-patch-sans-2fa');
+
+    const refuse = await patch(cible.id, 'suspendu', adminCj);
+    expect(refuse.status).toBe(403);
+    expect((await refuse.json()).error).toBe('TWO_FACTOR_REQUIRED');
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: cible.id } })).status).toBe('actif');
+
+    await prisma.user.update({ where: { id: admin.id }, data: { twoFactorEnabled: true } });
+    const accepte = await patch(cible.id, 'suspendu', adminCj);
+    expect(accepte.status).toBe(200);
   });
 
   it('refuse un statut invalide', async () => {

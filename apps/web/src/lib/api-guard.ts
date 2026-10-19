@@ -24,9 +24,13 @@ type Guard = { session: Session; response?: never } | { session?: never; respons
 // `cabinet: true` exige en plus un cabinetId (tout role rattache a un
 // cabinet, donc tout sauf SuperAdmin) : evite de repeter la verification au
 // debut de chaque route cabinet-scopee.
+//
+// `twoFactor: true` exige une 2FA activee : 403 TWO_FACTOR_REQUIRED sinon
+// (D20, 2FA obligatoire pour le SuperAdmin). Controle place apres celui du
+// role, pour qu'un autre role recoive FORBIDDEN sans rien apprendre sur la 2FA.
 export async function requireApiSession(
   request: Request,
-  options?: { role?: string | string[]; cabinet?: boolean; writable?: boolean },
+  options?: { role?: string | string[]; cabinet?: boolean; writable?: boolean; twoFactor?: boolean },
 ): Promise<Guard> {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) {
@@ -38,6 +42,10 @@ export async function requireApiSession(
     if (!allowed.includes(session.user.role ?? '')) {
       return { response: NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 }) };
     }
+  }
+
+  if (options?.twoFactor && !session.user.twoFactorEnabled) {
+    return { response: NextResponse.json({ error: 'TWO_FACTOR_REQUIRED' }, { status: 403 }) };
   }
 
   if (options?.cabinet && !session.user.cabinetId) {

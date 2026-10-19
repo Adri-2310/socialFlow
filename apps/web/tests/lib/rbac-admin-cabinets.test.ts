@@ -60,7 +60,7 @@ async function creerSuperAdmin(label: string) {
   // Detache d'abord (sinon supprimer le cabinet cascaderait sur le User
   // lui-meme, via onDelete: Cascade sur User.cabinetId).
   const cabinetId = user.cabinetId!;
-  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null, twoFactorEnabled: true } });
   await prisma.cabinet.delete({ where: { id: cabinetId } });
   return { mail, cj, user };
 }

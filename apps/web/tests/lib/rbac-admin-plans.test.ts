@@ -69,7 +69,7 @@ async function creerCabinetRH(label: string) {
 async function creerSuperAdmin(label: string) {
   const { mail, cj, user } = await creerCabinetRH(label);
   const cabinetId = user.cabinetId!;
-  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
+  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null, twoFactorEnabled: true } });
   await prisma.cabinet.delete({ where: { id: cabinetId } });
   return { mail, cj, user };
 }
