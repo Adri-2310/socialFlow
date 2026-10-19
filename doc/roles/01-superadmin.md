@@ -13,7 +13,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 |---|---|
 | Code du rôle | `SUPER_ADMIN` (`User.role`) |
 | Rattachement | Aucun cabinet (`User.cabinetId = null`) |
-| Création du compte | Par script de bootstrap (D18). Cible : un SuperAdmin existant invite le suivant ; le script ne sert qu'à l'installation initiale |
+| Création du compte | Par script d'installation (D18) ✅, voir § 4.6. Cible : un SuperAdmin existant invite le suivant ; le script ne sert qu'à l'installation initiale |
 | 2FA | **Obligatoire** (D20) ✅ : sans 2FA activée, accès à la console bloqué (pages et API) et redirection vers l'activation sur `/profil` |
 | Inscription publique | Impossible : `/register` crée toujours un `CABINET_RH` |
 | Connexion | Méthodes Better Auth communes à tous les rôles (mot de passe, lien magique, code email, Google, Microsoft) |
@@ -74,6 +74,22 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | 05:00 | `/api/cron/purge-expired-sessions` | Suppression des sessions expirées |
 | 06:00 | `/api/cron/suspend-overdue-cabinets` | Passage en `IMPAYE` (lecture seule) des cabinets dont le délai de grâce de 7 jours est écoulé (D57) |
 
+### 4.6 Création du premier SuperAdmin — `scripts/create-superadmin.ts` (D18)
+```
+cd apps/web
+npm run superadmin:create -- prenom@exemple.be [--nom "Prénom Nom"] [--force]
+```
+Le script lit `.env.local` (`DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_SECRET`, clé Resend) et affiche l'hôte de la base visée avant d'agir. La logique est dans `lib/superadmin-bootstrap.ts`.
+| Cas | Résultat |
+|---|---|
+| Adresse libre, aucun SuperAdmin | Compte créé sans cabinet ni mot de passe (`emailVerified` vrai, nom « SuperAdmin » sans `--nom`), audit `SUPERADMIN_BOOTSTRAPPED` dans la même transaction, puis email avec le lien standard (1 h) vers `/reinitialiser-mot-de-passe` : la personne choisit son mot de passe. Personne d'autre ne le voit ni ne le fixe (D21) |
+| Un SuperAdmin existe déjà | Refus (`SUPER_ADMIN_EXISTS`), sauf avec `--force` qui crée un SuperAdmin de plus |
+| Adresse d'un compte qui n'est pas SuperAdmin | Refus (`EMAIL_TAKEN`), même avec `--force` : un compte existant n'est jamais promu |
+| Adresse d'un SuperAdmin qui a déjà un mot de passe | Rien n'est modifié (idempotent) |
+| Adresse d'un SuperAdmin sans mot de passe | Le lien est renvoyé (lien expiré, ou email jamais parti), audit avec `resent` |
+| Échec d'envoi de l'email | Erreur `EMAIL_SEND_FAILED` ; le compte reste créé, relancer la commande renvoie le lien |
+À la première connexion, la 2FA obligatoire (D20) renvoie le SuperAdmin vers `/profil?2fa=requise`.
+
 ## 5. Ce que le SuperAdmin ne peut pas faire (par décision)
 
 - Voir ou exporter les entreprises clientes, salariés, fiches de paie, documents ou messages (D8).
@@ -85,7 +101,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | # | Sujet | Spécification |
 |---|---|---|
 | A1 ✅ | **2FA obligatoire** (D20) | `requireSession({ role: 'SUPER_ADMIN', twoFactor: true })` vérifie aussi `twoFactorEnabled` ; sinon redirection vers `/profil?2fa=requise` (section 2FA) avec un message explicite. Même contrôle dans chaque route `api/admin/*` via `requireApiSession(..., { twoFactor: true })` (403 `TWO_FACTOR_REQUIRED`). `/profil` reste accessible sans 2FA pour pouvoir l'activer |
-| A2 | **Bootstrap pro** (D18) | Script `scripts/create-superadmin.ts` idempotent (email en argument, refuse s'il existe déjà un SuperAdmin sauf `--force`), qui envoie un lien de définition du mot de passe au lieu d'en fixer un. Ensuite : écran « Inviter un SuperAdmin » réservé aux SuperAdmins (invitation `role = SUPER_ADMIN`, 2FA exigée à l'acceptation) |
+| A2 (script ✅) | **Bootstrap pro** (D18) | ✅ Script `scripts/create-superadmin.ts` idempotent (email en argument, refuse s'il existe déjà un SuperAdmin sauf `--force`), qui envoie un lien de définition du mot de passe au lieu d'en fixer un (voir § 4.6). **À construire** : écran « Inviter un SuperAdmin » réservé aux SuperAdmins (invitation `role = SUPER_ADMIN`, 2FA exigée à l'acceptation) |
 | A3 ✅ | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
 | A4 | **Modifier un cabinet** (D19) | Fiche cabinet : nom, coordonnées, et changement de plan **uniquement via Stripe** (le plan local suit l'abonnement, jamais l'inverse). Audit `CABINET_UPDATED` avec avant/après |
 | A5 | **Quotas par plan** (D15) | `PricingPlan` + `maxEntreprises`, `maxUtilisateurs`, `maxStorageMb` (`null` = illimité) et droits `integrations`, `whiteLabel`, éditables dans Configuration ; valeurs de départ = cahier des charges client (D34) |
