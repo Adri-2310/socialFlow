@@ -18,8 +18,11 @@ vi.mock('@/lib/email', () => ({
 }));
 
 const { auth } = await import('@/lib/auth');
+const { sendResetPasswordEmail } = await import('@/lib/email');
 const { prisma } = await import('@/lib/prisma');
 const { PATCH: patchUser, DELETE: deleteUser, PUT: restoreUser } = await import('@/app/api/admin/users/[id]/route');
+const { POST: revokeSessionsRoute } = await import('@/app/api/admin/users/[id]/revoke-sessions/route');
+const { POST: resetPasswordRoute } = await import('@/app/api/admin/users/[id]/reset-password/route');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';
@@ -84,6 +87,25 @@ function restore(userId: string, cj?: ReturnType<typeof cookieJar>) {
     params: Promise.resolve({ id: userId }),
   });
 }
+
+function post(
+  route: typeof revokeSessionsRoute,
+  action: 'revoke-sessions' | 'reset-password',
+  userId: string,
+  cj?: ReturnType<typeof cookieJar>,
+) {
+  const headers: Record<string, string> = {};
+  const cookie = cj?.headers().get('cookie');
+  if (cookie) headers.cookie = cookie;
+  return route(new Request(`${APP_URL}/api/admin/users/${userId}/${action}`, { method: 'POST', headers }), {
+    params: Promise.resolve({ id: userId }),
+  });
+}
+
+const revokeSessions = (userId: string, cj?: ReturnType<typeof cookieJar>) =>
+  post(revokeSessionsRoute, 'revoke-sessions', userId, cj);
+const resetPassword = (userId: string, cj?: ReturnType<typeof cookieJar>) =>
+  post(resetPasswordRoute, 'reset-password', userId, cj);
 
 describe('PATCH /api/admin/users/[id] (suspension)', () => {
   it('refuse sans session', async () => {
@@ -299,5 +321,130 @@ describe('PUT /api/admin/users/[id] (restauration)', () => {
       asResponse: true,
     });
     expect(connexion.status).toBe(200);
+  });
+});
+
+// D21 : outils de support - ni mot de passe visible, ni compte SuperAdmin touche.
+describe.each([
+  ['POST .../revoke-sessions', revokeSessions, 'CANNOT_REVOKE_SUPER_ADMIN'],
+  ['POST .../reset-password', resetPassword, 'CANNOT_RESET_SUPER_ADMIN'],
+] as const)('%s (outil de support)', (_nom, appeler, codeSuperAdmin) => {
+  it('refuse sans session', async () => {
+    const { user } = await creerCabinetRH('support-sans-session');
+    expect((await appeler(user.id)).status).toBe(401);
+  });
+
+  it('refuse a un role autre que SUPER_ADMIN', async () => {
+    const { cj } = await creerCabinetRH('support-non-admin-acteur');
+    const { user: cible } = await creerCabinetRH('support-non-admin-cible');
+    expect((await appeler(cible.id, cj)).status).toBe(403);
+  });
+
+  it('refuse un SuperAdmin sans 2FA', async () => {
+    const { cj, user: admin } = await creerSuperAdmin('support-sans-2fa');
+    await prisma.user.update({ where: { id: admin.id }, data: { twoFactorEnabled: false } });
+    const { user: cible } = await creerCabinetRH('support-cible-sans-2fa');
+
+    const res = await appeler(cible.id, cj);
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('TWO_FACTOR_REQUIRED');
+  });
+
+  it('renvoie 404 pour un utilisateur inexistant', async () => {
+    const { cj } = await creerSuperAdmin('support-inexistant');
+    const res = await appeler('inexistant', cj);
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('USER_NOT_FOUND');
+  });
+
+  it('refuse un compte SuperAdmin (y compris soi-meme)', async () => {
+    const { cj, user: admin } = await creerSuperAdmin('support-cible-superadmin');
+    const res = await appeler(admin.id, cj);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe(codeSuperAdmin);
+  });
+
+  it('refuse un utilisateur archive', async () => {
+    const { cj } = await creerSuperAdmin('support-cible-archivee');
+    const { user: cible } = await creerCabinetRH('support-archive');
+    await archive(cible.id, cj);
+
+    const res = await appeler(cible.id, cj);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('USER_ARCHIVED');
+  });
+});
+
+describe('POST /api/admin/users/[id]/revoke-sessions', () => {
+  it('supprime les sessions, journalise, et laisse l utilisateur se reconnecter', async () => {
+    const { cj: adminCj, user: admin } = await creerSuperAdmin('revoke-ok-admin');
+    const { cj: cibleCj, mail: cibleMail, user: cible } = await creerCabinetRH('revoke-ok-cible');
+    expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeTruthy();
+
+    const res = await revokeSessions(cible.id, adminCj);
+    expect(res.status).toBe(200);
+
+    expect(await auth.api.getSession({ headers: cibleCj.headers() })).toBeFalsy();
+    expect(await prisma.session.count({ where: { userId: cible.id } })).toBe(0);
+    // Ni suspendu ni archive : le compte reste utilisable.
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: cible.id } })).status).toBe('actif');
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'USER_SESSIONS_REVOKED', targetUserId: cible.id },
+    });
+    expect(log.actorId).toBe(admin.id);
+
+    const connexion = await auth.api.signInEmail({
+      body: { email: cibleMail, password: PASSWORD },
+      headers: new Headers(),
+      asResponse: true,
+    });
+    expect(connexion.status).toBe(200);
+  });
+
+  it('accepte un utilisateur suspendu', async () => {
+    const { cj: adminCj } = await creerSuperAdmin('revoke-suspendu-admin');
+    const { user: cible } = await creerCabinetRH('revoke-suspendu-cible');
+    await patch(cible.id, 'suspendu', adminCj);
+
+    expect((await revokeSessions(cible.id, adminCj)).status).toBe(200);
+  });
+});
+
+describe('POST /api/admin/users/[id]/reset-password', () => {
+  it('demande le lien standard, sans toucher au mot de passe, et journalise', async () => {
+    const { cj: adminCj, user: admin } = await creerSuperAdmin('reset-ok-admin');
+    const { mail: cibleMail, user: cible } = await creerCabinetRH('reset-ok-cible');
+    vi.mocked(sendResetPasswordEmail).mockClear();
+    const avant = await prisma.account.findFirstOrThrow({ where: { userId: cible.id, providerId: 'credential' } });
+
+    const res = await resetPassword(cible.id, adminCj);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+
+    // L'envoi est en arriere-plan : on attend l'appel au service d'email.
+    await vi.waitFor(() => expect(sendResetPasswordEmail).toHaveBeenCalledTimes(1));
+    const [destinataire, lien] = vi.mocked(sendResetPasswordEmail).mock.calls[0];
+    expect(destinataire).toBe(cibleMail);
+    expect(lien).toContain('/reset-password/');
+    expect(
+      await prisma.verification.count({ where: { identifier: { startsWith: 'reset-password:' }, value: cible.id } }),
+    ).toBe(1);
+
+    const apres = await prisma.account.findFirstOrThrow({ where: { userId: cible.id, providerId: 'credential' } });
+    expect(apres.password).toBe(avant.password);
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'USER_PASSWORD_RESET_SENT', targetUserId: cible.id },
+    });
+    expect(log.actorId).toBe(admin.id);
+  });
+
+  it('accepte un utilisateur suspendu', async () => {
+    const { cj: adminCj } = await creerSuperAdmin('reset-suspendu-admin');
+    const { user: cible } = await creerCabinetRH('reset-suspendu-cible');
+    await patch(cible.id, 'suspendu', adminCj);
+
+    expect((await resetPassword(cible.id, adminCj)).status).toBe(200);
   });
 });

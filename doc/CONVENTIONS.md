@@ -75,7 +75,7 @@ Format d'erreur unique : `{ "error": "CODE_EN_MAJUSCULES" }`, plus des champs op
 | 423 | `PRESTATIONS_LOCKED`, `CABINET_READ_ONLY` | Ressource verrouillée ; `CABINET_READ_ONLY` : cabinet en impaye ou resilie (D29). Toute route d'ecriture d'un role rattache a un cabinet passe `writable: true` a `requireApiSession` |
 | 502 | `EMAIL_SEND_FAILED`, `<INTEGRATION>_UNAVAILABLE` | Service externe en échec |
 
-Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED`, `USER_ARCHIVED`, `CANNOT_SUSPEND_SUPER_ADMIN`, `INVALID_STATUS`, etc.
+Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED`, `USER_ARCHIVED`, `CANNOT_SUSPEND_SUPER_ADMIN`, `CANNOT_REVOKE_SUPER_ADMIN`, `CANNOT_RESET_SUPER_ADMIN`, `INVALID_STATUS`, etc.
 
 ## 4. Base de données (Prisma)
 

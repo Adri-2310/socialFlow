@@ -231,3 +231,70 @@ describe('UsersTable - suspension et reactivation', () => {
     expect(screen.queryByText('Julien Lemaire')).not.toBeInTheDocument();
   });
 });
+
+describe('UsersTable - outils de support (D21)', () => {
+  it('propose les deux outils sur un compte non archive, pas sur un SuperAdmin', () => {
+    render(<UsersTable users={USERS} />);
+    const rows = screen.getAllByRole('row');
+
+    expect(within(rows[1]).getByRole('button', { name: 'Révoquer les sessions de Julien Lemaire' })).toBeInTheDocument();
+    expect(
+      within(rows[1]).getByRole('button', { name: 'Envoyer un lien de réinitialisation à Julien Lemaire' }),
+    ).toBeInTheDocument();
+    // Un compte suspendu reste concerne.
+    expect(within(rows[2]).getByRole('button', { name: /Révoquer les sessions/ })).toBeInTheDocument();
+    expect(within(rows[3]).queryByRole('button', { name: /Révoquer|réinitialisation/ })).not.toBeInTheDocument();
+  });
+
+  it('masque les outils sur un compte archive', () => {
+    const archived: UserRow[] = [{ ...USERS[0], deletedAt: '2026-08-01T00:00:00.000Z' }];
+    render(<UsersTable users={archived} />);
+
+    expect(screen.queryByRole('button', { name: /Révoquer|réinitialisation/ })).not.toBeInTheDocument();
+  });
+
+  it('demande confirmation, appelle POST revoke-sessions et affiche la confirmation', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<UsersTable users={USERS} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Révoquer les sessions de Julien Lemaire' }));
+    expect(screen.getByText('Révoquer les sessions ?')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Révoquer' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/users/1/revoke-sessions', { method: 'POST' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Sessions de « Julien Lemaire » révoquées.');
+    expect(screen.queryByText('Révoquer les sessions ?')).not.toBeInTheDocument();
+  });
+
+  it('demande confirmation, appelle POST reset-password et affiche la confirmation', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<UsersTable users={USERS} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer un lien de réinitialisation à Julien Lemaire' }));
+    expect(screen.getByText('Envoyer un lien de réinitialisation ?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/users/1/reset-password', { method: 'POST' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('julien.lemaire@cabinetlemaire.be');
+  });
+
+  it('affiche une erreur si la requete echoue', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+
+    render(<UsersTable users={USERS} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Révoquer les sessions de Julien Lemaire' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Révoquer' }));
+
+    expect(await screen.findByText('Une erreur est survenue. Réessayez.')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});

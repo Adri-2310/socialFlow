@@ -94,6 +94,8 @@ describe('AuditLogList - formatage des messages', () => {
     ['USER_ARCHIVED', 'Julien Lemaire', 'Adrien', /« Julien Lemaire » a été archivé par Adrien \(purge dans \d+ jours\)\./],
     ['USER_RESTORED', 'Julien Lemaire', 'Adrien', '« Julien Lemaire » a été restauré par Adrien.'],
     ['USER_RESTORED', null, 'Adrien', '« un utilisateur supprimé » a été restauré par Adrien.'],
+    ['USER_SESSIONS_REVOKED', 'Julien Lemaire', 'Adrien', 'Les sessions de « Julien Lemaire » ont été révoquées par Adrien.'],
+    ['USER_PASSWORD_RESET_SENT', 'Julien Lemaire', 'Adrien', 'Un lien de réinitialisation a été envoyé à « Julien Lemaire » par Adrien.'],
   ])('formate %s (utilisateur=%s, acteur=%s)', (action, targetUserName, actorName, expected) => {
     const log: AuditLogEntry = {
       id: '1',
