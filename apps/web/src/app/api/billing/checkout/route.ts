@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz';
 import { createCheckoutSession } from '@/lib/stripe-checkout';
 
 // Demarre le paiement de l'abonnement du cabinet (D25, D32) : renvoie l'URL
@@ -16,9 +16,9 @@ const STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
-  if (guard.response) return guard.response;
-  const cabinetId = guard.session.user.cabinetId as string;
+  const authz = await authorize(request, 'abonnement.gerer');
+  if (authz.response) return authz.response;
+  const cabinetId = authz.session.user.cabinetId as string;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl) {
