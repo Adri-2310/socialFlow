@@ -31,7 +31,7 @@ const SYMBOL_TO_LEVEL: Record<string, string> = { '✅': 'ALLOW', '🔸': 'SCOPE
 function readDocMatrix() {
   const text = readFileSync(path.resolve(process.cwd(), '../../doc/PERMISSIONS.md'), 'utf8');
   const matrix = text.split(/\r?\n/).slice(0);
-  const rows: { label: string; levels: string[] }[] = [];
+  const rows: { label: string; levels: string[]; id: string }[] = [];
   let inMatrix = true;
   for (const line of matrix) {
     if (line.startsWith('## États bloquants')) inMatrix = false;
@@ -39,7 +39,7 @@ function readDocMatrix() {
     const cells = line.split('|').slice(1, -1).map((cell) => cell.trim());
     if (cells[0] === 'Action' || cells[0].startsWith('---')) continue;
     const levels = cells.slice(1, 6).map((cell) => SYMBOL_TO_LEVEL[[...cell][0]] ?? `?${cell}`);
-    rows.push({ label: cells[0], levels });
+    rows.push({ label: cells[0], levels, id: (cells[6] ?? '').replace(/`/g, '') });
   }
   return rows;
 }
@@ -58,9 +58,10 @@ describe('catalogue des actions et PERMISSIONS.md', () => {
     expect(codeLabels).toEqual(docLabels);
   });
 
-  it.each(ACTION_IDS)('%s : les cinq niveaux sont ceux du document', (id) => {
+  it.each(ACTION_IDS)('%s : l identifiant et les cinq niveaux sont ceux du document', (id) => {
     const row = docRows.find((r) => r.label === ACTIONS[id].label);
     expect(row).toBeDefined();
+    expect(row!.id).toBe(id);
     expect(ROLES.map((role) => ACTIONS[id].levels[role])).toEqual(row!.levels);
   });
 

@@ -31,7 +31,7 @@ components/
   <domaine>/     admin, cabinet, gestionnaire, entreprise, collaborateur, auth, layout
   ui/            shadcn/ui (ne pas modifier à la main, régénérer)
 lib/
-  auth.ts, authz.ts, prisma.ts, email.ts, stripe.ts
+  auth.ts, authz.ts, authz-page.ts, prisma.ts, email.ts, stripe.ts
   <domaine>-data.ts   lectures filtrées par périmètre
   payroll/            moteur de paie (fonctions pures)
   integrations/       dimona, dmfa, exact, belcotax
@@ -43,7 +43,7 @@ tests/               miroir de src/ : tests/lib, tests/components, tests/payroll
 Ordre obligatoire dans chaque Route Handler :
 
 1. **Session** : `auth.api.getSession` → sinon `401 UNAUTHORIZED`.
-2. **Autorisation** : `authorize(session, '<action>', ressource)` → sinon `403 FORBIDDEN`, ou `404` si la ressource est hors périmètre.
+2. **Autorisation** : `authorize(request, '<action>')` (`lib/authz.ts`, identifiants dans `PERMISSIONS.md`) → sinon `401`, `403 FORBIDDEN`, `403 TWO_FACTOR_REQUIRED` ou `423`. La route lit ensuite ses données avec le `scope` renvoyé : une ressource hors périmètre répond `404`.
 3. **Validation** du corps et des paramètres avec **Zod** → sinon `400` avec le code précis.
 4. **Règles métier** (statut, quota, plan) → `409`, `403 QUOTA_EXCEEDED`, `403 PLAN_FEATURE_UNAVAILABLE`, `423`.
 5. **Écriture** dans une transaction Prisma si plusieurs tables sont touchées.
@@ -72,7 +72,7 @@ Format d'erreur unique : `{ "error": "CODE_EN_MAJUSCULES" }`, plus des champs op
 | 403 | `RESTORE_NOT_ALLOWED` | Compte non retiré par le cabinet (auto-suppression, archivage SuperAdmin) (D52) |
 | 409 | `RESTORE_WINDOW_EXPIRED` | Délai de restauration de 30 jours dépassé (D52) |
 | 400 | `EMAIL_UNCHANGED` | Nouvelle adresse identique à l'actuelle (D53) |
-| 423 | `PRESTATIONS_LOCKED`, `CABINET_READ_ONLY` | Ressource verrouillée ; `CABINET_READ_ONLY` : cabinet en impaye ou resilie (D29). Toute route d'ecriture d'un role rattache a un cabinet passe `writable: true` a `requireApiSession` |
+| 423 | `PRESTATIONS_LOCKED`, `CABINET_READ_ONLY` | Ressource verrouillée ; `CABINET_READ_ONLY` : cabinet en impaye ou resilie (D29). Toute action d'écriture d'un rôle rattaché à un cabinet porte `write: true` dans le catalogue de `lib/authz.ts`, et `authorize` renvoie ce `423` |
 | 502 | `EMAIL_SEND_FAILED`, `<INTEGRATION>_UNAVAILABLE` | Service externe en échec |
 
 Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED`, `USER_ARCHIVED`, `CANNOT_SUSPEND_SUPER_ADMIN`, `CANNOT_REVOKE_SUPER_ADMIN`, `CANNOT_RESET_SUPER_ADMIN`, `INVALID_STATUS`, etc.
@@ -91,7 +91,7 @@ Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED
 ## 5. Front-end
 
 - Server Components par défaut ; `'use client'` seulement pour l'interactivité.
-- Pages protégées : `requireSession({ role })` en tête du layout de chaque espace.
+- Pages protégées : `requireAuthorized('<action>')` (`lib/authz-page.ts`) en tête du layout de chaque espace **et de chaque page** (un layout n'est pas ré-exécuté à chaque navigation).
 - Formulaires : validation côté client avec le même schéma Zod que l'API (schéma partagé dans `lib/schemas/`).
 - Textes de l'interface en **français** ; montants formatés `fr-BE` en euros ; dates `JJ/MM/AAAA`.
 - Accessibilité : labels sur chaque champ, navigation clavier, contraste AA (vérifié aussi pour le branding des cabinets).
@@ -113,6 +113,7 @@ Toute nouvelle variable est documentée dans `.env.example` (rôle, où l'obteni
 
 - [ ] Fonctionnalités conformes à la fiche de rôle ou de module concernée.
 - [ ] Autorisations conformes à `PERMISSIONS.md`, avec tests d'isolation.
+- [ ] Toute nouvelle action est ajoutée au catalogue de `lib/authz.ts` **et** à `PERMISSIONS.md` (colonne « Identifiant ») : `authz.test.ts` compare les deux.
 - [ ] Tests unitaires et d'intégration qui passent (`npm test`), lint et types sans erreur.
 - [ ] Audit écrit pour chaque action sensible.
 - [ ] `.env.example`, `DECISIONS.md` (si nouvelle décision) et la fiche concernée mis à jour (sections « Existant » et « À construire »).
