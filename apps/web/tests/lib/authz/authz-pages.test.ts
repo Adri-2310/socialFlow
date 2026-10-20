@@ -42,6 +42,10 @@ const cabinetAudit = await import('@/app/dashboard/cabinet/audit/page');
 const cabinetBilling = await import('@/app/dashboard/cabinet/facturation/page');
 const cabinetPayment = await import('@/app/dashboard/cabinet/paiement/page');
 const cabinetSettings = await import('@/app/dashboard/cabinet/parametres/page');
+const gestionnaireLayout = await import('@/app/dashboard/gestionnaire/layout');
+const gestionnaireHome = await import('@/app/dashboard/gestionnaire/page');
+const gestionnaireSalaries =
+  await import('@/app/dashboard/gestionnaire/entreprises/[id]/salaries/page');
 const entrepriseLayout = await import('@/app/dashboard/entreprise/layout');
 const entrepriseHome = await import('@/app/dashboard/entreprise/page');
 const profil = await import('@/app/profil/page');
@@ -63,6 +67,15 @@ const PAGES: [string, Page, string][] = [
   ['dashboard/cabinet/facturation', cabinetBilling.default as Page, 'abonnement.gerer'],
   ['dashboard/cabinet/paiement', cabinetPayment.default as Page, 'abonnement.gerer'],
   ['dashboard/cabinet/parametres', cabinetSettings.default as Page, 'cabinet.personnaliser'],
+  // Le layout du gestionnaire se garde sur salarie.gerer (réservée au gestionnaire), car
+  // salarie.lister est aussi ouverte au Cabinet RH et à l'entreprise.
+  ['dashboard/gestionnaire (layout)', gestionnaireLayout.default as Page, 'salarie.gerer'],
+  ['dashboard/gestionnaire', gestionnaireHome.default as Page, 'salarie.lister'],
+  [
+    'dashboard/gestionnaire/entreprises/[id]/salaries',
+    gestionnaireSalaries.default as Page,
+    'salarie.lister',
+  ],
   ['dashboard/entreprise (layout)', entrepriseLayout.default as Page, 'entreprise.lister'],
   ['dashboard/entreprise', entrepriseHome.default as Page, 'entreprise.lister'],
   ['profil', profil.default as Page, 'compte.gerer'],
@@ -78,8 +91,8 @@ beforeEach(() => {
 });
 
 describe('pages protégées : autorisation par la matrice', () => {
-  it('couvre les 19 pages et layouts protégés', () => {
-    expect(PAGES).toHaveLength(19);
+  it('couvre les 22 pages et layouts protégés', () => {
+    expect(PAGES).toHaveLength(22);
   });
 
   describe.each(PAGES)('%s', (_name, page, action) => {
@@ -96,7 +109,9 @@ describe('pages protégées : autorisation par la matrice', () => {
     });
 
     it('redirige vers /dashboard un rôle inconnu', async () => {
-      getSession.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN', cabinetId: 'c1', twoFactorEnabled: true } });
+      getSession.mockResolvedValue({
+        user: { id: 'u1', role: 'ADMIN', cabinetId: 'c1', twoFactorEnabled: true },
+      });
       await expect(page(PROPS)).rejects.toThrow('REDIRECT:/dashboard');
     });
   });

@@ -52,6 +52,13 @@ const SHELL_CONFIG = {
       { label: 'Paramètres', icon: Settings, href: '/dashboard/cabinet/parametres' },
     ],
   },
+  // Espace du Gestionnaire RH (roles/03) : ses entreprises assignées, puis leurs
+  // salariés. Les prestations, fiches et déclarations s'ajouteront avec leurs chantiers.
+  GESTIONNAIRE_RH: {
+    consoleLabel: 'Espace Gestionnaire',
+    roleLabel: 'Gestionnaire RH',
+    nav: [{ label: 'Mes entreprises', icon: Building2, href: '/dashboard/gestionnaire' }],
+  },
   // Portail de l'administrateur d'une entreprise cliente (roles/04). Une seule
   // page pour l'instant ; les autres entrees arrivent avec le portail.
   ENTREPRISE_CLIENTE: {
