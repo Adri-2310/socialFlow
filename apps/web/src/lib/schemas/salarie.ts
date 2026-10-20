@@ -28,6 +28,60 @@ const optionalText = (max: number) =>
 const isoDate = z.iso.date();
 const cents = z.number().int().positive().max(100_000_000);
 
+// Ce qui change dans le temps (roles/03 § 4.2) : chaque changement ajoute une
+// ligne datée à l'historique, il ne modifie jamais l'ancienne.
+const conditionFields = {
+  statut: z.enum(STATUTS),
+  commissionParitaire: z.enum(COMMISSIONS_PARITAIRES),
+  fonction: text(100),
+
+  // Temps de travail : fraction d'occupation = heuresSemaine / heuresReference
+  regime: z.enum(REGIMES),
+  heuresSemaine: z.number().positive().max(60).optional(),
+  heuresReference: z.number().positive().max(60).optional(),
+
+  // Rémunération : mensuelle pour l'employé, horaire pour l'ouvrier
+  salaireMensuelBrutCents: cents.optional(),
+  salaireHoraireBrutCents: cents.optional(),
+};
+
+type ConditionFields = z.infer<z.ZodObject<typeof conditionFields>>;
+type Fail = (path: string) => void;
+
+function checkCondition(c: ConditionFields, fail: Fail) {
+  if (c.regime === 'TEMPS_PARTIEL') {
+    if (!c.heuresSemaine) fail('heuresSemaine');
+    if (!c.heuresReference) fail('heuresReference');
+    if (c.heuresSemaine && c.heuresReference && c.heuresSemaine > c.heuresReference) {
+      fail('heuresSemaine');
+    }
+  }
+
+  // Employé : salaire mensuel ; ouvrier : salaire horaire. L'autre est refusé
+  // pour ne pas stocker deux rémunérations contradictoires.
+  if (c.statut === 'EMPLOYE') {
+    if (!c.salaireMensuelBrutCents) fail('salaireMensuelBrutCents');
+    if (c.salaireHoraireBrutCents) fail('salaireHoraireBrutCents');
+  } else {
+    if (!c.salaireHoraireBrutCents) fail('salaireHoraireBrutCents');
+    if (c.salaireMensuelBrutCents) fail('salaireMensuelBrutCents');
+  }
+
+  if (c.commissionParitaire !== COMMISSION_DU_STATUT[c.statut]) fail('commissionParitaire');
+}
+
+const issueAdder =
+  (ctx: z.RefinementCtx): Fail =>
+  (path) =>
+    ctx.addIssue({ code: 'custom', message: 'invalid', path: [path] });
+
+// Nouvelle ligne de l'historique : valable à partir de `dateEffet`.
+export const conditionTravailSchema = z
+  .object({ dateEffet: isoDate, ...conditionFields })
+  .superRefine((c, ctx) => checkCondition(c, issueAdder(ctx)));
+
+export type ConditionTravailInput = z.infer<typeof conditionTravailSchema>;
+
 export const salarieSchema = z
   .object({
     // Identité
@@ -43,22 +97,14 @@ export const salarieSchema = z
     iban: z.string().transform(normalizeIban).refine(isValidIban),
 
     // Contrat
-    statut: z.enum(STATUTS),
     typeContrat: z.enum(TYPES_CONTRAT),
     dateEntree: isoDate,
     dateFinContrat: isoDate.optional(),
     dateSortie: isoDate.optional(),
-    commissionParitaire: z.enum(COMMISSIONS_PARITAIRES),
-    fonction: text(100),
 
-    // Temps de travail : fraction d'occupation = heuresSemaine / heuresReference
-    regime: z.enum(REGIMES),
-    heuresSemaine: z.number().positive().max(60).optional(),
-    heuresReference: z.number().positive().max(60).optional(),
-
-    // Rémunération : mensuelle pour l'employé, horaire pour l'ouvrier
-    salaireMensuelBrutCents: cents.optional(),
-    salaireHoraireBrutCents: cents.optional(),
+    // Conditions de travail initiales : elles deviennent la première ligne de
+    // l'historique daté (ConditionTravail), à la date d'entrée.
+    ...conditionFields,
 
     // Fiscal (précompte professionnel)
     situationFamiliale: z.enum(SITUATIONS_FAMILIALES),
@@ -66,8 +112,7 @@ export const salarieSchema = z
     personnesCharge: z.number().int().min(0).max(20),
   })
   .superRefine((s, ctx) => {
-    const fail = (path: string) =>
-      ctx.addIssue({ code: 'custom', message: 'invalid', path: [path] });
+    const fail = issueAdder(ctx);
 
     if (s.typeContrat === 'CDD' && !s.dateFinContrat) fail('dateFinContrat');
     if (s.typeContrat === 'CDI' && s.dateFinContrat) fail('dateFinContrat');
@@ -75,25 +120,7 @@ export const salarieSchema = z
     if (s.dateSortie && s.dateSortie < s.dateEntree) fail('dateSortie');
     if (s.dateNaissance >= s.dateEntree) fail('dateNaissance');
 
-    if (s.regime === 'TEMPS_PARTIEL') {
-      if (!s.heuresSemaine) fail('heuresSemaine');
-      if (!s.heuresReference) fail('heuresReference');
-      if (s.heuresSemaine && s.heuresReference && s.heuresSemaine > s.heuresReference) {
-        fail('heuresSemaine');
-      }
-    }
-
-    // Employé : salaire mensuel ; ouvrier : salaire horaire. L'autre est refusé
-    // pour ne pas stocker deux rémunérations contradictoires.
-    if (s.statut === 'EMPLOYE') {
-      if (!s.salaireMensuelBrutCents) fail('salaireMensuelBrutCents');
-      if (s.salaireHoraireBrutCents) fail('salaireHoraireBrutCents');
-    } else {
-      if (!s.salaireHoraireBrutCents) fail('salaireHoraireBrutCents');
-      if (s.salaireMensuelBrutCents) fail('salaireMensuelBrutCents');
-    }
-
-    if (s.commissionParitaire !== COMMISSION_DU_STATUT[s.statut]) fail('commissionParitaire');
+    checkCondition(s, fail);
 
     if (
       s.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL' &&

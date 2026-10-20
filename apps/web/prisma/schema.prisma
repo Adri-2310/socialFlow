@@ -69,6 +69,11 @@ model User {
   // Entreprise dont ce compte est l'administrateur (role ENTREPRISE_CLIENTE, D5).
   entrepriseAdministree Entreprise? @relation("EntrepriseAdmin")
 
+  // Dossier salarie lie a ce compte (portail Collaborateur, roles/03 § 4.3) et
+  // conditions de travail saisies par ce compte.
+  salarie          Salarie?
+  conditionsCreees ConditionTravail[]
+
   auditLogsAsActor  AuditLog[] @relation("AuditLogActor")
   auditLogsAsTarget AuditLog[] @relation("AuditLogTarget")
 
@@ -157,6 +162,8 @@ model Cabinet {
   auditLogs         AuditLog[]
   emailTemplates    EmailTemplate[]
   entreprises       Entreprise[]
+  salaries          Salarie[]
+  conditionsTravail ConditionTravail[]
 
   @@index([deletedAt])
   @@map("cabinet")
@@ -182,6 +189,7 @@ model Entreprise {
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
   gestionnaires GestionnaireEntreprise[]
+  salaries      Salarie[]
 
   // D5 : un seul compte administrateur par entreprise. Renseigne a l'acceptation
   // de l'invitation ; @unique garantit qu'un compte n'administre qu'une
@@ -208,6 +216,96 @@ model GestionnaireEntreprise {
   @@id([entrepriseId, userId])
   @@index([userId])
   @@map("gestionnaire_entreprise")
+}
+
+// Dossier salarie (D6, roles/03 § 4). NISS et IBAN sont chiffres (AES-256-GCM,
+// lib/crypto) ; nissHash est une empreinte liee a l'entreprise qui garantit
+// l'unicite du NISS par entreprise sans le stocker en clair. Archives comprises :
+// on restaure un dossier plutot que d'en recreer un (comme le n° d'entreprise,
+// D69). Pas de suppression physique : deletedAt = archivage, conservation 5 ans.
+// Statuts en chaines MAJUSCULES sans accent, valeurs validees par
+// lib/schemas/salarie.ts (pas d'enum Prisma, CONVENTIONS § 4).
+model Salarie {
+  id           String     @id @default(cuid())
+  cabinetId    String
+  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  // Identite
+  nom           String
+  prenom        String
+  dateNaissance DateTime @db.Date
+  adresse       String?
+  codePostal    String?
+  ville         String?
+  pays          String   @default("BE")
+  email         String?
+  nissEncrypted String
+  nissHash      String
+  ibanEncrypted String
+
+  // Contrat (le statut, la CP, la fonction et la remuneration sont dates :
+  // voir ConditionTravail)
+  typeContrat    String // CDI | CDD
+  dateEntree     DateTime  @db.Date
+  dateFinContrat DateTime? @db.Date
+  dateSortie     DateTime? @db.Date
+
+  // Fiscal (precompte professionnel)
+  situationFamiliale  String // ISOLE | MARIE_OU_COHABITANT_LEGAL
+  conjointAvecRevenus Boolean?
+  personnesCharge     Int      @default(0)
+
+  // Compte du portail Collaborateur (facultatif, D12). SetNull : si le compte est
+  // purge, le dossier reste (obligation de conservation).
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  deletedAt  DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  conditions ConditionTravail[]
+
+  @@unique([entrepriseId, nissHash])
+  @@index([cabinetId])
+  @@index([entrepriseId, deletedAt])
+  @@index([deletedAt])
+  @@map("salarie")
+}
+
+// Historique date des conditions de travail d'un salarie (roles/03 § 4.2) : une
+// ligne par changement de statut, regime, fonction ou remuneration. Une fiche
+// utilise la condition en vigueur a sa periode : la plus recente dont dateEffet
+// ne depasse pas la periode. On n'edite jamais une ligne deja utilisee : on en
+// ajoute une nouvelle. Montants en centimes.
+model ConditionTravail {
+  id        String   @id @default(cuid())
+  cabinetId String
+  cabinet   Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  salarieId String
+  salarie   Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  dateEffet DateTime @db.Date
+
+  statut                  String // EMPLOYE | OUVRIER (D39)
+  commissionParitaire     String // 200 | 100 (D44)
+  fonction                String
+  regime                  String // TEMPS_PLEIN | TEMPS_PARTIEL
+  // Fraction d'occupation = heuresSemaine / heuresReference (non stockee).
+  heuresSemaine           Float?
+  heuresReference         Float?
+  // Employe : salaire mensuel ; ouvrier : salaire horaire.
+  salaireMensuelBrutCents Int?
+  salaireHoraireBrutCents Int?
+
+  // SetNull : le compte de l'auteur peut etre purge, la condition reste.
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@unique([salarieId, dateEffet])
+  @@index([cabinetId])
+  @@map("condition_travail")
 }
 
 // Modele d'email personnalise d'un cabinet (D30, D68). Absent = modele par

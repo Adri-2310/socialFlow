@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { invalidFieldCode, salarieSchema } from '@/lib/schemas/salarie';
+import { conditionTravailSchema, invalidFieldCode, salarieSchema } from '@/lib/schemas/salarie';
 
 const employe = {
   nom: 'Dupont',
@@ -121,5 +121,46 @@ describe('schéma du dossier salarié', () => {
   it('refuse une commission paritaire inconnue et une date mal formée', () => {
     expect(codeOf({ ...employe, commissionParitaire: '999' })).toBe('INVALID_COMMISSION_PARITAIRE');
     expect(codeOf({ ...employe, dateEntree: '01/11/2026' })).toBe('INVALID_DATE_ENTREE');
+  });
+});
+
+describe('schéma d’une condition de travail datée', () => {
+  const condition = {
+    dateEffet: '2027-01-01',
+    statut: 'EMPLOYE',
+    commissionParitaire: '200',
+    fonction: 'Responsable comptable',
+    regime: 'TEMPS_PLEIN',
+    salaireMensuelBrutCents: 310000,
+  };
+  const codeOfCondition = (input: unknown): string | null => {
+    const result = conditionTravailSchema.safeParse(input);
+    return result.success ? null : invalidFieldCode(result.error);
+  };
+
+  it('accepte une nouvelle ligne valide, y compris un passage ouvrier → employé', () => {
+    expect(codeOfCondition(condition)).toBeNull();
+    expect(
+      codeOfCondition({
+        ...condition,
+        statut: 'OUVRIER',
+        commissionParitaire: '100',
+        salaireMensuelBrutCents: undefined,
+        salaireHoraireBrutCents: 1700,
+      }),
+    ).toBeNull();
+  });
+
+  it('applique les mêmes règles que le dossier', () => {
+    expect(codeOfCondition({ ...condition, dateEffet: undefined })).toBe('INVALID_DATE_EFFET');
+    expect(codeOfCondition({ ...condition, commissionParitaire: '100' })).toBe(
+      'INVALID_COMMISSION_PARITAIRE',
+    );
+    expect(codeOfCondition({ ...condition, salaireMensuelBrutCents: undefined })).toBe(
+      'INVALID_SALAIRE_MENSUEL_BRUT_CENTS',
+    );
+    expect(codeOfCondition({ ...condition, regime: 'TEMPS_PARTIEL' })).toBe(
+      'INVALID_HEURES_SEMAINE',
+    );
   });
 });
