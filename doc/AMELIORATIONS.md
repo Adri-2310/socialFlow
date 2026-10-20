@@ -20,6 +20,8 @@
 | Test instable | `stripe-webhook.test.ts` échoue de façon intermittente (il passe seul) ; des délais de 15 secondes sont parfois dépassés quand Neon est lent | Trouver la cause ; retirer ensuite `--retry=1` de la CI |
 | Tests locaux | Ils tournent sur `dev` (via `.env.local`) | Faire lire à `vitest.config.ts` une `TEST_DATABASE_URL` en priorité |
 | Couverture | Pas de test de bout en bout (Playwright), pas de job de build dans la CI | À ajouter au chantier de finitions |
+| Avertissements de GitHub Actions | `actions/checkout@v4` et `actions/setup-node@v4` ciblent Node 20, que GitHub force déjà sur Node 24 ; `ubuntu-latest` bascule vers Ubuntu 26 (octobre 2026) | Monter les versions des actions quand une version Node 24 est publiée, et épingler la version d'Ubuntu si un comportement change |
+| Tests dépendants de la base de dev | La CI sur une base vide a révélé des tests qui supposaient un SuperAdmin ou des identifiants Google et Microsoft déjà présents (corrigés : fixtures et variables factices) | Chaque nouveau test crée ses propres données, jamais celles de `dev` |
 | Vérification manuelle | Les redirections des trois espaces (console SuperAdmin, Cabinet RH, Entreprise) et de `/profil` n'ont été testées qu'automatiquement | Naviguer à la main après chaque changement des gardes |
 
 ## 3. Code

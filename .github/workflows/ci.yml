@@ -61,6 +61,12 @@ jobs:
       STRIPE_WEBHOOK_SECRET: whsec_ci_factice
       RESEND_API_KEY: re_ci_factice
       RESEND_FROM_EMAIL: ci@example.invalid
+      # Les fournisseurs Google et Microsoft ne sont actifs que si ces variables existent
+      # (tests de construction de l'adresse d'autorisation) : valeurs factices, aucun appel réel.
+      GOOGLE_CLIENT_ID: ci-google-client-id-factice
+      GOOGLE_CLIENT_SECRET: ci-google-client-secret-factice
+      MICROSOFT_CLIENT_ID: ci-microsoft-client-id-factice
+      MICROSOFT_CLIENT_SECRET: ci-microsoft-client-secret-factice
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -110,7 +110,26 @@ beforeEach(() => {
   vi.mocked(email.sendPaymentFailedEmail).mockClear();
 });
 
+const adminIds: string[] = [];
+
+// Une base vide (CI) n'a aucun SuperAdmin : le test crée le sien au lieu de dépendre de
+// celui de la base de développement.
+async function createSuperAdmin() {
+  counter += 1;
+  const admin = await prisma.user.create({
+    data: {
+      id: `webhook-admin-${stamp}-${counter}`,
+      name: 'SuperAdmin Test',
+      email: `${TEST_EMAIL_PREFIX}webhook-admin-${stamp}-${counter}@example.com`,
+      role: 'SUPER_ADMIN',
+    },
+  });
+  adminIds.push(admin.id);
+  return admin;
+}
+
 afterAll(async () => {
+  await prisma.user.deleteMany({ where: { id: { in: adminIds } } });
   await prisma.webhookEvent.deleteMany({ where: { eventId: { startsWith: `evt_wh_${stamp}` } } });
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
@@ -312,6 +331,7 @@ describe('suivi de l abonnement', () => {
   it('un paiement echoue ouvre le delai de grace, previent le titulaire et les SuperAdmins, et journalise', async () => {
     const cabinet = await createCabinet({ billingStatus: 'ACTIF' });
     const owner = await createOwner(cabinet.id);
+    await createSuperAdmin();
 
     const res = await send(
       makeEvent('invoice.payment_failed', { customer: cabinet.stripeCustomerId }),

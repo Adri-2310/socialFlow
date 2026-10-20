@@ -13,6 +13,7 @@ const { GET } = await import('@/app/api/cron/suspend-overdue-cabinets/route');
 
 const stamp = Date.now();
 const cabinetIds: string[] = [];
+const adminIds: string[] = [];
 let counter = 0;
 const DAY = 24 * 60 * 60 * 1000;
 const now = new Date();
@@ -54,7 +55,24 @@ beforeEach(() => {
   vi.mocked(email.sendPaymentSuspensionEmail).mockClear();
 });
 
+// Une base vide (CI) n'a aucun SuperAdmin : le test crée le sien au lieu de dépendre de
+// celui de la base de développement.
+async function createSuperAdmin() {
+  counter += 1;
+  const admin = await prisma.user.create({
+    data: {
+      id: `grace-admin-${stamp}-${counter}`,
+      name: 'SuperAdmin Test',
+      email: `${TEST_EMAIL_PREFIX}grace-admin-${stamp}-${counter}@example.com`,
+      role: 'SUPER_ADMIN',
+    },
+  });
+  adminIds.push(admin.id);
+  return admin;
+}
+
 afterAll(async () => {
+  await prisma.user.deleteMany({ where: { id: { in: adminIds } } });
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
@@ -67,6 +85,7 @@ describe('suspendOverdueCabinets (D57)', () => {
       pastDueSince: new Date(now.getTime() - 8 * DAY),
     });
     const owner = await createOwner(cabinet.id);
+    await createSuperAdmin();
 
     const result = await suspendOverdueCabinets(now);
 
