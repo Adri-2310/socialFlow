@@ -17,7 +17,7 @@ import { listEmailTemplates } from '@/lib/cabinet-email-templates';
 import { getCabinetIdentity } from '@/lib/cabinet-identity';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 
 export const metadata: Metadata = {
   title: 'Paramètres',
@@ -31,7 +31,7 @@ export default async function CabinetSettingsPage({
 }: {
   searchParams: Promise<{ onglet?: string }>;
 }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('cabinet.personnaliser');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

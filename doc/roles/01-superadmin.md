@@ -18,7 +18,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 | Inscription publique | Impossible : `/register` crée toujours un `CABINET_RH` |
 | Connexion | Méthodes Better Auth communes à tous les rôles (mot de passe, lien magique, code email, Google, Microsoft) |
 | Point d'entrée | `/dashboard` redirige vers `/dashboard/admin` |
-| Garde des pages | `requireSession({ role: 'SUPER_ADMIN', twoFactor: true })` dans `app/dashboard/admin/layout.tsx` (redirige sinon vers `/dashboard`, ou vers `/profil?2fa=requise` sans 2FA) |
+| Garde des pages | `requireAuthorized('<action>')` (`lib/authz-page.ts`) dans `app/dashboard/admin/layout.tsx` **et dans chaque page de la console** (un layout n'est pas ré-exécuté à chaque navigation) : actions `plateforme.superviser`, `cabinet.administrer`, `utilisateur.lister`, `audit.voir`, `plan.gerer`. Redirige vers `/login` sans session, `/dashboard` si le rôle est refusé par la matrice, `/profil?2fa=requise` sans 2FA |
 | Garde des API | Chaque route `api/admin/*` passe par `authorize(request, '<action>')` (`lib/authz.ts`, actions `cabinet.administrer`, `plan.gerer`, `utilisateur.suspendre-archiver`, `utilisateur.support`) : session (401), rôle selon la matrice de `PERMISSIONS.md` (403), puis 2FA du SuperAdmin (403 `TWO_FACTOR_REQUIRED`), en JSON |
 
 ## 3. Écrans existants
@@ -100,7 +100,7 @@ Le script lit `.env.local` (`DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_
 
 | # | Sujet | Spécification |
 |---|---|---|
-| A1 ✅ | **2FA obligatoire** (D20) | `requireSession({ role: 'SUPER_ADMIN', twoFactor: true })` vérifie aussi `twoFactorEnabled` ; sinon redirection vers `/profil?2fa=requise` (section 2FA) avec un message explicite. Même contrôle dans chaque route `api/admin/*` via `requireApiSession(..., { twoFactor: true })` (403 `TWO_FACTOR_REQUIRED`). `/profil` reste accessible sans 2FA pour pouvoir l'activer |
+| A1 ✅ | **2FA obligatoire** (D20) | `requireAuthorized` vérifie aussi `twoFactorEnabled` pour le SuperAdmin ; sinon redirection vers `/profil?2fa=requise` (section 2FA) avec un message explicite. Même contrôle dans chaque route `api/admin/*` via `authorize` (403 `TWO_FACTOR_REQUIRED`). `/profil` reste accessible sans 2FA pour pouvoir l'activer |
 | A2 (script ✅) | **Bootstrap pro** (D18) | ✅ Script `scripts/create-superadmin.ts` idempotent (email en argument, refuse s'il existe déjà un SuperAdmin sauf `--force`), qui envoie un lien de définition du mot de passe au lieu d'en fixer un (voir § 4.6). **À construire** : écran « Inviter un SuperAdmin » réservé aux SuperAdmins (invitation `role = SUPER_ADMIN`, 2FA exigée à l'acceptation) |
 | A3 ✅ | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
 | A4 | **Modifier un cabinet** (D19) | Fiche cabinet : nom, coordonnées, et changement de plan **uniquement via Stripe** (le plan local suit l'abonnement, jamais l'inverse). Audit `CABINET_UPDATED` avec avant/après |

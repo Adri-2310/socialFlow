@@ -2,7 +2,10 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { ACTIONS, levelFor, type ActionId } from '@/lib/authz';
-import { TWO_FACTOR_REQUIRED_URL } from '@/lib/require-session';
+
+// D20 : /profil reste accessible sans 2FA pour pouvoir l'activer ; ce paramètre y
+// affiche le message d'explication.
+export const TWO_FACTOR_REQUIRED_URL = '/profil?2fa=requise';
 
 // Pendant « page » de authorize() (voir authz.ts) pour les Server Components :
 // même catalogue d'actions et mêmes règles, mais avec des redirections HTML au

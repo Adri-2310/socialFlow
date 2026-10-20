@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireAuthorized } from '@/lib/authz-page';
 import { Building2, ShieldAlert } from 'lucide-react';
 import { getMonitoringData } from '@/lib/admin-data';
 import { MonitoringSummary } from '@/components/admin/monitoring-summary';
@@ -48,6 +49,9 @@ function StatusBar({ label, actif, suspendu, archive }: { label: string; actif: 
 }
 
 export default async function AdminMonitoringPage() {
+  // Garde propre à la page : un layout n'est pas ré-exécuté à chaque navigation.
+  await requireAuthorized('plateforme.superviser');
+
   const data = await getMonitoringData();
 
   return (

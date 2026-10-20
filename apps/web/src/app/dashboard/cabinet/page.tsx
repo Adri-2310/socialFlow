@@ -6,7 +6,7 @@ import { QuotaUsage } from '@/components/cabinet/quota-usage';
 import { buildCabinetAlerts } from '@/lib/cabinet-alerts';
 import { getEntreprises } from '@/lib/cabinet-entreprises';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 import { requirePaidCabinet } from '@/lib/cabinet-access';
 import {
   getArchivedGestionnaires,
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CabinetOverviewPage() {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('cabinet.consulter');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

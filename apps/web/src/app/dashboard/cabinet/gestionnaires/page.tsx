@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { GestionnairesManager } from '@/components/cabinet/gestionnaires-manager';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 import { requirePaidCabinet } from '@/lib/cabinet-access';
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GestionnairesPage() {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('gestionnaire.lister');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

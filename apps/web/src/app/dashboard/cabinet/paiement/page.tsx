@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { PaymentStart } from '@/components/cabinet/payment-start';
 import { normalizeBillingStatus } from '@/lib/billing';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 import {
   TRIAL_DAYS,
   confirmCheckoutSession,
@@ -31,7 +31,7 @@ export default async function PaymentPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('abonnement.gerer');
   if (!user.cabinetId) redirect('/dashboard');
   const cabinetId = user.cabinetId;
 

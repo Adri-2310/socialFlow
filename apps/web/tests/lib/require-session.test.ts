@@ -65,20 +65,14 @@ async function creerCabinetRH(label: string) {
   return { cj, user };
 }
 
-/** Cree un compte puis le force au role SUPER_ADMIN. */
-async function creerSuperAdmin(label: string) {
-  const { cj, user } = await creerCabinetRH(label);
-  const cabinetId = user.cabinetId!;
-  await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
-  await prisma.cabinet.delete({ where: { id: cabinetId } });
-  return { cj, user };
-}
-
 beforeEach(() => {
   redirectMock.mockClear();
   currentHeaders = new Headers();
 });
 
+// Seule la presence d'une session est controlee ici : les decisions d'acces par
+// role (et la 2FA du SuperAdmin) sont celles de requireAuthorized, voir
+// authz-page.test.ts.
 describe('requireSession', () => {
   it('redirige vers /login sans session', async () => {
     await expect(requireSession()).rejects.toThrow('REDIRECT:/login');
@@ -89,75 +83,12 @@ describe('requireSession', () => {
     await expect(requireSession({ redirectTo: '/custom-login' })).rejects.toThrow('REDIRECT:/custom-login');
   });
 
-  it('redirige vers /dashboard quand le role ne correspond pas', async () => {
-    const { cj } = await creerCabinetRH('require-session-mauvais-role');
-    currentHeaders = cj.headers();
-
-    await expect(requireSession({ role: 'SUPER_ADMIN' })).rejects.toThrow('REDIRECT:/dashboard');
-  });
-
-  it('retourne la session sans verification de role si aucun n est demande', async () => {
-    const { cj, user } = await creerCabinetRH('require-session-sans-role');
+  it('retourne la session de l utilisateur connecte, quel que soit son role', async () => {
+    const { cj, user } = await creerCabinetRH('require-session-connecte');
     currentHeaders = cj.headers();
 
     const session = await requireSession();
     expect(session.user.id).toBe(user.id);
     expect(redirectMock).not.toHaveBeenCalled();
-  });
-
-  it('retourne la session quand le role correspond', async () => {
-    const { cj, user } = await creerSuperAdmin('require-session-bon-role');
-    currentHeaders = cj.headers();
-
-    const session = await requireSession({ role: 'SUPER_ADMIN' });
-    expect(session.user.id).toBe(user.id);
-    expect(redirectMock).not.toHaveBeenCalled();
-  });
-
-  it('accepte un tableau de roles autorises', async () => {
-    const { cj, user } = await creerSuperAdmin('require-session-tableau-roles');
-    currentHeaders = cj.headers();
-
-    const session = await requireSession({ role: ['GESTIONNAIRE_RH', 'SUPER_ADMIN'] });
-    expect(session.user.id).toBe(user.id);
-  });
-
-  describe('twoFactor (D20)', () => {
-    it('redirige un SuperAdmin sans 2FA vers /profil avec le message', async () => {
-      const { cj } = await creerSuperAdmin('require-session-sans-2fa');
-      currentHeaders = cj.headers();
-
-      await expect(requireSession({ role: 'SUPER_ADMIN', twoFactor: true })).rejects.toThrow(
-        'REDIRECT:/profil?2fa=requise',
-      );
-    });
-
-    it('laisse passer un SuperAdmin dont la 2FA est activee', async () => {
-      const { cj, user } = await creerSuperAdmin('require-session-avec-2fa');
-      await prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: true } });
-      currentHeaders = cj.headers();
-
-      const session = await requireSession({ role: 'SUPER_ADMIN', twoFactor: true });
-      expect(session.user.id).toBe(user.id);
-      expect(redirectMock).not.toHaveBeenCalled();
-    });
-
-    it('redirige vers /dashboard (pas /profil) un autre role, sans rien dire de la 2FA', async () => {
-      const { cj } = await creerCabinetRH('require-session-2fa-autre-role');
-      currentHeaders = cj.headers();
-
-      await expect(requireSession({ role: 'SUPER_ADMIN', twoFactor: true })).rejects.toThrow(
-        'REDIRECT:/dashboard',
-      );
-    });
-
-    it('n affecte pas un role qui n exige pas la 2FA', async () => {
-      const { cj, user } = await creerCabinetRH('require-session-2fa-non-exigee');
-      currentHeaders = cj.headers();
-
-      const session = await requireSession({ role: 'CABINET_RH' });
-      expect(session.user.id).toBe(user.id);
-      expect(redirectMock).not.toHaveBeenCalled();
-    });
   });
 });

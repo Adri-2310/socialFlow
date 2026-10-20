@@ -8,7 +8,7 @@ import { getArchivedEntreprises, getEntreprises } from '@/lib/cabinet-entreprise
 import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 
 export const metadata: Metadata = {
   title: 'Entreprises',
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function EntreprisesPage() {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('entreprise.lister');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireAuthorized } from '@/lib/authz-page';
 import { AuditLogList } from '@/components/admin/audit-log-list';
 import { getAuditLogEntries } from '@/lib/admin-data';
 
@@ -13,6 +14,9 @@ export const metadata: Metadata = {
 const MAX_ENTRIES = 200;
 
 export default async function AdminAuditPage() {
+  // Garde propre à la page : un layout n'est pas ré-exécuté à chaque navigation.
+  await requireAuthorized('audit.voir');
+
   const logs = await getAuditLogEntries(MAX_ENTRIES);
 
   return <AuditLogList logs={logs} />;

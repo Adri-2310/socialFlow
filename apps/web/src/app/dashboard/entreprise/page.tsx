@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Building2 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 // compte est operationnel, les fonctionnalites (salaries, prestations,
 // validation des fiches) arrivent avec le portail.
 export default async function EntrepriseHomePage() {
-  const { user } = await requireSession({ role: 'ENTREPRISE_CLIENTE' });
+  const { user } = await requireAuthorized('entreprise.lister');
 
   // Perimetre : l'entreprise dont CE compte est l'administrateur, dans SON
   // cabinet (D5, D7). Rien ne vient de l'URL.

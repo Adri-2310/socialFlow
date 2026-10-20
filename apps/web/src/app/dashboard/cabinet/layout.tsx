@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 import { auth } from '@/lib/auth';
 import { cabinetMetadata } from '@/lib/cabinet-metadata';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz-page';
 import { prisma } from '@/lib/prisma';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { BillingBanner } from '@/components/cabinet/billing-banner';
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // d'abonnement (delai de grace, lecture seule) l'est aussi, pour apparaitre
 // sur chaque page sans que chacune ait a le charger.
 export default async function CabinetLayout({ children }: { children: ReactNode }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('cabinet.consulter');
 
   const cabinet = user.cabinetId
     ? await prisma.cabinet.findUnique({
