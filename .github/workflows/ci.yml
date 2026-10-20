@@ -71,5 +71,9 @@ jobs:
         working-directory: .
       # Aligne le schéma de la base de test sur les migrations du code testé.
       - run: npx prisma migrate deploy
+      # Les tests supposent les trois formules de base (starter, pro, enterprise), que la
+      # branche `test`, créée sans données, n'a pas : on les pose ici (upsert, sans
+      # effet si elles existent déjà).
+      - run: npx tsx prisma/seed.mjs
       # --retry=1 : un test instable connu (stripe-webhook) est relancé une fois.
       - run: npm test -- --retry=1

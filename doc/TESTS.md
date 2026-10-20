@@ -48,7 +48,7 @@ Trois **branches Neon** du même projet (une branche est une copie instantanée 
 | `production` | application déployée, à la mise en ligne | schéma seul, plus les plans de base | variables Vercel d'environnement *Production* |
 
 - **Création** (console Neon) : *Branches* → *Create branch*, parent `dev`, option *schema-only* pour `test` et `production`, *Auto-delete* sur *Never* (sinon Neon supprimerait la branche et la CI casserait).
-- **Schéma** : la CI applique `prisma migrate deploy` sur `test` avant les tests, elle suit donc les migrations du code testé. Si elle dérive, la supprimer et la recréer. La production, vide à sa création, recevra les migrations et le seed des plans à la mise en ligne (non automatisé : `vercel.json` ne lance aucune migration au déploiement).
+- **Schéma et formules de base** : la CI applique `prisma migrate deploy` sur `test` avant les tests, elle suit donc les migrations du code testé, puis pose les trois formules tarifaires (`prisma/seed.mjs`, `upsert`) dont certains tests dépendent (`admin-data`). Si la branche dérive, la supprimer et la recréer. La production, vide à sa création, recevra les migrations et le seed des plans à la mise en ligne (non automatisé : `vercel.json` ne lance aucune migration au déploiement).
 - **Nettoyage des tests** : inchangé, par préfixe (`vitest-…`) en fin de fichier et dans `tests/global-setup.ts`. Tous les fichiers partagent la même base, d'où une seule exécution à la fois (voir `concurrency` au § 6). **Ne jamais lancer deux suites en parallèle sur la même base** : le nettoyage de l'une efface les comptes de l'autre.
 - **En local**, les tests utilisent `.env.local`, donc la branche `dev`, tant que `vitest.config.ts` ne lit pas une URL de test dédiée.
 
@@ -59,7 +59,7 @@ Workflow `.github/workflows/ci.yml` (GitHub Actions), déclenché sur les pull r
 | Job | Contenu | Secrets |
 |---|---|---|
 | `qualite` | `npm ci`, `npm run lint`, `npm run type-check` (environ 2 min) | aucun |
-| `tests` | `npm ci`, `prisma migrate deploy`, `npm test -- --retry=1` sur la branche Neon `test` (environ 25 min, délai maximal 45 min) | `TEST_DATABASE_URL`, `TEST_DATABASE_URL_UNPOOLED` |
+| `tests` | `npm ci`, `prisma migrate deploy`, seed des formules de base, `npm test -- --retry=1` sur la branche Neon `test` (environ 25 min, délai maximal 45 min) | `TEST_DATABASE_URL`, `TEST_DATABASE_URL_UNPOOLED` |
 
 - **Un seul run de `tests` à la fois** (`concurrency: neon-test-db`, sans annulation) : la base de test est partagée et nettoyée par préfixe.
 - **`--retry=1`** : un test intermittent connu (`stripe-webhook.test.ts`, qui passe seul) est relancé une fois avant d'échouer. À retirer quand il sera stabilisé.
