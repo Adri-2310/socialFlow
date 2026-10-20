@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { stripe } from '@/lib/stripe';
-import { stripeUnitAmountCents } from '@/lib/billing';
+import { stripe } from '@/lib/billing/stripe';
+import { stripeUnitAmountCents } from '@/lib/billing/billing';
 
 type PlanCreateBody = {
   planId: string;
@@ -24,7 +24,7 @@ const isQuota = (v: unknown) =>
   v === undefined || v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0);
 
 // Minuscules/chiffres/tirets uniquement : sert de metadata Stripe et
-// d'identifiant stable dans le code (voir PlanId dans lib/plans.ts).
+// d'identifiant stable dans le code (voir PlanId dans lib/billing/plans.ts).
 const PLAN_ID_PATTERN = /^[a-z0-9-]+$/;
 
 function parseBody(body: unknown): PlanCreateBody | null {
@@ -68,13 +68,9 @@ function parseBody(body: unknown): PlanCreateBody | null {
 // PricingPlan (donc visible sur /tarifs) sans contrepartie Stripe reelle
 // derriere - si Stripe echoue, rien n'est ecrit en base.
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const authz = await authorize(request, 'plan.gerer');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const body = parseBody(await request.json().catch(() => null));
   if (!body) {

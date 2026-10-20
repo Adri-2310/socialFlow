@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { removeEntrepriseAdmin } from '@/lib/entreprise-admin';
+import { authorize } from '@/lib/authz/authz';
+import { removeEntrepriseAdmin } from '@/lib/entreprise/entreprise-admin';
 
 // Retrait du compte administrateur d'une entreprise (D5, roles/04 § 2) : etape
 // du remplacement, avant d'inviter le nouveau. Reserve au Cabinet RH ; une
 // entreprise d'un autre cabinet ou archivee est "introuvable" (404).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'entreprise.retirer-admin');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
   const { id } = await params;
 
   const result = await removeEntrepriseAdmin(cabinetId, actorId, id);

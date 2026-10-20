@@ -1,21 +1,17 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendEntrepriseInvitationEmail, sendGestionnaireInvitationEmail } from '@/lib/email';
-import { TEMPLATES, isTemplateType, validateTemplate } from '@/lib/email-templates';
+import { authorize } from '@/lib/authz/authz';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { sendEntrepriseInvitationEmail, sendGestionnaireInvitationEmail } from '@/lib/email/email';
+import { TEMPLATES, isTemplateType, validateTemplate } from '@/lib/email/email-templates';
 
 // Envoi d'un email de test du modele (brouillon, non enregistre) (D68). Il part
 // UNIQUEMENT vers l'adresse du titulaire connecte, jamais vers une adresse
 // fournie par la requete : la route ne peut pas servir a envoyer des emails a
 // des tiers. Les valeurs sont fictives.
 export async function POST(request: Request, { params }: { params: Promise<{ type: string }> }) {
-  const guard = await requireApiSession(request, {
-    role: 'CABINET_RH',
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
-  const { cabinetId, email: ownEmail } = guard.session.user as {
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, email: ownEmail } = authz.session.user as {
     cabinetId: string;
     id: string;
     email: string;

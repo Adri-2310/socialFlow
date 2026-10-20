@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isCronAuthorized } from '@/lib/cron-auth';
-import { suspendOverdueCabinets } from '@/lib/billing-grace';
+import { isCronAuthorized } from '@/lib/authz/cron-auth';
+import { suspendOverdueCabinets } from '@/lib/billing/billing-grace';
 
 // Fin du delai de grace des impayes (D57) : appelee quotidiennement par
 // Vercel Cron (voir vercel.json), protegee par CRON_SECRET. Idempotente.

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { inviteEntrepriseAdmin, sendEntrepriseAdminInvitation } from '@/lib/entreprise-admin';
+import { authorize, levelFor } from '@/lib/authz/authz';
+import { inviteEntrepriseAdmin, sendEntrepriseAdminInvitation } from '@/lib/entreprise/entreprise-admin';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -14,18 +14,14 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // peuvent le demander ; le gestionnaire ne peut QUE remplacer (jamais inviter un
 // premier administrateur) et une entreprise qui ne lui est pas assignee est introuvable.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, {
-    role: ['CABINET_RH', 'GESTIONNAIRE_RH'],
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
+  const authz = await authorize(request, 'entreprise.remplacer-admin');
+  if (authz.response) return authz.response;
   const {
     cabinetId,
     id: actorId,
     name: actorName,
     role,
-  } = guard.session.user as { cabinetId: string; id: string; name: string; role: string };
+  } = authz.session.user as { cabinetId: string; id: string; name: string; role: string };
   const { id } = await params;
 
   const body = await request.json().catch(() => null);
@@ -36,7 +32,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const replace = body?.replace === true;
 
   const isGestionnaire = role === 'GESTIONNAIRE_RH';
-  if (isGestionnaire && !replace) {
+  // D78 : seul le Cabinet RH invite un premier administrateur (matrice : entreprise.inviter-admin).
+  if (!replace && levelFor('entreprise.inviter-admin', role) === 'DENY') {
     return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
   }
 

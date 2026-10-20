@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QuotaUsage } from '@/components/cabinet/quota-usage';
-import type { CabinetQuotaUsage } from '@/lib/cabinet-quotas';
+import type { CabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
 
 const base: CabinetQuotaUsage = {
   limits: { maxEntreprises: 25, maxUtilisateurs: 3, maxStorageMb: 5120 },

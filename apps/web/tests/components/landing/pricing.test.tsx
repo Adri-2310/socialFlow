@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Pricing } from '@/components/landing/pricing';
-import type { Plan } from '@/lib/plans';
+import type { Plan } from '@/lib/billing/plans';
 
 vi.mock('framer-motion');
 

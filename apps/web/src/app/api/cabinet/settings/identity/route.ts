@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { identitySchema, updateCabinetIdentity } from '@/lib/cabinet-identity';
+import { authorize } from '@/lib/authz/authz';
+import { identitySchema, updateCabinetIdentity } from '@/lib/cabinet/cabinet-identity';
 
 // Identite du cabinet (D30) : raison sociale, TVA, adresse, contact. Reserve
 // au Cabinet RH, pour son cabinet (cabinetId de la session). Ecriture : refusee
 // en lecture seule (423, D29).
 export async function PATCH(request: Request) {
-  const guard = await requireApiSession(request, {
-    role: 'CABINET_RH',
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.modifier-identite');
+  if (authz.response) return authz.response;
+  // La matrice laisse le SuperAdmin modifier l'identite d'un cabinet (A4, pas encore
+  // construit) : cette route ne sert que le cabinet de la session.
+  if (authz.scope.kind !== 'cabinet') return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const parsed = identitySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

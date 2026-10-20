@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Link2, Loader2, Unlink } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
+import { authClient } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
 import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
 
 const PROVIDERS = [

@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { updateCabinetSlug } from '@/lib/cabinet-portal';
+import { authorize } from '@/lib/authz/authz';
+import { updateCabinetSlug } from '@/lib/portal/cabinet-portal';
 
 // Identifiant du portail de connexion du cabinet (D76), reserve au Cabinet RH
 // pour son cabinet (cabinetId de la session). Ecriture : refusee en lecture seule
 // (423, D29).
 export async function PATCH(request: Request) {
-  const guard = await requireApiSession(request, {
-    role: 'CABINET_RH',
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const body = await request.json().catch(() => null);
   if (typeof body?.slug !== 'string') {

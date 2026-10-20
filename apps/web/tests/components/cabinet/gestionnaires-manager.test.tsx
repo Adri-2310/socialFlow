@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GestionnairesManager } from '@/components/cabinet/gestionnaires-manager';
-import type { GestionnaireRow, InvitationRow } from '@/lib/cabinet-data';
+import type { GestionnaireRow, InvitationRow } from '@/lib/cabinet/cabinet-data';
 
 // InviteGestionnaire (enfant) appelle useRouter pour rafraichir la page.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));

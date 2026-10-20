@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { createCardUpdateSession } from '@/lib/cabinet-subscription';
+import { authorize } from '@/lib/authz/authz';
+import { createCardUpdateSession } from '@/lib/billing/cabinet-subscription';
 
 // Demarre la saisie d'une nouvelle carte (D59) : renvoie l'URL de la page
 // Stripe. Reserve au Cabinet RH, pour son cabinet. Volontairement sans
@@ -13,9 +13,9 @@ const STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
-  if (guard.response) return guard.response;
-  const cabinetId = guard.session.user.cabinetId as string;
+  const authz = await authorize(request, 'abonnement.gerer');
+  if (authz.response) return authz.response;
+  const cabinetId = authz.session.user.cabinetId as string;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl) return NextResponse.json({ error: 'STRIPE_FAILED' }, { status: 502 });

@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { CabinetAuditLog } from '@/components/cabinet/audit-log';
-import { requireSession } from '@/lib/require-session';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
+import { requireAuthorized } from '@/lib/authz/authz-page';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
 import {
   getCabinetAuditLog,
   getCabinetAuditUsers,
   type CabinetAuditFilters,
-} from '@/lib/cabinet-audit';
+} from '@/lib/cabinet/cabinet-audit';
 
 export const metadata: Metadata = {
   title: "Journal d'audit",
@@ -28,7 +28,7 @@ export default async function CabinetAuditPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('audit.voir');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4) : les parametres ne servent qu'a
   // filtrer a l'interieur de ce cabinet.

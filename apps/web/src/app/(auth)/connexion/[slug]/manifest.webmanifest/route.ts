@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getPortalCabinet } from '@/lib/cabinet-portal';
-import { buildPortalManifest } from '@/lib/portal-pwa';
+import { getPortalCabinet } from '@/lib/portal/cabinet-portal';
+import { buildPortalManifest } from '@/lib/portal/portal-pwa';
 
 // Manifeste de l'application installable du cabinet (D77). Public, comme le portail :
 // il ne contient que l'identite visuelle. Identifiant inconnu ou cabinet archive : 404.

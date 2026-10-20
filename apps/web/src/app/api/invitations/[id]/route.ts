@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
 
 // Revoque une invitation du cabinet (roles/02-cabinet-rh.md § 4.2) : le lien
 // envoye par email cesse immediatement de fonctionner (la route d'acceptation
 // ne retient que le statut "pending").
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  // Revocation/renvoi communs a tous les types d'invitation (gestionnaire, admin
+  // d'entreprise) : meme regle aujourd'hui (Cabinet RH seul). Si les lignes
+  // gestionnaire.inviter et entreprise.inviter-admin divergent, choisir selon le type.
+  const authz = await authorize(request, 'gestionnaire.inviter');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 

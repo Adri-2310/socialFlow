@@ -1,5 +1,5 @@
 import { KeyRound, Webhook } from 'lucide-react';
-import type { StripeStatus } from '@/lib/admin-data';
+import type { StripeStatus } from '@/lib/admin/admin-data';
 
 const MODE_LABEL: Record<StripeStatus['mode'], string> = {
   test: 'Mode test (sandbox)',
@@ -16,7 +16,7 @@ const MODE_TONE: Record<StripeStatus['mode'], string> = {
 // Lecture seule par choix : la cle secrete elle-meme n'est jamais affichee
 // (seul son mode test/live transite), et creer un webhook necessite une URL
 // publique que l'environnement de dev n'a pas - voir getStripeStatus dans
-// lib/admin-data.ts.
+// lib/admin/admin-data.ts.
 export function StripeStatusPanel({ status }: { status: StripeStatus }) {
   return (
     <section className="grid gap-4 sm:grid-cols-2">

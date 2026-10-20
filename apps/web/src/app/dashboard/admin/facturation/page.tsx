@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { Euro } from 'lucide-react';
-import { getBillingData } from '@/lib/admin-data';
+import { getBillingData } from '@/lib/admin/admin-data';
 
 export const metadata: Metadata = {
   title: 'Facturation — Console SuperAdmin',
@@ -44,6 +45,9 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month:
 const AMOUNT_FORMATTER = new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 
 export default async function AdminFacturationPage() {
+  // Garde propre à la page : un layout n'est pas ré-exécuté à chaque navigation.
+  await requireAuthorized('plateforme.superviser');
+
   const { rows, mrr } = await getBillingData();
 
   return (

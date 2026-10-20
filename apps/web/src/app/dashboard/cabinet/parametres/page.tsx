@@ -3,21 +3,21 @@ import { redirect } from 'next/navigation';
 import { BrandingForm } from '@/components/cabinet/branding-form';
 import { ExportCard } from '@/components/cabinet/export-card';
 import { PortalForm } from '@/components/cabinet/portal-form';
-import { ensureCabinetSlug } from '@/lib/cabinet-portal';
+import { ensureCabinetSlug } from '@/lib/portal/cabinet-portal';
 import { EmailTemplateEditor } from '@/components/cabinet/email-template-editor';
 import { IdentityForm } from '@/components/cabinet/identity-form';
 import { LogoForm } from '@/components/cabinet/logo-form';
 import { SettingsTabs, type SettingsTab } from '@/components/cabinet/settings-tabs';
-import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
-import { getCabinetBranding } from '@/lib/cabinet-branding';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { formatFrom } from '@/lib/email-brand';
-import { listEmailTemplates } from '@/lib/cabinet-email-templates';
-import { getCabinetIdentity } from '@/lib/cabinet-identity';
+import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
+import { getCabinetBranding } from '@/lib/branding/cabinet-branding';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { formatFrom } from '@/lib/email/email-brand';
+import { listEmailTemplates } from '@/lib/email/cabinet-email-templates';
+import { getCabinetIdentity } from '@/lib/cabinet/cabinet-identity';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 
 export const metadata: Metadata = {
   title: 'Paramètres',
@@ -31,7 +31,7 @@ export default async function CabinetSettingsPage({
 }: {
   searchParams: Promise<{ onglet?: string }>;
 }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('cabinet.personnaliser');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

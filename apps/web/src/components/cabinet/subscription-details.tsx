@@ -5,10 +5,10 @@ import {
   ResumeSubscriptionButton,
 } from '@/components/cabinet/subscription-actions';
 import { PlanChange } from '@/components/cabinet/plan-change';
-import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing';
-import type { CabinetSubscriptionDetails } from '@/lib/cabinet-billing';
-import type { BillingExtras } from '@/lib/cabinet-subscription';
-import type { PlanChangeOptions } from '@/lib/plan-change';
+import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing/billing';
+import type { CabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
+import type { BillingExtras } from '@/lib/billing/cabinet-subscription';
+import type { PlanChangeOptions } from '@/lib/billing/plan-change';
 
 // Retour de la saisie de carte chez Stripe (voir la page Mon abonnement).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;

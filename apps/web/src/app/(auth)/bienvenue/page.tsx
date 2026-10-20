@@ -4,8 +4,8 @@ import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
-import { useSession } from '@/lib/auth-client';
-import { isPlanId, type BillingPeriod } from '@/lib/plans';
+import { useSession } from '@/lib/auth/auth-client';
+import { isPlanId, type BillingPeriod } from '@/lib/billing/plans';
 
 // Delai minimal d'affichage de l'ecran de bienvenue.
 const MIN_DISPLAY_MS = 1400;

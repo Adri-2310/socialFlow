@@ -3,7 +3,7 @@ import { loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-// Les tests d'integration de l'auth (tests/lib/auth.test.ts) tournent contre
+// Les tests d'integration de l'auth (tests/lib/auth/auth.test.ts) tournent contre
 // la vraie base Neon de dev via auth.api.* (pas de mock DB) : ils ont besoin
 // des memes variables que `next dev` (DATABASE_URL, BETTER_AUTH_SECRET...),
 // normalement injectees par Next mais absentes d'un run Vitest autonome.

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, RotateCw, Ban } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import type { InvitationStatus } from '@/lib/cabinet-data';
+import type { InvitationStatus } from '@/lib/cabinet/cabinet-data';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',

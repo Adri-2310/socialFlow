@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { IdentityForm } from '@/components/cabinet/identity-form';
-import type { CabinetIdentity } from '@/lib/cabinet-identity';
+import type { CabinetIdentity } from '@/lib/cabinet/cabinet-identity';
 import type { CountryOption } from '@/lib/countries';
 
 const refresh = vi.fn();

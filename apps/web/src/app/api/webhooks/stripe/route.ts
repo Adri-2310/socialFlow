@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { processStripeEvent } from '@/lib/stripe-webhook';
+import { stripe } from '@/lib/billing/stripe';
+import { processStripeEvent } from '@/lib/billing/stripe-webhook';
 
 // Webhook Stripe (D57, roles/01-superadmin.md § 6.1). Pas de session : la
 // seule authentification est la signature de l'evenement, verifiee sur le

@@ -1,23 +1,23 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { getCustomTemplate } from '@/lib/cabinet-email-templates';
-import { sendGestionnaireInvitationEmail } from '@/lib/email';
-import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
-import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
-import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { getCustomTemplate } from '@/lib/email/cabinet-email-templates';
+import { sendGestionnaireInvitationEmail } from '@/lib/email/email';
+import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations/invitations';
+import { ensureCabinetSlug, portalUrl } from '@/lib/portal/cabinet-portal';
+import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/billing/cabinet-quotas';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Premiere iteration RBAC (voir doc/analysis/ARCHITECTURE_SOCIALFLOW_RBAC.md
 // section 4.1) : seul un Cabinet RH peut inviter, et uniquement en tant que
 // Gestionnaire RH. La garde (401/403 JSON, pas de redirection HTML) vit dans
-// lib/api-guard.ts.
+// lib/authz/authz.ts (action gestionnaire.inviter).
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'gestionnaire.inviter');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
 
   const body = await request.json().catch(() => null);

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { PlansConfig } from '@/components/admin/plans-config';
-import type { PlanConfigRow } from '@/lib/admin-data';
+import type { PlanConfigRow } from '@/lib/admin/admin-data';
 
 const refreshMock = vi.fn();
 

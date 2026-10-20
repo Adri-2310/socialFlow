@@ -3,9 +3,9 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, KeyRound, Link2, Loader2, Mail, MailCheck } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
-import { PORTAL_HEADER, portalPath } from '@/lib/portal-slug';
+import { authClient } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
+import { PORTAL_HEADER, portalPath } from '@/lib/portal/portal-slug';
 
 type Step = 'email' | 'sent' | 'otp';
 

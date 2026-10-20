@@ -5,12 +5,12 @@ import { AccountSettings } from '@/components/auth/account-settings';
 import { DeleteAccount } from '@/components/auth/delete-account';
 import { InviteGestionnaire } from '@/components/dashboard/invite-gestionnaire';
 import { AppHeader } from '@/components/layout/app-header';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { roleDisplayLabel } from '@/lib/role-labels';
 import { prisma } from '@/lib/prisma';
-import { isSubscriptionBlockingDeletion } from '@/lib/account-deletion-guard';
-import { getCabinetClientBrand } from '@/lib/cabinet-client-brand';
-import { auth } from '@/lib/auth';
+import { isSubscriptionBlockingDeletion } from '@/lib/auth/account-deletion-guard';
+import { getCabinetClientBrand } from '@/lib/branding/cabinet-client-brand';
+import { auth } from '@/lib/auth/auth';
 import { headers } from 'next/headers';
 
 const BILLING_LABELS: Record<string, string> = {
@@ -30,10 +30,16 @@ export async function generateMetadata(): Promise<Metadata> {
   return brand ? brand.metadata('Mon profil') : DEFAULT_METADATA;
 }
 
-// Page commune a tous les roles (pas de requireSession({role}) : accessible
-// a n'importe quel utilisateur connecte, y compris SuperAdmin).
-export default async function ProfilPage() {
-  const { user } = await requireSession();
+// Page commune a tous les roles (action compte.gerer : accessible a n'importe
+// quel utilisateur connecte, y compris un SuperAdmin sans 2FA, qui doit pouvoir
+// l'activer ici).
+export default async function ProfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ '2fa'?: string }>;
+}) {
+  const { '2fa': twoFactorParam } = await searchParams;
+  const { user } = await requireAuthorized('compte.gerer');
   const brand = await getCabinetClientBrand(user);
 
   // D55 : la formule et la periode appartiennent au cabinet, pas a la personne.
@@ -123,6 +129,13 @@ export default async function ProfilPage() {
                 emailVerified={user.emailVerified ?? false}
               />
               <LinkedAccounts />
+              {/* D20 : redirection depuis la console SuperAdmin (voir requireAuthorized). */}
+              {twoFactorParam === 'requise' && user.role === 'SUPER_ADMIN' && !user.twoFactorEnabled && (
+                <p role="alert" className="rounded-lg border border-border/60 bg-muted/50 p-4 text-sm text-foreground">
+                  La double authentification est obligatoire pour accéder à la console d’administration.
+                  Activez-la ci-dessous pour continuer.
+                </p>
+              )}
               <TwoFactorSetup enabled={user.twoFactorEnabled ?? false} />
               {user.role === 'CABINET_RH' && <InviteGestionnaire />}
             </div>

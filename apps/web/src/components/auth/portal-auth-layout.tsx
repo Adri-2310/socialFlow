@@ -3,9 +3,9 @@ import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { buildThemeCss } from '@/lib/branding-rules';
-import type { PortalCabinet } from '@/lib/cabinet-portal';
-import { portalPath } from '@/lib/portal-slug';
+import { buildThemeCss } from '@/lib/branding/branding-rules';
+import type { PortalCabinet } from '@/lib/portal/cabinet-portal';
+import { portalPath } from '@/lib/portal/portal-slug';
 
 // Mise en page des pages d'authentification du portail d'un cabinet (D76, D77) autres que la
 // connexion : mot de passe oublie, nouveau mot de passe. Nom, logo et couleurs du cabinet,

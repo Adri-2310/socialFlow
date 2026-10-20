@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EmailTemplateEditor } from '@/components/cabinet/email-template-editor';
-import { TEMPLATES } from '@/lib/email-templates';
+import { TEMPLATES } from '@/lib/email/email-templates';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { isCronAuthorized } from '@/lib/cron-auth';
+import { isCronAuthorized } from '@/lib/authz/cron-auth';
 import { prisma } from '@/lib/prisma';
-import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
+import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet/cabinet-retention';
 
 // Purge reelle et definitive des cabinets archives depuis plus de
 // CABINET_DELETION_RETENTION_DAYS (voir DELETE dans

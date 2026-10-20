@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { PaymentStart } from '@/components/cabinet/payment-start';
-import { normalizeBillingStatus } from '@/lib/billing';
+import { normalizeBillingStatus } from '@/lib/billing/billing';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import {
   TRIAL_DAYS,
   confirmCheckoutSession,
   getCheckoutSummary,
-} from '@/lib/stripe-checkout';
+} from '@/lib/billing/stripe-checkout';
 
 export const metadata: Metadata = {
   title: 'Finaliser mon abonnement',
@@ -31,7 +31,7 @@ export default async function PaymentPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('abonnement.gerer');
   if (!user.cabinetId) redirect('/dashboard');
   const cabinetId = user.cabinetId;
 

@@ -4,8 +4,8 @@ import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import { Check, Copy, Loader2, ShieldCheck, ShieldOff } from 'lucide-react';
-import { twoFactor } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
+import { twoFactor } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
 
 type Step = 'idle' | 'enable-password' | 'enable-verify' | 'disable-password';
 

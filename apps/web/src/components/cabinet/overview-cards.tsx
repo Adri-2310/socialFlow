@@ -1,6 +1,6 @@
 import { Users, MailPlus, Building2, CreditCard } from 'lucide-react';
-import type { CabinetOverview } from '@/lib/cabinet-data';
-import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing';
+import type { CabinetOverview } from '@/lib/cabinet/cabinet-data';
+import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing/billing';
 
 const PERIOD_LABELS = { monthly: 'Facturation mensuelle', yearly: 'Facturation annuelle' } as const;
 

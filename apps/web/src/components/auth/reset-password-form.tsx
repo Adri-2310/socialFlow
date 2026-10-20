@@ -3,9 +3,9 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
-import { portalPath } from '@/lib/portal-slug';
+import { authClient } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
+import { portalPath } from '@/lib/portal/portal-slug';
 
 // `portal` (D76, D77) : page ouverte depuis le portail d'un cabinet - on y retourne pour se connecter.
 export function ResetPasswordForm({ portal }: { portal?: { slug: string } } = {}) {

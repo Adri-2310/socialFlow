@@ -13,13 +13,13 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 |---|---|
 | Code du rôle | `SUPER_ADMIN` (`User.role`) |
 | Rattachement | Aucun cabinet (`User.cabinetId = null`) |
-| Création du compte | Par script de bootstrap (D18). Cible : un SuperAdmin existant invite le suivant ; le script ne sert qu'à l'installation initiale |
-| 2FA | **Obligatoire** (D20) : sans 2FA activée, accès à la console bloqué et redirection vers l'activation |
+| Création du compte | Par script d'installation (D18) ✅, voir § 4.6. Cible : un SuperAdmin existant invite le suivant ; le script ne sert qu'à l'installation initiale |
+| 2FA | **Obligatoire** (D20) ✅ : sans 2FA activée, accès à la console bloqué (pages et API) et redirection vers l'activation sur `/profil` |
 | Inscription publique | Impossible : `/register` crée toujours un `CABINET_RH` |
 | Connexion | Méthodes Better Auth communes à tous les rôles (mot de passe, lien magique, code email, Google, Microsoft) |
 | Point d'entrée | `/dashboard` redirige vers `/dashboard/admin` |
-| Garde des pages | `requireSession({ role: 'SUPER_ADMIN' })` dans `app/dashboard/admin/layout.tsx` (redirige sinon vers `/dashboard`) |
-| Garde des API | Chaque route `api/admin/*` vérifie la session (401) puis `role === 'SUPER_ADMIN'` (403), en JSON |
+| Garde des pages | `requireAuthorized('<action>')` (`lib/authz/authz-page.ts`) dans `app/dashboard/admin/layout.tsx` **et dans chaque page de la console** (un layout n'est pas ré-exécuté à chaque navigation) : actions `plateforme.superviser`, `cabinet.administrer`, `utilisateur.lister`, `audit.voir`, `plan.gerer`. Redirige vers `/login` sans session, `/dashboard` si le rôle est refusé par la matrice, `/profil?2fa=requise` sans 2FA |
+| Garde des API | Chaque route `api/admin/*` passe par `authorize(request, '<action>')` (`lib/authz/authz.ts`, actions `cabinet.administrer`, `plan.gerer`, `utilisateur.suspendre-archiver`, `utilisateur.support`) : session (401), rôle selon la matrice de `PERMISSIONS.md` (403), puis 2FA du SuperAdmin (403 `TWO_FACTOR_REQUIRED`), en JSON |
 
 ## 3. Écrans existants
 
@@ -27,7 +27,7 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 |---|---|---|
 | Vue d'ensemble | `/dashboard/admin` | KPIs (cabinets actifs, nouveaux du mois, MRR réel Stripe), répartition par plan, aperçu des 10 derniers cabinets et des 10 dernières entrées d'audit, résumé monitoring |
 | Cabinets | `/dashboard/admin/cabinets` | Liste triable : nom, statut, plan, nombre de gestionnaires, date de création. Actions : suspendre (lecture seule par défaut, blocage total optionnel avec motif, D71), bloquer les connexions d'un cabinet en lecture seule, réactiver, archiver, restaurer |
-| Utilisateurs | `/dashboard/admin/utilisateurs` | Liste de tous les comptes (nom, email, rôle, statut, cabinet). Actions : suspendre, réactiver, archiver, restaurer |
+| Utilisateurs | `/dashboard/admin/utilisateurs` | Liste de tous les comptes (nom, email, rôle, statut, cabinet). Actions : suspendre, réactiver, archiver, restaurer, révoquer les sessions, envoyer un lien de réinitialisation |
 | Monitoring | `/dashboard/admin/monitoring` | Santé et latence de la base, sessions actives, utilisateurs actifs distincts, cabinets/utilisateurs par statut, top 10 des compteurs du rate limiter |
 | Journal d'audit | `/dashboard/admin/audit` | Historique des actions (acteur, cabinet ou utilisateur visé, date) |
 | Facturation | `/dashboard/admin/facturation` | Abonnements Stripe en direct par cabinet (plan, montant, période, statut, fin de période) et MRR |
@@ -51,8 +51,10 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 |---|---|---|
 | Suspendre / réactiver | `User.status` + suppression des sessions à la suspension | `USER_SUSPENDED` / `USER_REACTIVATED` |
 | Archiver / restaurer | `User.deletedAt` ; purge après **90 jours** (`ACCOUNT_DELETION_RETENTION_DAYS`, cron à 3 h) | `USER_ARCHIVED` / `USER_RESTORED` |
+| Révoquer les sessions (D21) | `POST …/revoke-sessions` : supprime toutes les sessions du compte, qui peut se reconnecter ensuite. Audit dans la même transaction | `USER_SESSIONS_REVOKED` |
+| Envoyer un lien de réinitialisation (D21) | `POST …/reset-password` : flux Better Auth standard (même email, lien valable 1 h), vers le portail du cabinet pour les rôles de portail. Le SuperAdmin ne voit et ne fixe jamais de mot de passe. La route confirme la demande du lien, pas la livraison (l'envoi se fait en arrière-plan) | `USER_PASSWORD_RESET_SENT` |
 
-**Protection** : un compte `SUPER_ADMIN` ne peut être ni suspendu ni archivé par cette voie (évite de verrouiller la console).
+**Protection** : un compte `SUPER_ADMIN` ne peut être ni suspendu, ni archivé, ni visé par les outils de support par cette voie (évite de verrouiller la console). Les outils de support refusent aussi un compte archivé (`USER_ARCHIVED`) mais acceptent un compte suspendu.
 
 ### 4.3 Plans tarifaires — `api/admin/plans`
 - Création, modification, archivage et restauration d'un `PricingPlan` (identifiant `[a-z0-9-]`, nom, description, prix mensuel et annuel en entiers, badge, mise en avant, ordre, au moins une fonctionnalité).
@@ -72,6 +74,22 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 | 05:00 | `/api/cron/purge-expired-sessions` | Suppression des sessions expirées |
 | 06:00 | `/api/cron/suspend-overdue-cabinets` | Passage en `IMPAYE` (lecture seule) des cabinets dont le délai de grâce de 7 jours est écoulé (D57) |
 
+### 4.6 Création du premier SuperAdmin — `scripts/create-superadmin.ts` (D18)
+```
+cd apps/web
+npm run superadmin:create -- prenom@exemple.be [--nom "Prénom Nom"] [--force]
+```
+Le script lit `.env.local` (`DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_SECRET`, clé Resend) et affiche l'hôte de la base visée avant d'agir. La logique est dans `lib/auth/superadmin-bootstrap.ts`.
+| Cas | Résultat |
+|---|---|
+| Adresse libre, aucun SuperAdmin | Compte créé sans cabinet ni mot de passe (`emailVerified` vrai, nom « SuperAdmin » sans `--nom`), audit `SUPERADMIN_BOOTSTRAPPED` dans la même transaction, puis email avec le lien standard (1 h) vers `/reinitialiser-mot-de-passe` : la personne choisit son mot de passe. Personne d'autre ne le voit ni ne le fixe (D21) |
+| Un SuperAdmin existe déjà | Refus (`SUPER_ADMIN_EXISTS`), sauf avec `--force` qui crée un SuperAdmin de plus |
+| Adresse d'un compte qui n'est pas SuperAdmin | Refus (`EMAIL_TAKEN`), même avec `--force` : un compte existant n'est jamais promu |
+| Adresse d'un SuperAdmin qui a déjà un mot de passe | Rien n'est modifié (idempotent) |
+| Adresse d'un SuperAdmin sans mot de passe | Le lien est renvoyé (lien expiré, ou email jamais parti), audit avec `resent` |
+| Échec d'envoi de l'email | Erreur `EMAIL_SEND_FAILED` ; le compte reste créé, relancer la commande renvoie le lien |
+À la première connexion, la 2FA obligatoire (D20) renvoie le SuperAdmin vers `/profil?2fa=requise`.
+
 ## 5. Ce que le SuperAdmin ne peut pas faire (par décision)
 
 - Voir ou exporter les entreprises clientes, salariés, fiches de paie, documents ou messages (D8).
@@ -82,12 +100,12 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 
 | # | Sujet | Spécification |
 |---|---|---|
-| A1 | **2FA obligatoire** (D20) | `requireSession({ role: 'SUPER_ADMIN' })` vérifie aussi `twoFactorEnabled` ; sinon redirection vers `/profil` (section 2FA) avec un message explicite. Même contrôle dans chaque route `api/admin/*` (403 `TWO_FACTOR_REQUIRED`) |
-| A2 | **Bootstrap pro** (D18) | Script `scripts/create-superadmin.ts` idempotent (email en argument, refuse s'il existe déjà un SuperAdmin sauf `--force`), qui envoie un lien de définition du mot de passe au lieu d'en fixer un. Ensuite : écran « Inviter un SuperAdmin » réservé aux SuperAdmins (invitation `role = SUPER_ADMIN`, 2FA exigée à l'acceptation) |
-| A3 | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
+| A1 ✅ | **2FA obligatoire** (D20) | `requireAuthorized` vérifie aussi `twoFactorEnabled` pour le SuperAdmin ; sinon redirection vers `/profil?2fa=requise` (section 2FA) avec un message explicite. Même contrôle dans chaque route `api/admin/*` via `authorize` (403 `TWO_FACTOR_REQUIRED`). `/profil` reste accessible sans 2FA pour pouvoir l'activer |
+| A2 (script ✅) | **Bootstrap pro** (D18) | ✅ Script `scripts/create-superadmin.ts` idempotent (email en argument, refuse s'il existe déjà un SuperAdmin sauf `--force`), qui envoie un lien de définition du mot de passe au lieu d'en fixer un (voir § 4.6). **À construire** : écran « Inviter un SuperAdmin » réservé aux SuperAdmins (invitation `role = SUPER_ADMIN`, 2FA exigée à l'acceptation) |
+| A3 ✅ | **Outils de support** (D21) | Sur la page Utilisateurs : « Révoquer les sessions » (supprime les sessions, audit `USER_SESSIONS_REVOKED`) et « Envoyer un lien de réinitialisation » (flux Better Auth standard, audit `USER_PASSWORD_RESET_SENT`) |
 | A4 | **Modifier un cabinet** (D19) | Fiche cabinet : nom, coordonnées, et changement de plan **uniquement via Stripe** (le plan local suit l'abonnement, jamais l'inverse). Audit `CABINET_UPDATED` avec avant/après |
 | A5 | **Quotas par plan** (D15) | `PricingPlan` + `maxEntreprises`, `maxUtilisateurs`, `maxStorageMb` (`null` = illimité) et droits `integrations`, `whiteLabel`, éditables dans Configuration ; valeurs de départ = cahier des charges client (D34) |
-| A6 | **Webhook Stripe + délai de grâce** (D23, D57) | Voir § 6.1. ✅ Webhook `api/webhooks/stripe` (signature, idempotence, ordre des événements, plan repris du prix) ; ✅ tâche quotidienne `api/cron/suspend-overdue-cabinets` (fin du délai de 7 jours → `IMPAYE`, emails au titulaire et aux SuperAdmins) ; ✅ refus des écritures en lecture seule (`423 CABINET_READ_ONLY`) pour les routes du Cabinet RH, via `requireApiSession({ writable: true })`, et bandeau d'abonnement |
+| A6 | **Webhook Stripe + délai de grâce** (D23, D57) | Voir § 6.1. ✅ Webhook `api/webhooks/stripe` (signature, idempotence, ordre des événements, plan repris du prix) ; ✅ tâche quotidienne `api/cron/suspend-overdue-cabinets` (fin du délai de 7 jours → `IMPAYE`, emails au titulaire et aux SuperAdmins) ; ✅ refus des écritures en lecture seule (`423 CABINET_READ_ONLY`) pour les routes du Cabinet RH, via `authorize` (actions `write: true`, voir `PERMISSIONS.md`), et bandeau d'abonnement |
 | A7 | **Barèmes automatiques** (D22) | Voir § 6.2 |
 | A8 | **Notifications in-app** | Modèle `Notification` (destinataire, type, message, lien, lu/non lu) + cloche dans l'en-tête, partagé par tous les rôles |
 | A9 | Journal d'audit | Filtres (action, acteur, cabinet, période), export CSV ; ajout `ipAddress`, `userAgent`, `metadata Json` |

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { removeCabinetLogo, setCabinetLogo } from '@/lib/cabinet-logo';
-import { LOGO_MAX_BYTES } from '@/lib/logo-validation';
+import { authorize } from '@/lib/authz/authz';
+import { removeCabinetLogo, setCabinetLogo } from '@/lib/branding/cabinet-logo';
+import { LOGO_MAX_BYTES } from '@/lib/branding/logo-validation';
 
 // Logo du cabinet (D33, D62). Reserve au Cabinet RH, pour son cabinet
 // (cabinetId de la session). Ecriture : refusee en lecture seule (423, D29).
@@ -16,13 +16,9 @@ const STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, {
-    role: 'CABINET_RH',
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   // Refus avant de lire un corps manifestement trop gros.
   const declared = Number(request.headers.get('content-length') ?? 0);
@@ -49,13 +45,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const guard = await requireApiSession(request, {
-    role: 'CABINET_RH',
-    cabinet: true,
-    writable: true,
-  });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'cabinet.personnaliser');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const result = await removeCabinetLogo(cabinetId, actorId);
   if (!result.ok) {

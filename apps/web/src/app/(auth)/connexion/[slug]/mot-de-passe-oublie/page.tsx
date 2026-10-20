@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form';
 import { PortalAuthLayout } from '@/components/auth/portal-auth-layout';
-import { getPortalCabinet } from '@/lib/cabinet-portal';
-import { manifestPath } from '@/lib/portal-pwa';
+import { getPortalCabinet } from '@/lib/portal/cabinet-portal';
+import { manifestPath } from '@/lib/portal/portal-pwa';
 
 type Params = Promise<{ slug: string }>;
 

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
 import {
   SUSPENSION_REASON_MAX,
   SUSPENSION_TYPES,
   suspensionTypeOf,
   type SuspensionType,
-} from '@/lib/cabinet-suspension';
+} from '@/lib/cabinet/cabinet-suspension';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
 type CabinetStatus = (typeof VALID_STATUSES)[number];
@@ -17,13 +17,9 @@ type CabinetStatus = (typeof VALID_STATUSES)[number];
 // reutiliser requireSession() ici : ce Route Handler doit renvoyer un
 // 401/403 JSON, pas une redirection HTML.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const authz = await authorize(request, 'cabinet.administrer');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const { id: cabinetId } = await params;
 
@@ -105,13 +101,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // utilisateurs - voir CABINET_DELETION_RETENTION_DAYS et
 // api/cron/purge-deleted-cabinets pour la purge reelle et differee).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const authz = await authorize(request, 'cabinet.administrer');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const { id: cabinetId } = await params;
 
@@ -139,13 +131,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 // n'est pas touche par l'archivage (voir DELETE ci-dessus), donc reste
 // coherent tel quel.
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
-    return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
-  if (session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const authz = await authorize(request, 'cabinet.administrer');
+  if (authz.response) return authz.response;
+  const { session } = authz;
 
   const { id: cabinetId } = await params;
 

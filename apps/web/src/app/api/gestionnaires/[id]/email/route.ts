@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
-import { requireApiSession } from '@/lib/api-guard';
+import { auth } from '@/lib/auth/auth';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendGestionnaireAccessChangedEmail } from '@/lib/email';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { sendGestionnaireAccessChangedEmail } from '@/lib/email/email';
 
 // D53 : le Cabinet RH corrige l'adresse de connexion d'un de ses
 // gestionnaires (changement d'adresse professionnelle...). L'adresse est un
@@ -12,9 +12,9 @@ import { sendGestionnaireAccessChangedEmail } from '@/lib/email';
 // sessions en cours sont coupees, un email de confirmation part vers la
 // nouvelle adresse et l'ancienne est prevenue.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true, writable: true });
-  if (guard.response) return guard.response;
-  const { session } = guard;
+  const authz = await authorize(request, 'gestionnaire.modifier-email');
+  if (authz.response) return authz.response;
+  const { session } = authz;
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 

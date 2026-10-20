@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Building2, Plus } from 'lucide-react';
-import { pendingPlanQuotaMessage } from '@/lib/quota-messages';
+import { pendingPlanQuotaMessage } from '@/lib/billing/quota-messages';
 import {
   EMPTY_ENTREPRISE,
   EntrepriseFormDialog,

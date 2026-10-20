@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextResponse } from 'next/server';
-import { getPortalCabinet } from '@/lib/cabinet-portal';
-import { brandInitial, parseIconSize, safeColor } from '@/lib/portal-pwa';
+import { getPortalCabinet } from '@/lib/portal/cabinet-portal';
+import { brandInitial, parseIconSize, safeColor } from '@/lib/portal/portal-pwa';
 
 // Icone de l'application installable du cabinet (D77) : son logo sur un fond a sa
 // couleur, ou, sans logo, l'initiale de son nom. Zone sure « maskable » : le contenu

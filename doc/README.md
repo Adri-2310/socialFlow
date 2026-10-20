@@ -11,6 +11,7 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 | Savoir ce qui a été décidé et pourquoi | [DECISIONS.md](DECISIONS.md) — **source de vérité** |
 | Savoir qui a le droit de faire quoi | [PERMISSIONS.md](PERMISSIONS.md) |
 | Connaître le planning | [ROADMAP.md](ROADMAP.md) |
+| Voir les dettes et idées d'amélioration | [AMELIORATIONS.md](AMELIORATIONS.md) |
 | Écrire du code dans les règles | [CONVENTIONS.md](CONVENTIONS.md), [TESTS.md](TESTS.md) |
 
 ## Rôles
@@ -41,6 +42,7 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 |---|---|
 | [RGPD.md](RGPD.md) | Registre des traitements, mesures, droits des personnes |
 | [JOURNAL.md](JOURNAL.md) | Journal de développement (matière du rapport) |
+| [AMELIORATIONS.md](AMELIORATIONS.md) | Dettes techniques et améliorations connues, mise en production |
 | [analysis/AUDIT_SECURITE_AUTH.md](analysis/AUDIT_SECURITE_AUTH.md) | Audit de sécurité de l'authentification (toujours valable) |
 | [reference/PRD_CLIENT.md](reference/PRD_CLIENT.md) | Cahier des charges du client : fait foi pour les plans, prix et fonctionnalités (D34), pas pour la technique |
 | [archive/](archive/) | Anciens documents d'analyse : **ne plus suivre**, conservés pour l'historique |

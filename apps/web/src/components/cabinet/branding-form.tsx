@@ -10,8 +10,8 @@ import {
   validateBranding,
   type BrandingFieldError,
   type CabinetBranding,
-} from '@/lib/branding-rules';
-import { readableForeground } from '@/lib/color';
+} from '@/lib/branding/branding-rules';
+import { readableForeground } from '@/lib/branding/color';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',

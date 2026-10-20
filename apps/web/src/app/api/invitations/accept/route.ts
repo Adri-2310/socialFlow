@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { ACCEPT_ERROR_STATUS, acceptInvitationWithPassword } from '@/lib/invitation-accept';
-import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendAdminReplacedEmail, sendWelcomeAccountEmail } from '@/lib/email';
-import { PORTAL_HEADER } from '@/lib/portal-slug';
+import { auth } from '@/lib/auth/auth';
+import { ACCEPT_ERROR_STATUS, acceptInvitationWithPassword } from '@/lib/invitations/invitation-accept';
+import { ensureCabinetSlug, portalUrl } from '@/lib/portal/cabinet-portal';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { sendAdminReplacedEmail, sendWelcomeAccountEmail } from '@/lib/email/email';
+import { PORTAL_HEADER } from '@/lib/portal/portal-slug';
 
 // Cree le compte de la personne invitee (C6) : role, cabinet et rattachement
-// viennent de l'invitation, jamais du client. Voir lib/invitation-accept.ts.
+// viennent de l'invitation, jamais du client. Voir lib/invitations/invitation-accept.ts.
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const token = typeof body?.token === 'string' ? body.token : '';

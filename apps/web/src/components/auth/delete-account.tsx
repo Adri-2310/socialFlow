@@ -3,9 +3,9 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Loader2, MailCheck } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { authClient } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 
 // `blockedBySubscription` : le titulaire dont l'abonnement court ne peut pas
 // supprimer son compte (D67). Le serveur le refuse de toute facon ; on le dit

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Check } from 'lucide-react';
-import type { BillingPeriod, Plan, PlanId } from '@/lib/plans';
-import { planPriceDisplay } from '@/lib/plan-price-display';
+import type { BillingPeriod, Plan, PlanId } from '@/lib/billing/plans';
+import { planPriceDisplay } from '@/lib/billing/plan-price-display';
 
 export function PlanSelect({
   plans,

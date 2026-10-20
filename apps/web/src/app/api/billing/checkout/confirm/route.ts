@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { confirmCheckoutSession } from '@/lib/stripe-checkout';
+import { authorize } from '@/lib/authz/authz';
+import { confirmCheckoutSession } from '@/lib/billing/stripe-checkout';
 
-// Confirme un Checkout au retour du client (voir lib/stripe-checkout.ts) :
+// Confirme un Checkout au retour du client (voir lib/billing/stripe-checkout.ts) :
 // applique l'abonnement au cabinet sans attendre le webhook. Idempotent.
 const STATUS: Record<string, number> = {
   SESSION_NOT_FOUND: 404,
@@ -11,9 +11,9 @@ const STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
-  if (guard.response) return guard.response;
-  const cabinetId = guard.session.user.cabinetId as string;
+  const authz = await authorize(request, 'abonnement.gerer');
+  if (authz.response) return authz.response;
+  const cabinetId = authz.session.user.cabinetId as string;
 
   const body = await request.json().catch(() => null);
   const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : '';

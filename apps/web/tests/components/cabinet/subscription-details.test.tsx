@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SubscriptionDetails } from '@/components/cabinet/subscription-details';
-import type { CabinetSubscriptionDetails } from '@/lib/cabinet-billing';
-import type { BillingExtras } from '@/lib/cabinet-subscription';
-import type { PlanChangeOptions } from '@/lib/plan-change';
+import type { CabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
+import type { BillingExtras } from '@/lib/billing/cabinet-subscription';
+import type { PlanChangeOptions } from '@/lib/billing/plan-change';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 

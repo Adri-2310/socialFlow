@@ -4,11 +4,11 @@ import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
-import { signIn, twoFactor } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
+import { signIn, twoFactor } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
 import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
 import { PasswordlessLogin } from '@/components/auth/passwordless-login';
-import { PORTAL_COOKIE, PORTAL_HEADER, portalPath } from '@/lib/portal-slug';
+import { PORTAL_COOKIE, PORTAL_HEADER, portalPath } from '@/lib/portal/portal-slug';
 
 // `portal` : connexion par le portail d'un cabinet (D76). Le serveur y reconnait le
 // cabinet (en-tete, cookie ou adresse de retour) ; sans lui, un gestionnaire, une

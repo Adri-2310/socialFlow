@@ -3,17 +3,17 @@ import { redirect } from 'next/navigation';
 import { CabinetAlerts } from '@/components/cabinet/alerts';
 import { OverviewCards } from '@/components/cabinet/overview-cards';
 import { QuotaUsage } from '@/components/cabinet/quota-usage';
-import { buildCabinetAlerts } from '@/lib/cabinet-alerts';
-import { getEntreprises } from '@/lib/cabinet-entreprises';
-import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
-import { requireSession } from '@/lib/require-session';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
+import { buildCabinetAlerts } from '@/lib/cabinet/cabinet-alerts';
+import { getEntreprises } from '@/lib/entreprise/cabinet-entreprises';
+import { getCabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
+import { requireAuthorized } from '@/lib/authz/authz-page';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
 import {
   getArchivedGestionnaires,
   getCabinetOverview,
   getGestionnaires,
   getInvitations,
-} from '@/lib/cabinet-data';
+} from '@/lib/cabinet/cabinet-data';
 
 export const metadata: Metadata = {
   title: "Vue d'ensemble",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CabinetOverviewPage() {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('cabinet.consulter');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

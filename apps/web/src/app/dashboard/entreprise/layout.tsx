@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
-import { auth } from '@/lib/auth';
-import { cabinetMetadata } from '@/lib/cabinet-metadata';
-import { requireSession } from '@/lib/require-session';
+import { auth } from '@/lib/auth/auth';
+import { cabinetMetadata } from '@/lib/cabinet/cabinet-metadata';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { prisma } from '@/lib/prisma';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { buildThemeCss } from '@/lib/branding-rules';
-import { ensureCabinetSlug, portalPath } from '@/lib/cabinet-portal';
+import { buildThemeCss } from '@/lib/branding/branding-rules';
+import { ensureCabinetSlug, portalPath } from '@/lib/portal/cabinet-portal';
 
 const CABINET_BRAND_SELECT = {
   displayName: true,
@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // d'entreprise (meme principe que dashboard/cabinet/layout.tsx). Le portail
 // prend le nom, le logo et les couleurs du cabinet (D33).
 export default async function EntrepriseLayout({ children }: { children: ReactNode }) {
-  const { user } = await requireSession({ role: 'ENTREPRISE_CLIENTE' });
+  const { user } = await requireAuthorized('entreprise.lister');
 
   const cabinet = user.cabinetId
     ? await prisma.cabinet.findUnique({

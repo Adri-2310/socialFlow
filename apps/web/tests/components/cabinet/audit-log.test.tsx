@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CabinetAuditLog } from '@/components/cabinet/audit-log';
-import type { CabinetAuditPage } from '@/lib/cabinet-audit';
+import type { CabinetAuditPage } from '@/lib/cabinet/cabinet-audit';
 
 const base: CabinetAuditPage = {
   total: 2,

@@ -4,10 +4,10 @@ import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
-import { signIn, signUp } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
+import { signIn, signUp } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
 import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
-import type { BillingPeriod, PlanId } from '@/lib/plans';
+import type { BillingPeriod, PlanId } from '@/lib/billing/plans';
 
 export function RegisterForm({
   planId,

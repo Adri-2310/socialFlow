@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, Home, LogIn } from 'lucide-react';
 import { ErrorState } from '@/components/errors/error-state';
-import { translateAuthError } from '@/lib/auth-errors';
-import { isValidSlug, portalPath } from '@/lib/portal-slug';
+import { translateAuthError } from '@/lib/auth/auth-errors';
+import { isValidSlug, portalPath } from '@/lib/portal/portal-slug';
 
 function ErrorContent() {
   const searchParams = useSearchParams();

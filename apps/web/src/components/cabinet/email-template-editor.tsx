@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Send } from 'lucide-react';
-import { buildTemplatePreview, inertLinks } from '@/lib/email-layout';
-import type { CabinetEmailBrand } from '@/lib/email-brand';
+import { buildTemplatePreview, inertLinks } from '@/lib/email/email-layout';
+import type { CabinetEmailBrand } from '@/lib/email/email-brand';
 import {
   BODY_MAX,
   SUBJECT_MAX,
@@ -12,7 +12,7 @@ import {
   validateTemplate,
   type TemplateError,
   type TemplateType,
-} from '@/lib/email-templates';
+} from '@/lib/email/email-templates';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -236,7 +236,7 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
           </div>
         </fieldset>
 
-        {/* Apercu = l'email reel : meme gabarit que l'envoi (lib/email-layout.ts),
+        {/* Apercu = l'email reel : meme gabarit que l'envoi (lib/email/email-layout.ts),
             dans un cadre isole. Le cadre n'a aucun droit (pas de script, de
             formulaire ni de navigation), seul allow-same-origin permet de lire sa
             hauteur. Le HTML vient de renderBody : texte echappe, balisage limite. */}

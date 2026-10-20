@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireApiSession } from '@/lib/api-guard';
-import { schedulePlanChange } from '@/lib/plan-change';
+import { authorize } from '@/lib/authz/authz';
+import { schedulePlanChange } from '@/lib/billing/plan-change';
 
 // Programme un changement de plan ou de periodicite en fin de periode (D60).
 // Reserve au Cabinet RH, pour son cabinet (cabinetId de la session). Le plan
@@ -26,9 +26,9 @@ const STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'abonnement.gerer');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

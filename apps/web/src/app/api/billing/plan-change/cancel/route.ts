@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireApiSession } from '@/lib/api-guard';
-import { cancelPlanChange } from '@/lib/plan-change';
+import { authorize } from '@/lib/authz/authz';
+import { cancelPlanChange } from '@/lib/billing/plan-change';
 
 // Annule le changement de plan programme (D60) : l'abonnement continue tel
 // quel. Reserve au Cabinet RH, pour son cabinet.
@@ -12,9 +12,9 @@ const STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const guard = await requireApiSession(request, { role: 'CABINET_RH', cabinet: true });
-  if (guard.response) return guard.response;
-  const { cabinetId, id: actorId } = guard.session.user as { cabinetId: string; id: string };
+  const authz = await authorize(request, 'abonnement.gerer');
+  if (authz.response) return authz.response;
+  const { cabinetId, id: actorId } = authz.session.user as { cabinetId: string; id: string };
 
   const result = await cancelPlanChange(cabinetId, actorId);
   if (!result.ok) {

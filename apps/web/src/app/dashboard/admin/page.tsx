@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { Building2, Euro, Gauge, AlertTriangle } from 'lucide-react';
 import { CabinetsTable } from '@/components/admin/cabinets-table';
 import { AuditLogList } from '@/components/admin/audit-log-list';
 import { MonitoringSummary } from '@/components/admin/monitoring-summary';
-import { getCabinets, getAuditLogEntries, getMonitoringData, getBillingData } from '@/lib/admin-data';
+import { getCabinets, getAuditLogEntries, getMonitoringData, getBillingData } from '@/lib/admin/admin-data';
 
 export const metadata: Metadata = {
   title: 'Console SuperAdmin — SocialFlow',
@@ -24,6 +25,9 @@ const AMOUNT_FORMATTER = new Intl.NumberFormat('fr-BE', {
 });
 
 export default async function AdminPage() {
+  // Garde propre à la page : un layout n'est pas ré-exécuté à chaque navigation.
+  await requireAuthorized('plateforme.superviser');
+
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);

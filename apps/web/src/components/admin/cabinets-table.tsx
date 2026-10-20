@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { Search, Loader2, ChevronUp, ChevronDown, Archive } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SuspendCabinetDialog } from '@/components/admin/suspend-cabinet-dialog';
-import type { SuspensionType } from '@/lib/cabinet-suspension';
-import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
+import type { SuspensionType } from '@/lib/cabinet/cabinet-suspension';
+import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet/cabinet-retention';
 
 export type CabinetRow = {
   id: string;

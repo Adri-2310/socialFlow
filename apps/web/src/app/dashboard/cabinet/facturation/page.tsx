@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { QuotaUsage } from '@/components/cabinet/quota-usage';
 import { SubscriptionDetails, type CardFlash } from '@/components/cabinet/subscription-details';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
-import { getCabinetSubscriptionDetails } from '@/lib/cabinet-billing';
-import { confirmCardUpdate, getBillingExtras } from '@/lib/cabinet-subscription';
-import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
-import { getPlanChangeOptions } from '@/lib/plan-change';
-import { requireSession } from '@/lib/require-session';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
+import { getCabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
+import { confirmCardUpdate, getBillingExtras } from '@/lib/billing/cabinet-subscription';
+import { getCabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
+import { getPlanChangeOptions } from '@/lib/billing/plan-change';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 
 export const metadata: Metadata = {
   title: 'Mon abonnement',
@@ -24,7 +24,7 @@ export default async function CabinetBillingPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('abonnement.gerer');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

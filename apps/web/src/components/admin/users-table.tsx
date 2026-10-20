@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, ChevronUp, ChevronDown, Archive } from 'lucide-react';
+import { Search, Loader2, ChevronUp, ChevronDown, Archive, LogOut, KeyRound } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 
 export type UserRow = {
   id: string;
@@ -110,8 +110,11 @@ export function UsersTable({ users }: { users: UserRow[] }) {
   const [page, setPage] = useState(1);
   const [pendingArchiveUser, setPendingArchiveUser] = useState<UserRow | null>(null);
   const [pendingSuspendUser, setPendingSuspendUser] = useState<UserRow | null>(null);
+  const [pendingRevokeUser, setPendingRevokeUser] = useState<UserRow | null>(null);
+  const [pendingResetUser, setPendingResetUser] = useState<UserRow | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -210,6 +213,28 @@ export function UsersTable({ users }: { users: UserRow[] }) {
     }
   }
 
+  // D21 : outils de support. Même appel pour les deux, seuls la route et le message changent.
+  async function runSupportAction(user: UserRow, action: 'revoke-sessions' | 'reset-password') {
+    setLoadingId(user.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/${action}`, { method: 'POST' });
+      if (!res.ok) throw new Error('request_failed');
+      setNotice(
+        action === 'revoke-sessions'
+          ? `Sessions de « ${user.name} » révoquées.`
+          : `Lien de réinitialisation demandé pour « ${user.name} » (${user.email}).`,
+      );
+    } catch {
+      setError('Une erreur est survenue. Réessayez.');
+    } finally {
+      setLoadingId(null);
+      setPendingRevokeUser(null);
+      setPendingResetUser(null);
+    }
+  }
+
   async function restoreUser(id: string) {
     setLoadingId(id);
     setError(null);
@@ -269,6 +294,11 @@ export function UsersTable({ users }: { users: UserRow[] }) {
       </div>
 
       {error && <p className="px-5 pt-3 text-sm text-destructive">{error}</p>}
+      {notice && (
+        <p role="status" className="px-5 pt-3 text-sm text-secondary">
+          {notice}
+        </p>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
@@ -385,6 +415,26 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                       )}
                       <button
                         type="button"
+                        onClick={() => setPendingRevokeUser(u)}
+                        disabled={loadingId === u.id}
+                        title="Révoquer les sessions"
+                        aria-label={`Révoquer les sessions de ${u.name}`}
+                        className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingResetUser(u)}
+                        disabled={loadingId === u.id}
+                        title="Envoyer un lien de réinitialisation"
+                        aria-label={`Envoyer un lien de réinitialisation à ${u.name}`}
+                        className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setPendingArchiveUser(u)}
                         disabled={loadingId === u.id}
                         title="Archiver"
@@ -444,6 +494,28 @@ export function UsersTable({ users }: { users: UserRow[] }) {
           loading={loadingId === pendingSuspendUser.id}
           onCancel={() => setPendingSuspendUser(null)}
           onConfirm={() => updateStatus(pendingSuspendUser.id, 'suspendu')}
+        />
+      )}
+
+      {pendingRevokeUser && (
+        <ConfirmDialog
+          title="Révoquer les sessions ?"
+          description={`« ${pendingRevokeUser.name} » sera déconnecté de tous ses appareils. Il pourra se reconnecter normalement.`}
+          confirmLabel="Révoquer"
+          loading={loadingId === pendingRevokeUser.id}
+          onCancel={() => setPendingRevokeUser(null)}
+          onConfirm={() => runSupportAction(pendingRevokeUser, 'revoke-sessions')}
+        />
+      )}
+
+      {pendingResetUser && (
+        <ConfirmDialog
+          title="Envoyer un lien de réinitialisation ?"
+          description={`Un email avec un lien valable 1 heure sera envoyé à ${pendingResetUser.email}. Vous ne voyez et ne définissez jamais son mot de passe.`}
+          confirmLabel="Envoyer"
+          loading={loadingId === pendingResetUser.id}
+          onCancel={() => setPendingResetUser(null)}
+          onConfirm={() => runSupportAction(pendingResetUser, 'reset-password')}
         />
       )}
 

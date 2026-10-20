@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
-vi.mock('@/lib/auth-client', () => ({
+vi.mock('@/lib/auth/auth-client', () => ({
   signOut: () => signOutMock(),
 }));
 

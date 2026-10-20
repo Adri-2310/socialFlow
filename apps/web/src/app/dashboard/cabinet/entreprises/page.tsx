@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { EntreprisesManager } from '@/components/cabinet/entreprises-manager';
-import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
-import { getGestionnaires } from '@/lib/cabinet-data';
-import { getArchivedEntreprises, getEntreprises } from '@/lib/cabinet-entreprises';
-import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
+import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
+import { getGestionnaires } from '@/lib/cabinet/cabinet-data';
+import { getArchivedEntreprises, getEntreprises } from '@/lib/entreprise/cabinet-entreprises';
+import { getCabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/require-session';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 
 export const metadata: Metadata = {
   title: 'Entreprises',
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function EntreprisesPage() {
-  const { user } = await requireSession({ role: 'CABINET_RH' });
+  const { user } = await requireAuthorized('entreprise.lister');
   // Le cabinetId vient de la session, jamais de l'URL (isolation
   // multi-tenant, FONCTIONNEMENT.md § 4).
   if (!user.cabinetId) redirect('/dashboard');

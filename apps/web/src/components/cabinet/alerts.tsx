@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AlertOctagon, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
-import type { AlertLevel, CabinetAlert } from '@/lib/cabinet-alerts';
+import type { AlertLevel, CabinetAlert } from '@/lib/cabinet/cabinet-alerts';
 
 const STYLES: Record<AlertLevel, { icon: typeof Info; tone: string; ring: string }> = {
   danger: {

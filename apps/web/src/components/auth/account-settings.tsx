@@ -14,8 +14,8 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
+import { authClient } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
 
 type Field = 'name' | 'email' | 'password' | null;
 
