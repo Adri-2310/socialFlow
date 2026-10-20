@@ -75,3 +75,42 @@
 - Une règle métier écrite à deux endroits (aperçu de l'invitation, acceptation) finit par diverger : elle vit désormais dans une seule fonction.
 
 **Reste à faire** : PDF à la marque, compteurs de fiches par entreprise, blocage du numéro d'entreprise dès qu'une fiche existe, échéances ONSS, modèles d'emails des fiches, white-label Enterprise ; fusion de la branche vers `dev`. Puis le rôle Gestionnaire RH.
+
+---
+
+## 2026-10-20 — Correctifs d'audit : autorisations centralisées, CI et réorganisation du code
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
+
+**Objectif** : corriger les points relevés à l'audit du code avant d'ouvrir les portails métier : couleurs du thème injectées telles quelles dans une feuille de style, console SuperAdmin accessible sans 2FA, contrôles de rôle écrits à la main dans chaque route et chaque page, premier SuperAdmin sans procédure, aucune intégration continue, dossier `lib/` à plat de 67 fichiers.
+
+**Décisions prises** : D79 (trois bases Neon `dev`, `test`, `production`, pour que les tests ne touchent jamais aux données de développement ni à la production) ; D80 (autorisations centralisées : une seule matrice dans le code, comparée au document, pour qu'aucune route ne contrôle un rôle « à la main »). Appliquent D18 (premier SuperAdmin par script), D20 (2FA obligatoire du SuperAdmin), D21 (outils de support sans jamais voir ni fixer un mot de passe) et D78.
+
+**Réalisé** : branche `feature/correctifs-audit`, une vingtaine de commits en français, regroupés par étape présentée et validée avant d'être codée.
+- Revalidation des couleurs du thème au rendu (défense en profondeur contre l'injection CSS).
+- Routes d'administration sur une garde commune, puis 2FA obligatoire du SuperAdmin pour les routes et les pages.
+- Outils de support du SuperAdmin : révocation des sessions et lien de réinitialisation, avec audit.
+- Script `superadmin:create` : compte créé sans mot de passe, lien de définition envoyé par email, refus si un SuperAdmin existe déjà (sauf `--force`).
+- CI GitHub Actions (`lint`, types, tests sur la branche Neon `test`) ; trois branches Neon ; production initialisée (migrations, 3 plans, SuperAdmin).
+- Autorisations : catalogue de 51 actions comparé à `PERMISSIONS.md`, `authorize` pour 41 gestionnaires de routes, `requireAuthorized` pour 19 pages et layouts (dont une garde propre sur chaque page de la console, qui n'en avait pas), périmètre de données par rôle.
+- `lib/` rangé en 10 dossiers par domaine (63 fichiers déplacés avec `git mv`, historique conservé), tests rangés pareil ; `email.ts` découpé en quatre fichiers et les hooks de `auth.ts` extraits (574 lignes, devenues 197).
+
+**Contrôlé / corrigé par moi**
+- J'ai validé chaque plan avant qu'il soit codé ; les déplacements de fichiers sont dans des commits séparés des changements de logique. ?
+- La matrice des permissions disait que le gestionnaire ne peut pas inviter l'administrateur d'une entreprise, alors que D78 l'autorise à le **remplacer** : j'ai validé l'ajout de lignes distinctes (`entreprise.remplacer-admin` ouverte au gestionnaire, `entreprise.inviter-admin` non) plutôt que de contourner l'écart. ?
+- J'ai validé d'ajouter une garde à chaque page de la console, protégées jusque-là par le seul layout. ?
+- J'ai décidé de ne lancer la suite complète (27 minutes) qu'à la fin du chantier, avec des tests ciblés à chaque commit. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Écrit à la main** : ?
+
+**Tests** : 2203 tests dans 104 fichiers au dernier décompte. Nouveaux : la matrice des permissions (catalogue contre document, toutes les actions pour les cinq rôles), le périmètre de données sur la vraie base (un gestionnaire ne voit que ses entreprises assignées et non archivées, étanchéité entre cabinets), chaque route et chaque page appelle l'action prévue, le script du premier SuperAdmin, la 2FA du SuperAdmin. Des mutations volontaires (une mauvaise action, une garde retirée) vérifient que ces tests échouent bien. **Suite complète finale : à renseigner après le dernier lancement.**
+
+**Difficultés et apprentissages**
+- Les tests partagent une seule base Neon : deux lancements en parallèle font échouer l'un des deux, parce que le nettoyage de fin supprime les comptes de test de l'autre. J'ai fait cette erreur pendant le chantier ; la règle est désormais de ne lancer qu'une suite à la fois.
+- Une branche Neon « schéma seul » n'a pas l'historique des migrations : il faut vider son schéma une fois avant que `prisma migrate deploy` fonctionne.
+- Un `vi.mock` dont le chemin n'est plus à jour ne provoque aucune erreur de compilation : un script a contrôlé que chacune des 691 chaînes `@/lib/…` pointe vers un fichier existant avant la réorganisation de `lib/`.
+- Une attribution erronée d'une constante entre deux hooks a été attrapée immédiatement par le compilateur ; l'extraction a été refaite depuis Git.
+- Un script lancé sous Windows plantait à la sortie (`process.exit` pendant que les sockets se ferment) : corrigé.
+
+**Reste à faire** : lancer la suite complète une dernière fois, vérifier à la main les redirections des trois espaces et de `/profil`, pousser `dev` (premier lancement de la CI), vider le schéma de la branche `test`, puis ouvrir Gestionnaire RH (1). Dettes et idées : voir `AMELIORATIONS.md`.
