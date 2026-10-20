@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
-import { auth } from '@/lib/auth';
-import { cabinetMetadata } from '@/lib/cabinet-metadata';
-import { requireAuthorized } from '@/lib/authz-page';
+import { auth } from '@/lib/auth/auth';
+import { cabinetMetadata } from '@/lib/cabinet/cabinet-metadata';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { prisma } from '@/lib/prisma';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { buildThemeCss } from '@/lib/branding-rules';
-import { ensureCabinetSlug, portalPath } from '@/lib/cabinet-portal';
+import { buildThemeCss } from '@/lib/branding/branding-rules';
+import { ensureCabinetSlug, portalPath } from '@/lib/portal/cabinet-portal';
 
 const CABINET_BRAND_SELECT = {
   displayName: true,

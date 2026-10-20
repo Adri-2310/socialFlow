@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {

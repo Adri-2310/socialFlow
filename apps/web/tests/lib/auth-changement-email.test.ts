@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, makeEmailVerificationJWT, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -17,15 +17,15 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const email = await import('@/lib/email');
+const email = await import('@/lib/email/email');
 
 const PASSWORD = 'InitialPass123!';
 
 afterAll(async () => {
   // Supprime les cabinets auto-crees a l'inscription avant les users (voir
-  // meme commentaire dans tests/lib/auth.test.ts).
+  // meme commentaire dans tests/lib/auth/auth.test.ts).
   const testUsers = await prisma.user.findMany({
     where: { email: { startsWith: TEST_EMAIL_PREFIX } },
     select: { cabinetId: true },
@@ -46,7 +46,7 @@ async function creerCompteVerifie(label: string) {
   const cj = cookieJar();
   cj.apply(await auth.api.signUpEmail({ body: { name: 'X', email: mail, password: PASSWORD }, asResponse: true }));
   // On marque l'email comme verifie directement en base : le parcours de
-  // verification lui-meme est deja couvert par tests/lib/auth.test.ts.
+  // verification lui-meme est deja couvert par tests/lib/auth/auth.test.ts.
   await prisma.user.update({ where: { email: mail }, data: { emailVerified: true } });
   return { mail, cj };
 }

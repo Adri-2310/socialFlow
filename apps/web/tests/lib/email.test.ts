@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 
-// Contrairement aux autres fichiers de tests (qui mockent '@/lib/email' pour
+// Contrairement aux autres fichiers de tests (qui mockent '@/lib/email/email' pour
 // tester auth.ts sans toucher au reseau), ce fichier teste directement les
 // fonctions d'envoi elles-memes : on mocke seulement le SDK Resend pour
 // intercepter le HTML genere sans l'envoyer reellement, et verifier
@@ -14,7 +14,7 @@ vi.mock('resend', () => ({
   },
 }));
 
-const { sendAccountDeletedEmail, sendDeleteAccountVerificationEmail } = await import('@/lib/email');
+const { sendAccountDeletedEmail, sendDeleteAccountVerificationEmail } = await import('@/lib/email/email');
 
 const NOM_MALVEILLANT = '<img src=x onerror=alert(1)>';
 const NOM_ECHAPPE = '&lt;img src=x onerror=alert(1)&gt;';

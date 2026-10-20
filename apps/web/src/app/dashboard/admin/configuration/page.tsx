@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { requireAuthorized } from '@/lib/authz-page';
-import { getPricingPlansConfig, getStripeStatus } from '@/lib/admin-data';
+import { requireAuthorized } from '@/lib/authz/authz-page';
+import { getPricingPlansConfig, getStripeStatus } from '@/lib/admin/admin-data';
 import { PlansConfig } from '@/components/admin/plans-config';
 import { StripeStatusPanel } from '@/components/admin/stripe-status-panel';
 

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { getCustomTemplate } from '@/lib/cabinet-email-templates';
-import { sendGestionnaireInvitationEmail } from '@/lib/email';
-import { sendEntrepriseAdminInvitation } from '@/lib/entreprise-admin';
-import { ensureCabinetSlug, portalUrl } from '@/lib/cabinet-portal';
-import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { getCustomTemplate } from '@/lib/email/cabinet-email-templates';
+import { sendGestionnaireInvitationEmail } from '@/lib/email/email';
+import { sendEntrepriseAdminInvitation } from '@/lib/entreprise/entreprise-admin';
+import { ensureCabinetSlug, portalUrl } from '@/lib/portal/cabinet-portal';
+import { createInvitationToken, invitationExpiry, invitationUrl } from '@/lib/invitations/invitations';
 
 // Renvoie une invitation non acceptee (roles/02-cabinet-rh.md § 4.2) : nouveau
 // jeton et nouvelle date d'expiration ; l'ancien lien cesse de fonctionner

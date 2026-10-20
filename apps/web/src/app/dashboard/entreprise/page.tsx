@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Building2 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import { requireAuthorized } from '@/lib/authz-page';
-import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
+import { requireAuthorized } from '@/lib/authz/authz-page';
+import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 
 export const metadata: Metadata = {
   title: 'Accueil',

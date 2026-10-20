@@ -5,10 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // prévue par la matrice (doc/PERMISSIONS.md), en tout premier, avant de toucher
 // aux données. Session simulée, aucune base : la garde redirige avant tout accès.
 const getSession = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
-vi.mock('@/lib/stripe', () => ({ stripe: {} }));
-vi.mock('@/lib/email', () => ({}));
+vi.mock('@/lib/billing/stripe', () => ({ stripe: {} }));
+vi.mock('@/lib/email/email', () => ({}));
 
 // `redirect()` de next/navigation ne peut pas s'exécuter hors d'un rendu Next.js
 // réel : on la remplace par une erreur ordinaire portant l'URL.
@@ -17,12 +17,12 @@ const redirectMock = vi.fn((url: string) => {
 });
 vi.mock('next/navigation', () => ({ redirect: redirectMock }));
 vi.mock('next/headers', () => ({ headers: async () => new Headers() }));
-vi.mock('@/lib/authz-page', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/authz-page')>();
+vi.mock('@/lib/authz/authz-page', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authz-page')>();
   return { ...actual, requireAuthorized: vi.fn(actual.requireAuthorized) };
 });
 
-const { requireAuthorized } = await import('@/lib/authz-page');
+const { requireAuthorized } = await import('@/lib/authz/authz-page');
 
 type Page = (props: Record<string, unknown>) => Promise<unknown>;
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize, levelFor } from '@/lib/authz';
-import { inviteEntrepriseAdmin, sendEntrepriseAdminInvitation } from '@/lib/entreprise-admin';
+import { authorize, levelFor } from '@/lib/authz/authz';
+import { inviteEntrepriseAdmin, sendEntrepriseAdminInvitation } from '@/lib/entreprise/entreprise-admin';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

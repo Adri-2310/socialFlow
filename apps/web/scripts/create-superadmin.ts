@@ -26,7 +26,7 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  const { createSuperAdmin, BootstrapError } = await import('../src/lib/superadmin-bootstrap');
+  const { createSuperAdmin, BootstrapError } = await import('../src/lib/auth/superadmin-bootstrap');
   const { prisma } = await import('../src/lib/prisma');
 
   // Évite de viser la mauvaise base (développement ou production) sans le voir.

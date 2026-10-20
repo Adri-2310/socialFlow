@@ -47,7 +47,7 @@ function base32Decode(input: string): Buffer {
  * Signe le meme JWT (HS256) que `createEmailVerificationToken` cote
  * better-auth, pour simuler un clic sur le lien recu par email sans
  * dependre de l'envoi reel (mocke) ni d'un stockage en base - ce token est
- * sans etat (voir apps/web/src/lib/auth.ts).
+ * sans etat (voir apps/web/src/lib/auth/auth.ts).
  */
 export async function makeEmailVerificationJWT(
   email: string,

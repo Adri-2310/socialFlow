@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { cancelPlanChange } from '@/lib/plan-change';
+import { authorize } from '@/lib/authz/authz';
+import { cancelPlanChange } from '@/lib/billing/plan-change';
 
 // Annule le changement de plan programme (D60) : l'abonnement continue tel
 // quel. Reserve au Cabinet RH, pour son cabinet.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pendingPlanQuotaMessage, quotaAwareMessage } from '@/lib/quota-messages';
+import { pendingPlanQuotaMessage, quotaAwareMessage } from '@/lib/billing/quota-messages';
 
 const MESSAGES = { QUOTA_EXCEEDED: 'Quota atteint : passez à un plan supérieur.', FORBIDDEN: 'Interdit.' };
 

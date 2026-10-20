@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildCabinetAlerts, type CabinetAlertsInput } from '@/lib/cabinet-alerts';
+import { buildCabinetAlerts, type CabinetAlertsInput } from '@/lib/cabinet/cabinet-alerts';
 import type {
   ArchivedGestionnaireRow,
   GestionnaireRow,
   InvitationRow,
-} from '@/lib/cabinet-data';
-import type { CabinetQuotaUsage } from '@/lib/cabinet-quotas';
+} from '@/lib/cabinet/cabinet-data';
+import type { CabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
 
 const now = new Date('2026-10-13T12:00:00Z');
 const day = 24 * 60 * 60 * 1000;

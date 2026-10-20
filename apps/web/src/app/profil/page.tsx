@@ -5,12 +5,12 @@ import { AccountSettings } from '@/components/auth/account-settings';
 import { DeleteAccount } from '@/components/auth/delete-account';
 import { InviteGestionnaire } from '@/components/dashboard/invite-gestionnaire';
 import { AppHeader } from '@/components/layout/app-header';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { roleDisplayLabel } from '@/lib/role-labels';
 import { prisma } from '@/lib/prisma';
-import { isSubscriptionBlockingDeletion } from '@/lib/account-deletion-guard';
-import { getCabinetClientBrand } from '@/lib/cabinet-client-brand';
-import { auth } from '@/lib/auth';
+import { isSubscriptionBlockingDeletion } from '@/lib/auth/account-deletion-guard';
+import { getCabinetClientBrand } from '@/lib/branding/cabinet-client-brand';
+import { auth } from '@/lib/auth/auth';
 import { headers } from 'next/headers';
 
 const BILLING_LABELS: Record<string, string> = {

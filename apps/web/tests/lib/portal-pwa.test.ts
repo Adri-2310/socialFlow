@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
-import { brandInitial, buildPortalManifest, parseIconSize, safeColor } from '@/lib/portal-pwa';
+import { brandInitial, buildPortalManifest, parseIconSize, safeColor } from '@/lib/portal/portal-pwa';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -63,9 +63,9 @@ describe('regles de l application installable (D77)', () => {
   });
 });
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const { ensureCabinetSlug } = await import('@/lib/cabinet-portal');
+const { ensureCabinetSlug } = await import('@/lib/portal/cabinet-portal');
 const { GET: getManifest } = await import('@/app/(auth)/connexion/[slug]/manifest.webmanifest/route');
 const { GET: getIcon } = await import('@/app/(auth)/connexion/[slug]/icone/[taille]/route');
 

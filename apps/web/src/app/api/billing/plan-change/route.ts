@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { authorize } from '@/lib/authz';
-import { schedulePlanChange } from '@/lib/plan-change';
+import { authorize } from '@/lib/authz/authz';
+import { schedulePlanChange } from '@/lib/billing/plan-change';
 
 // Programme un changement de plan ou de periodicite en fin de periode (D60).
 // Reserve au Cabinet RH, pour son cabinet (cabinetId de la session). Le plan

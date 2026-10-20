@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { UsersTable } from '@/components/admin/users-table';
-import { getUsers } from '@/lib/admin-data';
+import { getUsers } from '@/lib/admin/admin-data';
 
 export const metadata: Metadata = {
   title: 'Utilisateurs — Console SuperAdmin',

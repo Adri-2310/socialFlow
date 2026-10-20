@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
 
 // Revoque une invitation du cabinet (roles/02-cabinet-rh.md § 4.2) : le lien

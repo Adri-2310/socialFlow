@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { QuotaUsage } from '@/components/cabinet/quota-usage';
 import { SubscriptionDetails, type CardFlash } from '@/components/cabinet/subscription-details';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
-import { getCabinetSubscriptionDetails } from '@/lib/cabinet-billing';
-import { confirmCardUpdate, getBillingExtras } from '@/lib/cabinet-subscription';
-import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
-import { getPlanChangeOptions } from '@/lib/plan-change';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
+import { getCabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
+import { confirmCardUpdate, getBillingExtras } from '@/lib/billing/cabinet-subscription';
+import { getCabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
+import { getPlanChangeOptions } from '@/lib/billing/plan-change';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 
 export const metadata: Metadata = {
   title: 'Mon abonnement',

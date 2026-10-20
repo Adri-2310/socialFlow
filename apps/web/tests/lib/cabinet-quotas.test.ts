@@ -9,7 +9,7 @@ import {
   quotaPercent,
   reserveQuotas,
   stricterLimit,
-} from '@/lib/cabinet-quotas';
+} from '@/lib/billing/cabinet-quotas';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 const stamp = Date.now();

@@ -4,7 +4,7 @@ import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type { CountryOption } from '@/lib/countries';
-import type { CabinetIdentity } from '@/lib/cabinet-identity';
+import type { CabinetIdentity } from '@/lib/cabinet/cabinet-identity';
 
 const FIELD_ERRORS: Record<string, string> = {
   NAME_REQUIRED: 'La raison sociale est obligatoire (2 caractères minimum).',

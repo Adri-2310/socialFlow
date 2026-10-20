@@ -1,5 +1,5 @@
 import { AlertOctagon, AlertTriangle, Lock } from 'lucide-react';
-import type { BillingStatus } from '@/lib/billing';
+import type { BillingStatus } from '@/lib/billing/billing';
 import Link from 'next/link';
 
 type Props = {

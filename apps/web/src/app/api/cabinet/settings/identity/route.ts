@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { identitySchema, updateCabinetIdentity } from '@/lib/cabinet-identity';
+import { authorize } from '@/lib/authz/authz';
+import { identitySchema, updateCabinetIdentity } from '@/lib/cabinet/cabinet-identity';
 
 // Identite du cabinet (D30) : raison sociale, TVA, adresse, contact. Reserve
 // au Cabinet RH, pour son cabinet (cabinetId de la session). Ecriture : refusee

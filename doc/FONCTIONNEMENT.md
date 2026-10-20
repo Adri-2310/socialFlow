@@ -44,8 +44,8 @@ flowchart LR
 
 | Couche | Emplacement | Règle |
 |---|---|---|
-| Pages (Server Components) | `apps/web/src/app/**/page.tsx` | Protégées par `requireAuthorized('<action>')` (`lib/authz-page.ts`), layout et chaque page |
-| API (Route Handlers) | `apps/web/src/app/api/**/route.ts` | `authorize` (`lib/authz.ts`) : session (401) → rôle selon la matrice (403) → lecture seule (423) et 2FA du SuperAdmin ; puis périmètre (404) → validation Zod (400) → action → audit |
+| Pages (Server Components) | `apps/web/src/app/**/page.tsx` | Protégées par `requireAuthorized('<action>')` (`lib/authz/authz-page.ts`), layout et chaque page |
+| API (Route Handlers) | `apps/web/src/app/api/**/route.ts` | `authorize` (`lib/authz/authz.ts`) : session (401) → rôle selon la matrice (403) → lecture seule (423) et 2FA du SuperAdmin ; puis périmètre (404) → validation Zod (400) → action → audit |
 | Accès aux données | `apps/web/src/lib/*-data.ts` | Toujours un paramètre de périmètre (`cabinetId`, liste d'entreprises, `collaborateurId`) |
 | Métier pur | `apps/web/src/lib/payroll/` | Fonctions pures testées, sans accès base |
 | Intégrations | `apps/web/src/lib/integrations/` | Derrière une interface, avec une version simulée et une version réelle |
@@ -66,7 +66,7 @@ Collaborateur: WHERE collaborateurId = dossier de l'utilisateur
 ```
 
 Règles :
-- Le client n'envoie **jamais** `cabinetId`, `role` ou `entrepriseId` d'autorité : le serveur les déduit de la session. Le périmètre est calculé par `resolveScope` (`lib/authz.ts`) à chaque requête.
+- Le client n'envoie **jamais** `cabinetId`, `role` ou `entrepriseId` d'autorité : le serveur les déduit de la session. Le périmètre est calculé par `resolveScope` (`lib/authz/authz.ts`) à chaque requête.
 - Ressource hors périmètre → **404** (on ne révèle pas son existence).
 - Toute nouvelle route arrive avec un **test d'intégration d'isolation** : un utilisateur du cabinet A n'accède à rien du cabinet B, un gestionnaire à rien d'une entreprise non assignée.
 - Données sensibles (NISS, IBAN) **chiffrées en base**, masquées à l'affichage, et chaque dévoilement est journalisé.
@@ -246,7 +246,7 @@ Tout email part par Resend (pas de SMTP de cabinet, D30) ; pour les emails « au
 | Vérification des nouveaux barèmes officiels | Hebdomadaire | 🆕 |
 | Expiration des invitations et des liens de fiche | Quotidienne | 🆕 |
 
-Toutes **idempotentes** (rejouables sans effet double) et protégées par `CRON_SECRET`. L'autorisation passe par un seul module, `lib/cron-auth.ts` (`isCronAuthorized`) : un `CRON_SECRET` **absent ou vide refuse tout appel** (sinon « Bearer undefined » passerait) et la comparaison se fait en **temps constant**. Corrigé le 19/10 pour les trois premières routes, qui comparaient directement l'en-tête.
+Toutes **idempotentes** (rejouables sans effet double) et protégées par `CRON_SECRET`. L'autorisation passe par un seul module, `lib/authz/cron-auth.ts` (`isCronAuthorized`) : un `CRON_SECRET` **absent ou vide refuse tout appel** (sinon « Bearer undefined » passerait) et la comparaison se fait en **temps constant**. Corrigé le 19/10 pour les trois premières routes, qui comparaient directement l'en-tête.
 
 ## 12. Conservation des données
 

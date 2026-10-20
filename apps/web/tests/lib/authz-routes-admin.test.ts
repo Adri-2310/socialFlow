@@ -6,16 +6,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // simulée, aucune base : seuls les refus d'accès sont éprouvés ici ; les effets
 // des routes sont couverts par rbac-admin-*.test.ts.
 const getSession = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
-vi.mock('@/lib/stripe', () => ({ stripe: {} }));
-vi.mock('@/lib/email', () => ({}));
-vi.mock('@/lib/authz', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/authz')>();
+vi.mock('@/lib/billing/stripe', () => ({ stripe: {} }));
+vi.mock('@/lib/email/email', () => ({}));
+vi.mock('@/lib/authz/authz', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authz')>();
   return { ...actual, authorize: vi.fn(actual.authorize) };
 });
 
-const { authorize, ROLES } = await import('@/lib/authz');
+const { authorize, ROLES } = await import('@/lib/authz/authz');
 const cabinets = await import('@/app/api/admin/cabinets/[id]/route');
 const plans = await import('@/app/api/admin/plans/route');
 const plansById = await import('@/app/api/admin/plans/[id]/route');

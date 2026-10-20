@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { CabinetAuditLog } from '@/components/cabinet/audit-log';
-import { requireAuthorized } from '@/lib/authz-page';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
+import { requireAuthorized } from '@/lib/authz/authz-page';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
 import {
   getCabinetAuditLog,
   getCabinetAuditUsers,
   type CabinetAuditFilters,
-} from '@/lib/cabinet-audit';
+} from '@/lib/cabinet/cabinet-audit';
 
 export const metadata: Metadata = {
   title: "Journal d'audit",

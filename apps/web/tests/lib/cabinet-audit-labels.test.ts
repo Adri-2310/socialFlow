@@ -4,7 +4,7 @@ import {
   describeAuditEntry,
   isCabinetAuditAction,
   parseBrusselsDayStart,
-} from '@/lib/cabinet-audit-labels';
+} from '@/lib/cabinet/cabinet-audit-labels';
 
 const empty = { targetName: null, email: null, previousEmail: null, newEmail: null };
 

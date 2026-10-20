@@ -9,7 +9,7 @@ vi.mock('resend', () => ({
 }));
 
 const { prisma } = await import('@/lib/prisma');
-const email = await import('@/lib/email');
+const email = await import('@/lib/email/email');
 
 const stamp = Date.now();
 const CABINET = {

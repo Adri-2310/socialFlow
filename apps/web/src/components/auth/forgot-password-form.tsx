@@ -3,9 +3,9 @@
 import { useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Mail, MailCheck } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
-import { translateAuthError } from '@/lib/auth-errors';
-import { portalPath } from '@/lib/portal-slug';
+import { authClient } from '@/lib/auth/auth-client';
+import { translateAuthError } from '@/lib/auth/auth-errors';
+import { portalPath } from '@/lib/portal/portal-slug';
 
 // `portal` (D76, D77) : demande faite depuis le portail d'un cabinet - le lien de l'email ramene
 // sur une page de CE portail, et « Retour » y retourne, sans page SocialFlow.

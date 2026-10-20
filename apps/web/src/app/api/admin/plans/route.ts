@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { stripe } from '@/lib/stripe';
-import { stripeUnitAmountCents } from '@/lib/billing';
+import { stripe } from '@/lib/billing/stripe';
+import { stripeUnitAmountCents } from '@/lib/billing/billing';
 
 type PlanCreateBody = {
   planId: string;
@@ -24,7 +24,7 @@ const isQuota = (v: unknown) =>
   v === undefined || v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0);
 
 // Minuscules/chiffres/tirets uniquement : sert de metadata Stripe et
-// d'identifiant stable dans le code (voir PlanId dans lib/plans.ts).
+// d'identifiant stable dans le code (voir PlanId dans lib/billing/plans.ts).
 const PLAN_ID_PATTERN = /^[a-z0-9-]+$/;
 
 function parseBody(body: unknown): PlanCreateBody | null {

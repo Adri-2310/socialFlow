@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -17,12 +17,12 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { PATCH: patchCabinet, DELETE: deleteCabinet, PUT: restoreCabinet } = await import(
   '@/app/api/admin/cabinets/[id]/route'
 );
-const { CABINET_DELETION_RETENTION_DAYS } = await import('@/lib/cabinet-retention');
+const { CABINET_DELETION_RETENTION_DAYS } = await import('@/lib/cabinet/cabinet-retention');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { CabinetsTable } from '@/components/admin/cabinets-table';
-import { getCabinets } from '@/lib/admin-data';
+import { getCabinets } from '@/lib/admin/admin-data';
 
 export const metadata: Metadata = {
   title: 'Cabinets — Console SuperAdmin',

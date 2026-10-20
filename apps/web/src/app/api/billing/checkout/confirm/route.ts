@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { confirmCheckoutSession } from '@/lib/stripe-checkout';
+import { authorize } from '@/lib/authz/authz';
+import { confirmCheckoutSession } from '@/lib/billing/stripe-checkout';
 
-// Confirme un Checkout au retour du client (voir lib/stripe-checkout.ts) :
+// Confirme un Checkout au retour du client (voir lib/billing/stripe-checkout.ts) :
 // applique l'abonnement au cabinet sans attendre le webhook. Idempotent.
 const STATUS: Record<string, number> = {
   SESSION_NOT_FOUND: 404,

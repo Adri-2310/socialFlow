@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -28,7 +28,7 @@ const customersRetrieve = vi.fn();
 const customersUpdate = vi.fn();
 const invoicesList = vi.fn();
 const invoicesPay = vi.fn();
-vi.mock('@/lib/stripe', () => ({
+vi.mock('@/lib/billing/stripe', () => ({
   stripe: {
     subscriptions: { list: subsList, update: subsUpdate },
     checkout: { sessions: { create: sessionsCreate, retrieve: sessionsRetrieve } },
@@ -37,7 +37,7 @@ vi.mock('@/lib/stripe', () => ({
   },
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const {
   scheduleCancellation,
@@ -45,7 +45,7 @@ const {
   createCardUpdateSession,
   confirmCardUpdate,
   getBillingExtras,
-} = await import('@/lib/cabinet-subscription');
+} = await import('@/lib/billing/cabinet-subscription');
 const { POST: cardRoute } = await import('@/app/api/billing/card/route');
 const { POST: cancelRoute } = await import('@/app/api/billing/subscription/cancel/route');
 const { POST: resumeRoute } = await import('@/app/api/billing/subscription/resume/route');

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import {
   archiveEntreprise,
   entrepriseSchema,
   restoreEntreprise,
   updateEntreprise,
-} from '@/lib/cabinet-entreprises';
-import { entrepriseErrorResponse, invalidRequestResponse } from '@/lib/entreprise-http';
+} from '@/lib/entreprise/cabinet-entreprises';
+import { entrepriseErrorResponse, invalidRequestResponse } from '@/lib/entreprise/entreprise-http';
 
 // Gestion d'une entreprise cliente par le Cabinet RH (D4, § 4.3). Le perimetre
 // est pose dans la requete elle-meme (id + cabinetId de la session) : une

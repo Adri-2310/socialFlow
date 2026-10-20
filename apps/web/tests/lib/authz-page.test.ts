@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const getSession = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 
 // `redirect()` de next/navigation ne peut pas s'exécuter hors d'un rendu Next.js
@@ -14,8 +14,8 @@ const redirectMock = vi.fn((url: string) => {
 vi.mock('next/navigation', () => ({ redirect: redirectMock }));
 vi.mock('next/headers', () => ({ headers: async () => new Headers() }));
 
-const { ACTIONS, ROLES } = await import('@/lib/authz');
-const { requireAuthorized } = await import('@/lib/authz-page');
+const { ACTIONS, ROLES } = await import('@/lib/authz/authz');
+const { requireAuthorized } = await import('@/lib/authz/authz-page');
 type ActionId = keyof typeof ACTIONS;
 
 const ACTION_IDS = Object.keys(ACTIONS) as ActionId[];

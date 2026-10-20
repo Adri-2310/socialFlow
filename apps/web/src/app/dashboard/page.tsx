@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
-import { requireSession } from '@/lib/require-session';
+import { requireSession } from '@/lib/auth/require-session';
 import { roleDisplayLabel } from '@/lib/role-labels';
-import { getCabinetClientBrand } from '@/lib/cabinet-client-brand';
-import { auth } from '@/lib/auth';
+import { getCabinetClientBrand } from '@/lib/branding/cabinet-client-brand';
+import { auth } from '@/lib/auth/auth';
 import { headers } from 'next/headers';
 
 const DEFAULT_METADATA: Metadata = {

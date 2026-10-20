@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { EntreprisesManager } from '@/components/cabinet/entreprises-manager';
-import { isCabinetReadOnly } from '@/lib/cabinet-suspension';
-import { requirePaidCabinet } from '@/lib/cabinet-access';
-import { getGestionnaires } from '@/lib/cabinet-data';
-import { getArchivedEntreprises, getEntreprises } from '@/lib/cabinet-entreprises';
-import { getCabinetQuotaUsage } from '@/lib/cabinet-quotas';
+import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
+import { requirePaidCabinet } from '@/lib/cabinet/cabinet-access';
+import { getGestionnaires } from '@/lib/cabinet/cabinet-data';
+import { getArchivedEntreprises, getEntreprises } from '@/lib/entreprise/cabinet-entreprises';
+import { getCabinetQuotaUsage } from '@/lib/billing/cabinet-quotas';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 
 export const metadata: Metadata = {
   title: 'Entreprises',

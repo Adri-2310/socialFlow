@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { updateCabinetSlug } from '@/lib/cabinet-portal';
+import { authorize } from '@/lib/authz/authz';
+import { updateCabinetSlug } from '@/lib/portal/cabinet-portal';
 
 // Identifiant du portail de connexion du cabinet (D76), reserve au Cabinet RH
 // pour son cabinet (cabinetId de la session). Ecriture : refusee en lecture seule

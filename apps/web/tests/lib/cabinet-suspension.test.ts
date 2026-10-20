@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isCabinetReadOnly, isLoginBlocked, suspensionTypeOf } from '@/lib/cabinet-suspension';
+import { isCabinetReadOnly, isLoginBlocked, suspensionTypeOf } from '@/lib/cabinet/cabinet-suspension';
 
 describe('suspensionTypeOf (D71)', () => {
   it('ne signale rien pour un cabinet actif, meme avec un type residuel', () => {

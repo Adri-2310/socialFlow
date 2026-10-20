@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -30,7 +30,7 @@ const pricesCreate = vi.fn();
 const pricesUpdate = vi.fn();
 const productsList = vi.fn();
 const productsCreate = vi.fn();
-vi.mock('@/lib/stripe', () => ({
+vi.mock('@/lib/billing/stripe', () => ({
   stripe: {
     subscriptions: { list: subsList },
     subscriptionSchedules: {
@@ -44,7 +44,7 @@ vi.mock('@/lib/stripe', () => ({
   },
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const {
   quotaBlockers,
@@ -52,7 +52,7 @@ const {
   schedulePlanChange,
   cancelPlanChange,
   getPendingPlanChange,
-} = await import('@/lib/plan-change');
+} = await import('@/lib/billing/plan-change');
 const { POST: changeRoute } = await import('@/app/api/billing/plan-change/route');
 const { POST: cancelRoute } = await import('@/app/api/billing/plan-change/cancel/route');
 

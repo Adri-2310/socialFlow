@@ -4,7 +4,7 @@ import {
   quotaPercent,
   isQuotaReached,
   type CabinetQuotaUsage,
-} from '@/lib/cabinet-quotas';
+} from '@/lib/billing/cabinet-quotas';
 
 function QuotaRow({
   icon: Icon,

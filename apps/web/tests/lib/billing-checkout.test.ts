@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -28,7 +28,7 @@ const productsCreate = vi.fn();
 const customersCreate = vi.fn();
 const sessionsCreate = vi.fn();
 const sessionsRetrieve = vi.fn();
-vi.mock('@/lib/stripe', () => ({
+vi.mock('@/lib/billing/stripe', () => ({
   stripe: {
     prices: { list: pricesList, create: pricesCreate, update: pricesUpdate },
     products: { list: productsList, create: productsCreate },
@@ -37,10 +37,10 @@ vi.mock('@/lib/stripe', () => ({
   },
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { createCheckoutSession, confirmCheckoutSession, getCheckoutSummary } = await import(
-  '@/lib/stripe-checkout'
+  '@/lib/billing/stripe-checkout'
 );
 const { POST: checkoutRoute } = await import('@/app/api/billing/checkout/route');
 const { POST: confirmRoute } = await import('@/app/api/billing/checkout/confirm/route');

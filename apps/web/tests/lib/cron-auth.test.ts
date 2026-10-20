@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { isCronAuthorized } from '@/lib/cron-auth';
+import { isCronAuthorized } from '@/lib/authz/cron-auth';
 
 const request = (authorization?: string) =>
   new Request('http://localhost:3000/api/cron/x', {

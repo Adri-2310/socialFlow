@@ -15,7 +15,7 @@
 
 1. **Moteur de paie** : les cas de référence de `modules/paie.md` § 6, au centime près. Aucun barème activé si un cas échoue.
 2. **Isolation multi-tenant** : pour chaque route, un utilisateur d'un autre cabinet, un gestionnaire non assigné, une autre entreprise ou un autre collaborateur obtient `404` ; voir `PERMISSIONS.md`. Couvert aujourd'hui par `authz-scope.test.ts` (périmètres sur la vraie base), `authz-routes-*.test.ts` et les `rbac-*.test.ts` ; à étendre à chaque nouvelle route.
-3. **Matrice des permissions** : test paramétré sur toutes les cases ✅ (`authz.test.ts` compare le catalogue de `lib/authz.ts` à `PERMISSIONS.md` et passe `authorize` sur les 51 actions × 5 rôles ; `authz-page.test.ts` pour les pages).
+3. **Matrice des permissions** : test paramétré sur toutes les cases ✅ (`authz.test.ts` compare le catalogue de `lib/authz/authz.ts` à `PERMISSIONS.md` et passe `authorize` sur les 51 actions × 5 rôles ; `authz-page.test.ts` pour les pages).
 4. **Machine à états des fiches** : toutes les transitions permises réussissent, toutes les autres renvoient `409 INVALID_TRANSITION` ; une fiche `ENVOYEE` n'est jamais modifiée.
 5. **Idempotence** : webhook Stripe rejoué, cron exécuté deux fois → aucun effet double.
 6. **Intégrations** : contre l'implémentation simulée, y compris les cas de refus et d'anomalie.
@@ -79,5 +79,5 @@ Workflow `.github/workflows/ci.yml` (GitHub Actions), déclenché sur les pull r
 | Zone | Couverture |
 |---|---|
 | `lib/payroll` | 100 % des lignes, 100 % des cas de référence |
-| `lib/authz.ts` et routes d'API | ≥ 90 % |
+| `lib/authz/authz.ts` et routes d'API | ≥ 90 % |
 | Global | ≥ 80 % (objectif du cahier des charges) |

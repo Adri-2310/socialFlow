@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { AuditLogList } from '@/components/admin/audit-log-list';
-import { getAuditLogEntries } from '@/lib/admin-data';
+import { getAuditLogEntries } from '@/lib/admin/admin-data';
 
 export const metadata: Metadata = {
   title: "Journal d'audit — Console SuperAdmin",

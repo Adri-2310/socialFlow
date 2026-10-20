@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { resetEmailTemplate, saveEmailTemplate } from '@/lib/cabinet-email-templates';
-import { isTemplateType, validateTemplate } from '@/lib/email-templates';
+import { authorize } from '@/lib/authz/authz';
+import { resetEmailTemplate, saveEmailTemplate } from '@/lib/email/cabinet-email-templates';
+import { isTemplateType, validateTemplate } from '@/lib/email/email-templates';
 
 // Modele d'email du cabinet (D30, D68) : enregistrement et retour au modele par
 // defaut. Reserve au Cabinet RH, pour son cabinet (cabinetId de la session).

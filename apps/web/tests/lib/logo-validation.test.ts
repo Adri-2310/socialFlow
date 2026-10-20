@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LOGO_MAX_BYTES, isSafeSvg, validateLogo } from '@/lib/logo-validation';
+import { LOGO_MAX_BYTES, isSafeSvg, validateLogo } from '@/lib/branding/logo-validation';
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
 const enc = (text: string) => new TextEncoder().encode(text);

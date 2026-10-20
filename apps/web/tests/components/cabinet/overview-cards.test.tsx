@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { OverviewCards } from '@/components/cabinet/overview-cards';
-import type { CabinetOverview } from '@/lib/cabinet-data';
+import type { CabinetOverview } from '@/lib/cabinet/cabinet-data';
 
 const base: CabinetOverview = {
   cabinetName: 'Cabinet Test',

@@ -3,11 +3,11 @@ import crypto from 'node:crypto';
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, totpCode, makeEmailVerificationJWT, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-// L'appli envoie les emails transactionnels via Resend (voir src/lib/email.ts).
+// L'appli envoie les emails transactionnels via Resend (voir src/lib/email/email.ts).
 // On mocke tout le module : les tests verifient que le bon email est
 // declenche (via ces mocks), sans dependre du reseau, d'une cle API Resend
 // valide, ni consommer le quota d'envoi reel.
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -22,9 +22,9 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const email = await import('@/lib/email');
+const email = await import('@/lib/email/email');
 
 const PASSWORD = 'InitialPass123!';
 

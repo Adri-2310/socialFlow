@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { createCheckoutSession } from '@/lib/stripe-checkout';
+import { authorize } from '@/lib/authz/authz';
+import { createCheckoutSession } from '@/lib/billing/stripe-checkout';
 
 // Demarre le paiement de l'abonnement du cabinet (D25, D32) : renvoie l'URL
 // de la page Checkout de Stripe. Reserve au Cabinet RH, pour son cabinet ;

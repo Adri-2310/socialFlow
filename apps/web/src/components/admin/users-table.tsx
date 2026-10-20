@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Loader2, ChevronUp, ChevronDown, Archive, LogOut, KeyRound } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 
 export type UserRow = {
   id: string;

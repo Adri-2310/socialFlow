@@ -3,7 +3,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Mail, UserPlus } from 'lucide-react';
-import { pendingPlanQuotaMessage, quotaAwareMessage } from '@/lib/quota-messages';
+import { pendingPlanQuotaMessage, quotaAwareMessage } from '@/lib/billing/quota-messages';
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_EMAIL: 'Adresse email invalide.',

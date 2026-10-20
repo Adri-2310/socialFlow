@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }));
 
 const signInEmail = vi.fn();
 const signInSocial = vi.fn();
-vi.mock('@/lib/auth-client', () => ({
+vi.mock('@/lib/auth/auth-client', () => ({
   signIn: {
     email: (...args: unknown[]) => signInEmail(...args),
     social: (...args: unknown[]) => signInSocial(...args),

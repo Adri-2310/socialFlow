@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -23,14 +23,14 @@ const stripePricesCreate = vi.fn().mockResolvedValue({});
 const stripeProductsList = vi.fn();
 const stripeProductsUpdate = vi.fn().mockResolvedValue({});
 const stripeProductsCreate = vi.fn().mockResolvedValue({ id: 'prod_nouveau' });
-vi.mock('@/lib/stripe', () => ({
+vi.mock('@/lib/billing/stripe', () => ({
   stripe: {
     prices: { list: stripePricesList, update: stripePricesUpdate, create: stripePricesCreate },
     products: { list: stripeProductsList, update: stripeProductsUpdate, create: stripeProductsCreate },
   },
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { PATCH: patchPlan, DELETE: archivePlan, PUT: restorePlan } = await import('@/app/api/admin/plans/[id]/route');
 const { POST: createPlan } = await import('@/app/api/admin/plans/route');

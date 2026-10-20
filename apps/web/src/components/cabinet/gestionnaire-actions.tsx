@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Pencil, PauseCircle, PlayCircle, UserMinus } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EditEmailDialog } from '@/components/cabinet/edit-email-dialog';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
-import { GESTIONNAIRE_RESTORE_WINDOW_DAYS } from '@/lib/gestionnaire-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
+import { GESTIONNAIRE_RESTORE_WINDOW_DAYS } from '@/lib/cabinet/gestionnaire-retention';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',

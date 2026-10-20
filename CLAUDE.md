@@ -12,7 +12,7 @@ SaaS multi-tenant de gestion de la paie belge (TFE d'Adrien Mertens). Next.js 16
 ## Règles non négociables
 
 - **Isolation multi-tenant** : toute requête filtre côté serveur selon le périmètre du rôle (`doc/FONCTIONNEMENT.md` § 4). Ressource hors périmètre → `404`. `cabinetId`, `role` et `entrepriseId` viennent de la session, jamais du client.
-- **Autorisations** conformes à `doc/PERMISSIONS.md`, via `lib/authz.ts`. Pas de contrôle de rôle ad hoc.
+- **Autorisations** conformes à `doc/PERMISSIONS.md`, via `lib/authz/authz.ts`. Pas de contrôle de rôle ad hoc.
 - **Le SuperAdmin n'accède jamais aux données de paie** (D8). **Le Cabinet RH ne voit que des agrégats** (D26).
 - **Fiches de paie** : machine à états `BROUILLON → A_VALIDER → VALIDEE → ENVOYEE (→ REMPLACEE)`. Aucune modification hors `BROUILLON`. Une fiche `ENVOYEE` n'est **jamais** modifiée ni recalculée.
 - **Argent en centimes entiers.** Aucun flottant pour un montant.

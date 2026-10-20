@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DeleteAccount } from '@/components/auth/delete-account';
 
-vi.mock('@/lib/auth-client', () => ({
+vi.mock('@/lib/auth/auth-client', () => ({
   authClient: {
     listAccounts: vi.fn().mockResolvedValue({ data: [{ providerId: 'credential' }] }),
     deleteUser: vi.fn(),

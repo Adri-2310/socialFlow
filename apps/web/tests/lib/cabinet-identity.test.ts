@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -20,10 +20,10 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { normalizeVatNumber, identitySchema, getCabinetIdentity, updateCabinetIdentity } = await import(
-  '@/lib/cabinet-identity'
+  '@/lib/cabinet/cabinet-identity'
 );
 const { PATCH: identityRoute } = await import('@/app/api/cabinet/settings/identity/route');
 

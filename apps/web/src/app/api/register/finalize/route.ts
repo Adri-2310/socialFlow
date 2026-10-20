@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
-import { defaultCabinetName, resolvePlanChoice } from '@/lib/cabinet-provision';
+import { defaultCabinetName, resolvePlanChoice } from '@/lib/cabinet/cabinet-provision';
 
 // Finalisation de l'inscription d'un titulaire (D25, D32, D55) : s'assure que son
 // cabinet existe et y pose le plan choisi. Appelee apres l'inscription par email

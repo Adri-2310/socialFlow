@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle2, AlertTriangle, Pencil, Plus, Archive, ArchiveRestore } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import type { PlanConfigRow } from '@/lib/admin-data';
+import type { PlanConfigRow } from '@/lib/admin/admin-data';
 
 // D15, D34 : une limite vide (null) signifie "illimite", pas "non renseignee".
 function quotaLabel(value: number | null, noun: string): string {

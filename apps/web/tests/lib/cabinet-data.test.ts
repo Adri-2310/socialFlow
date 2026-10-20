@@ -8,7 +8,7 @@ import {
   getInvitations,
   getSelfDeletedGestionnaires,
   invitationDisplayStatus,
-} from '@/lib/cabinet-data';
+} from '@/lib/cabinet/cabinet-data';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 // Donnees creees directement via Prisma (pas via le flux d'inscription) :

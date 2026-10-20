@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import type { BillingPeriod, Plan, PlanId } from '@/lib/plans';
+import type { BillingPeriod, Plan, PlanId } from '@/lib/billing/plans';
 import { PlanSelect } from '@/components/auth/plan-select';
 import { RegisterForm } from '@/components/auth/register-form';
 

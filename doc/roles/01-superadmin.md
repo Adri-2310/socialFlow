@@ -18,8 +18,8 @@ Le SuperAdmin est l'exploitant de la plateforme SocialFlow. Il supervise les cab
 | Inscription publique | Impossible : `/register` crée toujours un `CABINET_RH` |
 | Connexion | Méthodes Better Auth communes à tous les rôles (mot de passe, lien magique, code email, Google, Microsoft) |
 | Point d'entrée | `/dashboard` redirige vers `/dashboard/admin` |
-| Garde des pages | `requireAuthorized('<action>')` (`lib/authz-page.ts`) dans `app/dashboard/admin/layout.tsx` **et dans chaque page de la console** (un layout n'est pas ré-exécuté à chaque navigation) : actions `plateforme.superviser`, `cabinet.administrer`, `utilisateur.lister`, `audit.voir`, `plan.gerer`. Redirige vers `/login` sans session, `/dashboard` si le rôle est refusé par la matrice, `/profil?2fa=requise` sans 2FA |
-| Garde des API | Chaque route `api/admin/*` passe par `authorize(request, '<action>')` (`lib/authz.ts`, actions `cabinet.administrer`, `plan.gerer`, `utilisateur.suspendre-archiver`, `utilisateur.support`) : session (401), rôle selon la matrice de `PERMISSIONS.md` (403), puis 2FA du SuperAdmin (403 `TWO_FACTOR_REQUIRED`), en JSON |
+| Garde des pages | `requireAuthorized('<action>')` (`lib/authz/authz-page.ts`) dans `app/dashboard/admin/layout.tsx` **et dans chaque page de la console** (un layout n'est pas ré-exécuté à chaque navigation) : actions `plateforme.superviser`, `cabinet.administrer`, `utilisateur.lister`, `audit.voir`, `plan.gerer`. Redirige vers `/login` sans session, `/dashboard` si le rôle est refusé par la matrice, `/profil?2fa=requise` sans 2FA |
+| Garde des API | Chaque route `api/admin/*` passe par `authorize(request, '<action>')` (`lib/authz/authz.ts`, actions `cabinet.administrer`, `plan.gerer`, `utilisateur.suspendre-archiver`, `utilisateur.support`) : session (401), rôle selon la matrice de `PERMISSIONS.md` (403), puis 2FA du SuperAdmin (403 `TWO_FACTOR_REQUIRED`), en JSON |
 
 ## 3. Écrans existants
 
@@ -79,7 +79,7 @@ Même mécanique que les cabinets, mais limitée à un seul compte : les autres 
 cd apps/web
 npm run superadmin:create -- prenom@exemple.be [--nom "Prénom Nom"] [--force]
 ```
-Le script lit `.env.local` (`DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_SECRET`, clé Resend) et affiche l'hôte de la base visée avant d'agir. La logique est dans `lib/superadmin-bootstrap.ts`.
+Le script lit `.env.local` (`DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_SECRET`, clé Resend) et affiche l'hôte de la base visée avant d'agir. La logique est dans `lib/auth/superadmin-bootstrap.ts`.
 | Cas | Résultat |
 |---|---|
 | Adresse libre, aucun SuperAdmin | Compte créé sans cabinet ni mot de passe (`emailVerified` vrai, nom « SuperAdmin » sans `--nom`), audit `SUPERADMIN_BOOTSTRAPPED` dans la même transaction, puis email avec le lien standard (1 h) vers `/reinitialiser-mot-de-passe` : la personne choisit son mot de passe. Personne d'autre ne le voit ni ne le fixe (D21) |

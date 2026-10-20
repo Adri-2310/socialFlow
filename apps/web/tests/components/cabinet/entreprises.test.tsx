@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { EntreprisesManager } from '@/components/cabinet/entreprises-manager';
 import { EntrepriseFormDialog, EMPTY_ENTREPRISE } from '@/components/cabinet/entreprise-form-dialog';
 import { GestionnaireActions } from '@/components/cabinet/gestionnaire-actions';
-import type { EntrepriseRow } from '@/lib/cabinet-entreprises';
+import type { EntrepriseRow } from '@/lib/entreprise/cabinet-entreprises';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
-import { AUDIT_PAGE_SIZE, getCabinetAuditLog, getCabinetAuditUsers } from '@/lib/cabinet-audit';
+import { AUDIT_PAGE_SIZE, getCabinetAuditLog, getCabinetAuditUsers } from '@/lib/cabinet/cabinet-audit';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
 const stamp = Date.now();

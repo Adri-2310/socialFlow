@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { Euro } from 'lucide-react';
-import { getBillingData } from '@/lib/admin-data';
+import { getBillingData } from '@/lib/admin/admin-data';
 
 export const metadata: Metadata = {
   title: 'Facturation — Console SuperAdmin',

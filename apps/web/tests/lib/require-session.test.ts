@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -36,9 +36,9 @@ vi.mock('next/headers', () => ({
   headers: async () => currentHeaders,
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const { requireSession } = await import('@/lib/require-session');
+const { requireSession } = await import('@/lib/auth/require-session');
 
 const PASSWORD = 'InitialPass123!';
 

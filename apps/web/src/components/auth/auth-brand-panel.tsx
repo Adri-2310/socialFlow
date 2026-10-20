@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Clock, Lock, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { darken } from '@/lib/color';
+import { darken } from '@/lib/branding/color';
 
 // Identite d'un cabinet (D33) : remplace celle de SocialFlow dans le panneau.
 export type PanelBrand = {

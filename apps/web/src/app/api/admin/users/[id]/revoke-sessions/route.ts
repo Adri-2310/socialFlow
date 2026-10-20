@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
 
 // D21 : outil de support. Deconnecte le compte partout (appareil perdu, doute

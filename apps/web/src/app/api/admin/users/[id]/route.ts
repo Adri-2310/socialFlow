@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;

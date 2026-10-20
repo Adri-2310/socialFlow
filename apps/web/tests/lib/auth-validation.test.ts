@@ -2,9 +2,9 @@
 import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-// Meme convention que tests/lib/auth.test.ts : Resend est entierement mocke,
+// Meme convention que tests/lib/auth/auth.test.ts : Resend est entierement mocke,
 // les tests parlent directement a `auth.api.*` (pas de serveur Next demarre).
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -30,7 +30,7 @@ let customerCounter = 0;
 const stripePricesList = vi.fn().mockResolvedValue({ data: [] });
 const stripeCustomersCreate = vi.fn(() => Promise.resolve({ id: `cus_test_${++customerCounter}` }));
 const stripeSubscriptionsCreate = vi.fn().mockResolvedValue({ id: 'sub_test' });
-vi.mock('@/lib/stripe', () => ({
+vi.mock('@/lib/billing/stripe', () => ({
   stripe: {
     prices: { list: stripePricesList },
     customers: { create: stripeCustomersCreate },
@@ -38,9 +38,9 @@ vi.mock('@/lib/stripe', () => ({
   },
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const email = await import('@/lib/email');
+const email = await import('@/lib/email/email');
 const { POST: finalizeRoute } = await import('@/app/api/register/finalize/route');
 
 const PASSWORD = 'InitialPass123!';
@@ -53,7 +53,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   // Supprime les cabinets auto-crees a l'inscription avant les users (voir
-  // meme commentaire dans tests/lib/auth.test.ts).
+  // meme commentaire dans tests/lib/auth/auth.test.ts).
   const testUsers = await prisma.user.findMany({
     where: { email: { startsWith: TEST_EMAIL_PREFIX } },
     select: { cabinetId: true },

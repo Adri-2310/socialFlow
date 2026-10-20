@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Loader2, PauseCircle } from 'lucide-react';
-import { SUSPENSION_REASON_MAX, type SuspensionType } from '@/lib/cabinet-suspension';
+import { SUSPENSION_REASON_MAX, type SuspensionType } from '@/lib/cabinet/cabinet-suspension';
 
 // Suspension manuelle d'un cabinet par le SuperAdmin (D71). Par defaut : lecture
 // seule, les connexions restent possibles. Le blocage total est un choix explicite

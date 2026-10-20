@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // invitations et rbac-entreprise-admin.
 const getSession = vi.fn();
 const cabinetFindUnique = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     cabinet: { findUnique: cabinetFindUnique },
@@ -16,14 +16,14 @@ vi.mock('@/lib/prisma', () => ({
     entreprise: { findFirst: vi.fn().mockResolvedValue(null) },
   },
 }));
-vi.mock('@/lib/stripe', () => ({ stripe: {} }));
-vi.mock('@/lib/email', () => ({}));
-vi.mock('@/lib/authz', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/authz')>();
+vi.mock('@/lib/billing/stripe', () => ({ stripe: {} }));
+vi.mock('@/lib/email/email', () => ({}));
+vi.mock('@/lib/authz/authz', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authz')>();
   return { ...actual, authorize: vi.fn(actual.authorize) };
 });
 
-const { ACTIONS, ROLES, authorize } = await import('@/lib/authz');
+const { ACTIONS, ROLES, authorize } = await import('@/lib/authz/authz');
 type ActionId = keyof typeof ACTIONS;
 
 const gestionnaire = await import('@/app/api/gestionnaires/[id]/route');

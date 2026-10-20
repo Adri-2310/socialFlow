@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { ScrollText } from 'lucide-react';
-import { CABINET_AUDIT_ACTIONS, CABINET_AUDIT_ACTION_LIST } from '@/lib/cabinet-audit-labels';
+import { CABINET_AUDIT_ACTIONS, CABINET_AUDIT_ACTION_LIST } from '@/lib/cabinet/cabinet-audit-labels';
 import type {
   AuditUserOption,
   CabinetAuditFilters,
   CabinetAuditPage,
-} from '@/lib/cabinet-audit';
+} from '@/lib/cabinet/cabinet-audit';
 
 // Date et heure formatees separement et jointes explicitement : la sortie
 // combinee d'Intl varie selon la version d'ICU, pas celle-ci.

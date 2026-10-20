@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendEntrepriseInvitationEmail, sendGestionnaireInvitationEmail } from '@/lib/email';
-import { TEMPLATES, isTemplateType, validateTemplate } from '@/lib/email-templates';
+import { authorize } from '@/lib/authz/authz';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { sendEntrepriseInvitationEmail, sendGestionnaireInvitationEmail } from '@/lib/email/email';
+import { TEMPLATES, isTemplateType, validateTemplate } from '@/lib/email/email-templates';
 
 // Envoi d'un email de test du modele (brouillon, non enregistre) (D68). Il part
 // UNIQUEMENT vers l'adresse du titulaire connecte, jamais vers une adresse

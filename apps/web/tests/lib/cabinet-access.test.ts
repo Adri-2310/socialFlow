@@ -12,7 +12,7 @@ const redirect = vi.fn((to: string) => {
 vi.mock('next/navigation', () => ({ redirect }));
 
 const { prisma } = await import('@/lib/prisma');
-const { requirePaidCabinet, PAYMENT_PAGE } = await import('@/lib/cabinet-access');
+const { requirePaidCabinet, PAYMENT_PAGE } = await import('@/lib/cabinet/cabinet-access');
 
 const stamp = Date.now();
 const cabinetIds: string[] = [];

@@ -3,15 +3,15 @@ import { InviteGestionnaire } from '@/components/dashboard/invite-gestionnaire';
 import { InvitationActions } from '@/components/cabinet/invitation-actions';
 import { GestionnaireActions } from '@/components/cabinet/gestionnaire-actions';
 import { GestionnaireRestore } from '@/components/cabinet/gestionnaire-restore';
-import { GESTIONNAIRE_RESTORE_WINDOW_DAYS } from '@/lib/gestionnaire-retention';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { GESTIONNAIRE_RESTORE_WINDOW_DAYS } from '@/lib/cabinet/gestionnaire-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 import type {
   ArchivedGestionnaireRow,
   SelfDeletedGestionnaireRow,
   GestionnaireRow,
   InvitationRow,
   InvitationStatus,
-} from '@/lib/cabinet-data';
+} from '@/lib/cabinet/cabinet-data';
 
 const INVITATION_LABELS: Record<InvitationStatus, string> = {
   pending: 'En attente',

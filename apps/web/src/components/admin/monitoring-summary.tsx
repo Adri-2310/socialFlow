@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Database, Users, UserCheck, ArrowRight } from 'lucide-react';
-import type { MonitoringData } from '@/lib/admin-data';
+import type { MonitoringData } from '@/lib/admin/admin-data';
 
 // Les 3 cartes reutilisees telles quelles sur /dashboard/admin (apercu, avec
 // lien vers la page complete) et /dashboard/admin/monitoring (page complete,

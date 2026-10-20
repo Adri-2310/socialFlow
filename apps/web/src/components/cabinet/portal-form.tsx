@@ -3,7 +3,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Loader2 } from 'lucide-react';
-import { SLUG_MAX, SLUG_MIN, slugify } from '@/lib/portal-slug';
+import { SLUG_MAX, SLUG_MIN, slugify } from '@/lib/portal/portal-slug';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',

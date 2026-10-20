@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { createCardUpdateSession } from '@/lib/cabinet-subscription';
+import { authorize } from '@/lib/authz/authz';
+import { createCardUpdateSession } from '@/lib/billing/cabinet-subscription';
 
 // Demarre la saisie d'une nouvelle carte (D59) : renvoie l'URL de la page
 // Stripe. Reserve au Cabinet RH, pour son cabinet. Volontairement sans

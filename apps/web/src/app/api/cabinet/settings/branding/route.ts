@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { brandingSchema, validateBranding } from '@/lib/branding-rules';
-import { updateCabinetBranding } from '@/lib/cabinet-branding';
+import { authorize } from '@/lib/authz/authz';
+import { brandingSchema, validateBranding } from '@/lib/branding/branding-rules';
+import { updateCabinetBranding } from '@/lib/branding/cabinet-branding';
 
 // Branding du cabinet (D33, D62) : nom affiche et couleurs. Reserve au Cabinet
 // RH, pour son cabinet (cabinetId de la session). Ecriture : refusee en

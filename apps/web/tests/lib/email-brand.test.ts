@@ -8,7 +8,7 @@ vi.mock('resend', () => ({
   },
 }));
 
-const { emailTheme, formatFrom, safeSenderName, senderAddress } = await import('@/lib/email-brand');
+const { emailTheme, formatFrom, safeSenderName, senderAddress } = await import('@/lib/email/email-brand');
 const {
   sendGestionnaireInvitationEmail,
   sendEntrepriseInvitationEmail,
@@ -16,7 +16,7 @@ const {
   sendMagicLinkEmail,
   sendWelcomeAccountEmail,
   sendAdminReplacedEmail,
-} = await import('@/lib/email');
+} = await import('@/lib/email/email');
 
 const brand = {
   name: 'Alicia Cabinet',
@@ -203,7 +203,7 @@ describe('emails au nom du cabinet', () => {
   });
 
   it('l apercu des modeles est exactement l email envoye (meme constructeur)', async () => {
-    const { buildGestionnaireInvitation } = await import('@/lib/email-layout');
+    const { buildGestionnaireInvitation } = await import('@/lib/email/email-layout');
     const template = { subject: 'Bienvenue {{cabinet_nom}}', body: 'Salut **{{invitant_nom}}**' };
 
     await sendGestionnaireInvitationEmail('bruno@test.com', brand, 'Alicia', 'https://app/accept?token=x', template);
@@ -220,7 +220,7 @@ describe('emails au nom du cabinet', () => {
   });
 
   it('inertLinks : plus aucun lien cliquable, le reste de l email est conserve', async () => {
-    const { inertLinks, buildGestionnaireInvitation } = await import('@/lib/email-layout');
+    const { inertLinks, buildGestionnaireInvitation } = await import('@/lib/email/email-layout');
     const { html } = buildGestionnaireInvitation({
       brand,
       inviterName: 'Alicia',

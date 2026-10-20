@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { auth } from '@/lib/auth';
+import { authorize } from '@/lib/authz/authz';
+import { auth } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureCabinetSlug, isPortalRole, portalPath } from '@/lib/cabinet-portal';
+import { ensureCabinetSlug, isPortalRole, portalPath } from '@/lib/portal/cabinet-portal';
 
 // D21 : outil de support. Envoie au compte le lien de reinitialisation
 // standard (meme flux et meme email que « Mot de passe oublie »). Le SuperAdmin

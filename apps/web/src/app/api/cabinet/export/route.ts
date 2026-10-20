@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { buildCabinetExport, exportFilename } from '@/lib/cabinet-export';
+import { authorize } from '@/lib/authz/authz';
+import { buildCabinetExport, exportFilename } from '@/lib/cabinet/cabinet-export';
 import { prisma } from '@/lib/prisma';
 
 // Export des donnees du cabinet (D28, D74), reserve au Cabinet RH. Route de

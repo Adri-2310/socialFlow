@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
-import { authorize } from '@/lib/authz';
+import { auth } from '@/lib/auth/auth';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendGestionnaireAccessChangedEmail } from '@/lib/email';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { sendGestionnaireAccessChangedEmail } from '@/lib/email/email';
 
 // D53 : le Cabinet RH corrige l'adresse de connexion d'un de ses
 // gestionnaires (changement d'adresse professionnelle...). L'adresse est un

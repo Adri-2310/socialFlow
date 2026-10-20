@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { removeCabinetLogo, setCabinetLogo } from '@/lib/cabinet-logo';
-import { LOGO_MAX_BYTES } from '@/lib/logo-validation';
+import { authorize } from '@/lib/authz/authz';
+import { removeCabinetLogo, setCabinetLogo } from '@/lib/branding/cabinet-logo';
+import { LOGO_MAX_BYTES } from '@/lib/branding/logo-validation';
 
 // Logo du cabinet (D33, D62). Reserve au Cabinet RH, pour son cabinet
 // (cabinetId de la session). Ecriture : refusee en lecture seule (423, D29).

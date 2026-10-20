@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { removeEntrepriseAdmin } from '@/lib/entreprise-admin';
+import { authorize } from '@/lib/authz/authz';
+import { removeEntrepriseAdmin } from '@/lib/entreprise/entreprise-admin';
 
 // Retrait du compte administrateur d'une entreprise (D5, roles/04 § 2) : etape
 // du remplacement, avant d'inviter le nouveau. Reserve au Cabinet RH ; une

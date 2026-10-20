@@ -6,8 +6,8 @@ import {
   isHexColor,
   lightenForDarkTheme,
   readableForeground,
-} from '@/lib/color';
-import { buildThemeCss, validateBranding } from '@/lib/branding-rules';
+} from '@/lib/branding/color';
+import { buildThemeCss, validateBranding } from '@/lib/branding/branding-rules';
 
 describe('color', () => {
   it('calcule le contraste WCAG (noir/blanc = 21, identiques = 1)', () => {

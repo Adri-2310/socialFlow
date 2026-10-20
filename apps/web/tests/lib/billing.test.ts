@@ -11,7 +11,7 @@ import {
   normalizeBillingPeriod,
   normalizeBillingStatus,
   trialDaysLeft,
-} from '@/lib/billing';
+} from '@/lib/billing/billing';
 
 const now = new Date('2026-10-14T12:00:00Z');
 const day = 24 * 60 * 60 * 1000;

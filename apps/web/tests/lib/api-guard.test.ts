@@ -2,11 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const getSession = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 const cabinetFindUnique = vi.fn();
 vi.mock('@/lib/prisma', () => ({ prisma: { cabinet: { findUnique: cabinetFindUnique } } }));
 
-const { requireApiSession } = await import('@/lib/api-guard');
+const { requireApiSession } = await import('@/lib/authz/api-guard');
 
 const request = new Request('http://localhost/api/test');
 

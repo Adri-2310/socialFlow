@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { resumeSubscription } from '@/lib/cabinet-subscription';
+import { authorize } from '@/lib/authz/authz';
+import { resumeSubscription } from '@/lib/billing/cabinet-subscription';
 
 // Annule une resiliation programmee avant son terme (D59) : l'abonnement continue.
 // Reserve au Cabinet RH, pour son cabinet (cabinetId de la session).

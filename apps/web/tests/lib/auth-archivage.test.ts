@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -18,14 +18,14 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 
 const PASSWORD = 'InitialPass123!';
 
 afterAll(async () => {
   // Supprime les cabinets auto-crees a l'inscription avant les users (voir
-  // meme commentaire dans tests/lib/auth.test.ts). Le compte purge pour de
+  // meme commentaire dans tests/lib/auth/auth.test.ts). Le compte purge pour de
   // vrai dans "purge definitive des comptes archives" ci-dessous n'est plus
   // trouvable ici (deja supprime par la purge elle-meme) : son cabinet est
   // nettoye explicitement dans ce test-la.

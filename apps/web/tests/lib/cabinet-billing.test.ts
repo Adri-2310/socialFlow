@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
-import { getCabinetSubscriptionDetails } from '@/lib/cabinet-billing';
+import { getCabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
 
 const stamp = Date.now();
 const PLAN = `vitest-billing-${stamp}`;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { createEntreprise, entrepriseSchema } from '@/lib/cabinet-entreprises';
-import { entrepriseErrorResponse, invalidRequestResponse } from '@/lib/entreprise-http';
+import { authorize } from '@/lib/authz/authz';
+import { createEntreprise, entrepriseSchema } from '@/lib/entreprise/cabinet-entreprises';
+import { entrepriseErrorResponse, invalidRequestResponse } from '@/lib/entreprise/entreprise-http';
 
 // Creation d'une entreprise cliente (D4) : reservee au Cabinet RH, pour son
 // cabinet (cabinetId de la session). Refusee en lecture seule (423, D29) et

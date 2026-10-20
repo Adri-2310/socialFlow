@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { PaymentStart } from '@/components/cabinet/payment-start';
-import { normalizeBillingStatus } from '@/lib/billing';
+import { normalizeBillingStatus } from '@/lib/billing/billing';
 import { prisma } from '@/lib/prisma';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import {
   TRIAL_DAYS,
   confirmCheckoutSession,
   getCheckoutSummary,
-} from '@/lib/stripe-checkout';
+} from '@/lib/billing/stripe-checkout';
 
 export const metadata: Metadata = {
   title: 'Finaliser mon abonnement',

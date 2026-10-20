@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CabinetAlerts } from '@/components/cabinet/alerts';
-import type { CabinetAlert } from '@/lib/cabinet-alerts';
+import type { CabinetAlert } from '@/lib/cabinet/cabinet-alerts';
 
 const alerts: CabinetAlert[] = [
   {

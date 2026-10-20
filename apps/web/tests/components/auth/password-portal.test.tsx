@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 
 const requestPasswordReset = vi.fn();
 const resetPassword = vi.fn();
-vi.mock('@/lib/auth-client', () => ({
+vi.mock('@/lib/auth/auth-client', () => ({
   signIn: { email: vi.fn(), social: vi.fn() },
   twoFactor: { verifyTotp: vi.fn(), verifyBackupCode: vi.fn() },
   authClient: {

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, totpCode, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -17,14 +17,14 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 
 const PASSWORD = 'InitialPass123!';
 
 afterAll(async () => {
   // Supprime les cabinets auto-crees a l'inscription avant les users (voir
-  // meme commentaire dans tests/lib/auth.test.ts).
+  // meme commentaire dans tests/lib/auth/auth.test.ts).
   const testUsers = await prisma.user.findMany({
     where: { email: { startsWith: TEST_EMAIL_PREFIX } },
     select: { cabinetId: true },

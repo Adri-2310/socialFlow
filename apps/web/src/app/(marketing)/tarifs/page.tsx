@@ -3,7 +3,7 @@ import { Navbar } from '@/components/landing/navbar';
 import { PageHero } from '@/components/landing/page-hero';
 import { Pricing } from '@/components/landing/pricing';
 import { Footer } from '@/components/landing/footer';
-import { getPricingPlans } from '@/lib/pricing';
+import { getPricingPlans } from '@/lib/billing/pricing';
 
 export const metadata: Metadata = {
   title: 'Tarifs — SocialFlow',

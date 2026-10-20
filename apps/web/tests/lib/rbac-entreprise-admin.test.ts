@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -21,20 +21,20 @@ vi.mock('@/lib/email', () => ({
   sendAccountUnlinkedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const email = await import('@/lib/email');
+const email = await import('@/lib/email/email');
 const { POST: inviteRoute } = await import('@/app/api/cabinet/entreprises/[id]/admin-invitation/route');
 const { POST: createEntreprise } = await import('@/app/api/cabinet/entreprises/route');
 const { DELETE: removeAdminRoute } = await import('@/app/api/cabinet/entreprises/[id]/admin/route');
 const { POST: acceptInvitation } = await import('@/app/api/invitations/accept/route');
 const { POST: resendInvitation } = await import('@/app/api/invitations/[id]/resend/route');
 const { DELETE: revokeInvitation } = await import('@/app/api/invitations/[id]/route');
-const { getEntreprises } = await import('@/lib/cabinet-entreprises');
-const { getInvitations, getCabinetOverview } = await import('@/lib/cabinet-data');
-const { getCabinetQuotaUsage } = await import('@/lib/cabinet-quotas');
-const { getInvitationPreview } = await import('@/lib/invitation-preview');
-const { hashInvitationToken } = await import('@/lib/invitations');
+const { getEntreprises } = await import('@/lib/entreprise/cabinet-entreprises');
+const { getInvitations, getCabinetOverview } = await import('@/lib/cabinet/cabinet-data');
+const { getCabinetQuotaUsage } = await import('@/lib/billing/cabinet-quotas');
+const { getInvitationPreview } = await import('@/lib/invitations/invitation-preview');
+const { hashInvitationToken } = await import('@/lib/invitations/invitations');
 
 const PASSWORD = 'InitialPass123!';
 const APP_URL = 'http://localhost:3000';

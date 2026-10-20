@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { UserPlus, PauseCircle, PlayCircle, Archive, ArchiveRestore, Tag, LogOut, KeyRound, ShieldCheck } from 'lucide-react';
-import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet-retention';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet/cabinet-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 
 export type AuditLogEntry = {
   id: string;

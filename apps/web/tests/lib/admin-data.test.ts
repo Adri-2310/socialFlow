@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterAll, beforeEach, afterEach } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendMagicLinkEmail: vi.fn().mockResolvedValue(undefined),
   sendOTPEmail: vi.fn().mockResolvedValue(undefined),
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
@@ -24,7 +24,7 @@ const stripeSubscriptionsList = vi.fn();
 const stripeProductsList = vi.fn().mockResolvedValue({ data: [] });
 const stripePricesList = vi.fn().mockResolvedValue({ data: [] });
 const stripeWebhookEndpointsList = vi.fn().mockResolvedValue({ data: [] });
-vi.mock('@/lib/stripe', () => ({
+vi.mock('@/lib/billing/stripe', () => ({
   stripe: {
     subscriptions: { list: stripeSubscriptionsList },
     products: { list: stripeProductsList },
@@ -33,7 +33,7 @@ vi.mock('@/lib/stripe', () => ({
   },
 }));
 
-const { auth } = await import('@/lib/auth');
+const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const {
   getCabinets,
@@ -43,7 +43,7 @@ const {
   getBillingData,
   getPricingPlansConfig,
   getStripeStatus,
-} = await import('@/lib/admin-data');
+} = await import('@/lib/admin/admin-data');
 
 const PASSWORD = 'InitialPass123!';
 

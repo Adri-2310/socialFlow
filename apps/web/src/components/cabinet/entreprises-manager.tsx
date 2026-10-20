@@ -6,7 +6,7 @@ import { InvitationActions } from '@/components/cabinet/invitation-actions';
 import { EntrepriseCreate } from '@/components/cabinet/entreprise-create';
 import { EntrepriseRestore } from '@/components/cabinet/entreprise-restore';
 import type { GestionnaireOption } from '@/components/cabinet/entreprise-form-dialog';
-import type { ArchivedEntrepriseRow, EntrepriseRow } from '@/lib/cabinet-entreprises';
+import type { ArchivedEntrepriseRow, EntrepriseRow } from '@/lib/entreprise/cabinet-entreprises';
 import type { CountryOption } from '@/lib/countries';
 
 const formatDate = (date: Date) => date.toLocaleDateString('fr-BE');

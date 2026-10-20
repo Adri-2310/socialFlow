@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
-import { createInvitationToken } from '@/lib/invitations';
-import { getInvitationPreview } from '@/lib/invitation-preview';
+import { createInvitationToken } from '@/lib/invitations/invitations';
+import { getInvitationPreview } from '@/lib/invitations/invitation-preview';
 import { roleDisplayLabel } from '@/lib/role-labels';
 
 const stamp = Date.now();

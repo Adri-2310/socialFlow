@@ -7,16 +7,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // les effets des routes sont couverts par billing-checkout, plan-change et
 // cabinet-subscription.
 const getSession = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
-vi.mock('@/lib/stripe', () => ({ stripe: {} }));
-vi.mock('@/lib/email', () => ({}));
-vi.mock('@/lib/authz', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/authz')>();
+vi.mock('@/lib/billing/stripe', () => ({ stripe: {} }));
+vi.mock('@/lib/email/email', () => ({}));
+vi.mock('@/lib/authz/authz', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/authz/authz')>();
   return { ...actual, authorize: vi.fn(actual.authorize) };
 });
 
-const { ACTIONS, ROLES, authorize } = await import('@/lib/authz');
+const { ACTIONS, ROLES, authorize } = await import('@/lib/authz/authz');
 const checkout = await import('@/app/api/billing/checkout/route');
 const checkoutConfirm = await import('@/app/api/billing/checkout/confirm/route');
 const card = await import('@/app/api/billing/card/route');

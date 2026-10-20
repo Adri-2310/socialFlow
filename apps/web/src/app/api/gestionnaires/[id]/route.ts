@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { getCabinetEmailBrand } from '@/lib/cabinet-email-brand';
-import { sendGestionnaireAccessChangedEmail, type GestionnaireAccessChange } from '@/lib/email';
-import { gestionnaireRestoreDeadline } from '@/lib/gestionnaire-retention';
-import { getUncoveredEntreprises } from '@/lib/cabinet-entreprises';
-import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/cabinet-quotas';
+import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
+import { sendGestionnaireAccessChangedEmail, type GestionnaireAccessChange } from '@/lib/email/email';
+import { gestionnaireRestoreDeadline } from '@/lib/cabinet/gestionnaire-retention';
+import { getUncoveredEntreprises } from '@/lib/entreprise/cabinet-entreprises';
+import { getCabinetQuotaUsage, isQuotaReached, quotaExceededBody } from '@/lib/billing/cabinet-quotas';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
 type GestionnaireStatus = (typeof VALID_STATUSES)[number];

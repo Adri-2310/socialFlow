@@ -5,13 +5,13 @@ import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 const WEBHOOK_SECRET = 'whsec_test_secret_for_vitest';
 process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendPaymentFailedEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { prisma } = await import('@/lib/prisma');
-const { stripe } = await import('@/lib/stripe');
-const email = await import('@/lib/email');
+const { stripe } = await import('@/lib/billing/stripe');
+const email = await import('@/lib/email/email');
 const { POST } = await import('@/app/api/webhooks/stripe/route');
 
 const stamp = Date.now();

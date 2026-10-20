@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { requireAuthorized } from '@/lib/authz-page';
+import { requireAuthorized } from '@/lib/authz/authz-page';
 import { Building2, ShieldAlert } from 'lucide-react';
-import { getMonitoringData } from '@/lib/admin-data';
+import { getMonitoringData } from '@/lib/admin/admin-data';
 import { MonitoringSummary } from '@/components/admin/monitoring-summary';
 
 export const metadata: Metadata = {

@@ -8,7 +8,7 @@ import {
   renderSubject,
   validateTemplate,
   variablesIn,
-} from '@/lib/email-templates';
+} from '@/lib/email/email-templates';
 
 const values = { cabinet_nom: 'Alicia Cabinet', invitant_nom: 'Alice', lien: 'https://app.test/accept?token=abc&x=1' };
 

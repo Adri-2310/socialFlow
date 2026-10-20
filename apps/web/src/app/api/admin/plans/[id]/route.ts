@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { stripe } from '@/lib/stripe';
-import { stripeUnitAmountCents } from '@/lib/billing';
+import { stripe } from '@/lib/billing/stripe';
+import { stripeUnitAmountCents } from '@/lib/billing/billing';
 
 type PlanUpdateBody = {
   name: string;
@@ -115,7 +115,7 @@ async function setPlanStripeActive(planId: string, active: boolean) {
   if (active) {
     // Restauration : ne reactive que le Price le plus recent de chaque
     // periode (Stripe liste du plus recent au plus ancien, voir
-    // getPricingPlansConfig dans lib/admin-data.ts) - jamais un ancien Price
+    // getPricingPlansConfig dans lib/admin/admin-data.ts) - jamais un ancien Price
     // deja desactive par un changement de prix avant l'archivage.
     for (const billingPeriod of ['monthly', 'yearly'] as const) {
       const current = prices.data.find(
@@ -176,7 +176,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 // Archive un plan : retire du catalogue Product+Price Stripe (voir
 // setPlanStripeActive) et le sort de /tarifs (voir getPricingPlans dans
-// lib/pricing.ts), sans supprimer la ligne ni casser les cabinets deja sur ce
+// lib/billing/pricing.ts), sans supprimer la ligne ni casser les cabinets deja sur ce
 // plan (lecture directe par planId dans profil/page.tsx, non filtree).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authz = await authorize(request, 'plan.gerer');

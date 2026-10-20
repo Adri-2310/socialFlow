@@ -3,7 +3,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Loader2 } from 'lucide-react';
-import { quotaAwareMessage } from '@/lib/quota-messages';
+import { quotaAwareMessage } from '@/lib/billing/quota-messages';
 import type { CountryOption } from '@/lib/countries';
 
 export type EntrepriseFormValues = {

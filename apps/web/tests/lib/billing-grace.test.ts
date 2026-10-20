@@ -2,13 +2,13 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { TEST_EMAIL_PREFIX } from '../helpers/auth-test-utils';
 
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email/email', () => ({
   sendPaymentSuspensionEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { prisma } = await import('@/lib/prisma');
-const email = await import('@/lib/email');
-const { suspendOverdueCabinets } = await import('@/lib/billing-grace');
+const email = await import('@/lib/email/email');
+const { suspendOverdueCabinets } = await import('@/lib/billing/billing-grace');
 const { GET } = await import('@/app/api/cron/suspend-overdue-cabinets/route');
 
 const stamp = Date.now();

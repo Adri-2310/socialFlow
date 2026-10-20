@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
+import { authorize } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
 import {
   SUSPENSION_REASON_MAX,
   SUSPENSION_TYPES,
   suspensionTypeOf,
   type SuspensionType,
-} from '@/lib/cabinet-suspension';
+} from '@/lib/cabinet/cabinet-suspension';
 
 const VALID_STATUSES = ['actif', 'suspendu'] as const;
 type CabinetStatus = (typeof VALID_STATUSES)[number];

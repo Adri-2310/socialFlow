@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { isCronAuthorized } from '@/lib/cron-auth';
+import { isCronAuthorized } from '@/lib/authz/cron-auth';
 import { prisma } from '@/lib/prisma';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/account-retention';
+import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 
 // Purge reelle et definitive des comptes archives depuis plus de
 // ACCOUNT_DELETION_RETENTION_DAYS (voir hooks.before dans auth.ts, qui

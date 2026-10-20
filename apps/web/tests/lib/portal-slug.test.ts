@@ -7,7 +7,7 @@ import {
   portalPath,
   portalSlugFromRequest,
   slugify,
-} from '@/lib/portal-slug';
+} from '@/lib/portal/portal-slug';
 
 describe('slugify (D76)', () => {
   it('met en minuscules, retire les accents et relie par des tirets', () => {

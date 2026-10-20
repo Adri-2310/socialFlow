@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Undo2 } from 'lucide-react';
-import { quotaAwareMessage } from '@/lib/quota-messages';
+import { quotaAwareMessage } from '@/lib/billing/quota-messages';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',

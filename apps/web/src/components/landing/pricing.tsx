@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
-import type { Plan } from '@/lib/plans';
-import { planPriceDisplay } from '@/lib/plan-price-display';
+import type { Plan } from '@/lib/billing/plans';
+import { planPriceDisplay } from '@/lib/billing/plan-price-display';
 
 export function Pricing({ plans }: { plans: Plan[] }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');

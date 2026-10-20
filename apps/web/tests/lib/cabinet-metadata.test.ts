@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cabinetMetadata } from '@/lib/cabinet-metadata';
+import { cabinetMetadata } from '@/lib/cabinet/cabinet-metadata';
 
 describe('cabinetMetadata (D33)', () => {
   it('utilise le nom affiche dans le titre et le modele des pages', () => {

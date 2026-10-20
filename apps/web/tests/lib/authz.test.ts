@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const getSession = vi.fn();
-vi.mock('@/lib/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
 const cabinetFindUnique = vi.fn();
 const assignmentsFindMany = vi.fn();
 const entrepriseFindFirst = vi.fn();
@@ -16,7 +16,7 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
-const { ACTIONS, ROLES, authorize, levelFor, resolveScope, entrepriseWhere } = await import('@/lib/authz');
+const { ACTIONS, ROLES, authorize, levelFor, resolveScope, entrepriseWhere } = await import('@/lib/authz/authz');
 type ActionId = keyof typeof ACTIONS;
 type Role = (typeof ROLES)[number];
 

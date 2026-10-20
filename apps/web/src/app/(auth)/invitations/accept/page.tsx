@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { AcceptInvitationForm } from '@/components/invitations/accept-invitation-form';
-import { buildThemeCss } from '@/lib/branding-rules';
-import { getInvitationPreview } from '@/lib/invitation-preview';
+import { buildThemeCss } from '@/lib/branding/branding-rules';
+import { getInvitationPreview } from '@/lib/invitations/invitation-preview';
 
 type SearchParams = Promise<{ token?: string }>;
 

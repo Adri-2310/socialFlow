@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planPriceDisplay } from '@/lib/plan-price-display';
+import { planPriceDisplay } from '@/lib/billing/plan-price-display';
 
 const starter = { monthlyPrice: 150, yearlyPrice: 120 };
 

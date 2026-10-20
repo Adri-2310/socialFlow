@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorize } from '@/lib/authz';
-import { scheduleCancellation } from '@/lib/cabinet-subscription';
+import { authorize } from '@/lib/authz/authz';
+import { scheduleCancellation } from '@/lib/billing/cabinet-subscription';
 
 // Programme la resiliation de l'abonnement en fin de periode (D59) : le cabinet garde l'acces jusqu'au terme.
 // Reserve au Cabinet RH, pour son cabinet (cabinetId de la session).

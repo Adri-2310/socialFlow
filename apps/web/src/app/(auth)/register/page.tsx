@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { RegisterFlow } from '@/components/auth/register-flow';
-import { isPlanId, type PlanId } from '@/lib/plans';
-import { getPricingPlans } from '@/lib/pricing';
+import { isPlanId, type PlanId } from '@/lib/billing/plans';
+import { getPricingPlans } from '@/lib/billing/pricing';
 
 export const metadata: Metadata = {
   title: 'Créer un compte — SocialFlow',

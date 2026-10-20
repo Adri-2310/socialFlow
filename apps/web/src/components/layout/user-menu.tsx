@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, LogOut, Loader2 } from 'lucide-react';
-import { signOut } from '@/lib/auth-client';
+import { signOut } from '@/lib/auth/auth-client';
 
 // Point d'acces unique et commun a tous les roles pour "Mon profil" et la
 // deconnexion (remplace l'ancien LogoutButton, supprime). Le declencheur est

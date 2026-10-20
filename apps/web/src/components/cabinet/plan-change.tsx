@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Loader2 } from 'lucide-react';
-import { formatStorageMb } from '@/lib/quota-format';
-import type { QuotaKey } from '@/lib/cabinet-quotas';
-import type { PendingPlanChange, PlanChangeOptions, PlanOption } from '@/lib/plan-change';
+import { formatStorageMb } from '@/lib/billing/quota-format';
+import type { QuotaKey } from '@/lib/billing/cabinet-quotas';
+import type { PendingPlanChange, PlanChangeOptions, PlanOption } from '@/lib/billing/plan-change';
 
 type Period = 'monthly' | 'yearly';
 

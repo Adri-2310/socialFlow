@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PlanChange } from '@/components/cabinet/plan-change';
-import type { PlanChangeOptions } from '@/lib/plan-change';
+import type { PlanChangeOptions } from '@/lib/billing/plan-change';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));

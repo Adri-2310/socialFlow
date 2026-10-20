@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { LoginForm } from '@/components/auth/login-form';
-import { translateAuthError } from '@/lib/auth-errors';
-import { buildThemeCss } from '@/lib/branding-rules';
-import { getPortalCabinet } from '@/lib/cabinet-portal';
-import { manifestPath } from '@/lib/portal-pwa';
+import { translateAuthError } from '@/lib/auth/auth-errors';
+import { buildThemeCss } from '@/lib/branding/branding-rules';
+import { getPortalCabinet } from '@/lib/portal/cabinet-portal';
+import { manifestPath } from '@/lib/portal/portal-pwa';
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ error?: string }>;
