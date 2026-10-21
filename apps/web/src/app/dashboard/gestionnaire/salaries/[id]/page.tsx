@@ -3,10 +3,13 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { ConditionAdd } from '@/components/gestionnaire/condition-add';
+import { ConditionRowActions } from '@/components/gestionnaire/condition-row-actions';
 import { SalarieEdit } from '@/components/gestionnaire/salarie-edit';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
+import { toConditionFormValues } from '@/lib/salarie/condition-form';
 import { toFormValues } from '@/lib/salarie/salarie-form';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
@@ -97,6 +100,8 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
   const courante =
     salarie.conditions.find((c) => c.etat === 'EN_VIGUEUR') ??
     [...salarie.conditions].reverse().find((c) => c.etat === 'A_VENIR');
+
+  const estPremiere = (c: ConditionRow) => c.dateEffet.getTime() === salarie.dateEntree.getTime();
 
   const adresse = [salarie.adresse, [salarie.codePostal, salarie.ville].filter(Boolean).join(' ')]
     .filter(Boolean)
@@ -193,9 +198,18 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <section className="rounded-2xl border border-border bg-card">
-        <h3 className="px-5 pt-5 text-sm font-semibold text-foreground">
-          Historique des conditions de travail
-        </h3>
+        <div className="flex flex-col gap-2 px-5 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-sm font-semibold text-foreground">
+            Historique des conditions de travail
+          </h3>
+          {courante && (
+            <ConditionAdd
+              salarieId={salarie.id}
+              initial={toConditionFormValues(courante, { avecDate: false })}
+              readOnly={readOnly}
+            />
+          )}
+        </div>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-y border-border text-xs uppercase tracking-wide text-muted-foreground">
@@ -206,6 +220,7 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
                 <th className="px-4 py-2.5 font-semibold">Régime</th>
                 <th className="px-4 py-2.5 font-semibold">Rémunération</th>
                 <th className="px-4 py-2.5 font-semibold">État</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -226,6 +241,16 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
                     >
                       {ETATS[c.etat]}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <ConditionRowActions
+                      salarieId={salarie.id}
+                      conditionId={c.id}
+                      initial={toConditionFormValues(c, { avecDate: true })}
+                      // Seul un changement à venir s'annule, jamais la première ligne (l'entrée).
+                      removable={c.etat === 'A_VENIR' && !estPremiere(c)}
+                      readOnly={readOnly}
+                    />
                   </td>
                 </tr>
               ))}

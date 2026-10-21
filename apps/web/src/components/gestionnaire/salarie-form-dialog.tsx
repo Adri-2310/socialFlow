@@ -6,51 +6,9 @@ import { Loader2, Pencil, UserPlus } from 'lucide-react';
 import { Field, inputClass } from '@/components/gestionnaire/form-field';
 import type { CountryOption } from '@/lib/countries';
 import { parseEurosToCents } from '@/lib/salarie/montant';
+import { ERROR_MESSAGES, FALLBACK, FIELD_ERRORS, blank, number } from '@/lib/salarie/form-messages';
 import { INITIAL, type FormValues } from '@/lib/salarie/salarie-form';
 import { invalidFields, salarieModificationSchema, salarieSchema } from '@/lib/schemas/salarie';
-
-// Message affiché sous un champ, d'après le code renvoyé par le schéma ou par l'API.
-const FIELD_ERRORS: Record<string, string> = {
-  INVALID_NOM: 'Le nom est obligatoire.',
-  INVALID_PRENOM: 'Le prénom est obligatoire.',
-  INVALID_DATE_NAISSANCE: 'Date de naissance invalide, ou postérieure à la date d’entrée.',
-  INVALID_NISS: 'NISS invalide : 11 chiffres avec une clé de contrôle correcte.',
-  DATE_ENTREE_CONFLICT:
-    'Une condition de travail est datée avant cette entrée (ou le même jour), ou l’entrée suit la date de sortie.',
-  NISS_ALREADY_USED:
-    'Un salarié de cette entreprise porte déjà ce NISS (peut-être archivé : restaurez-le plutôt).',
-  INVALID_IBAN: 'IBAN belge invalide (BE suivi de 14 chiffres, clé de contrôle comprise).',
-  INVALID_EMAIL: 'Adresse email invalide.',
-  INVALID_PAYS: 'Pays invalide.',
-  INVALID_DATE_ENTREE: 'Date d’entrée obligatoire.',
-  INVALID_DATE_FIN_CONTRAT:
-    'Un CDD exige une date de fin postérieure à l’entrée ; un CDI n’en a pas.',
-  INVALID_DATE_SORTIE: 'La date de sortie se saisit à la sortie du salarié.',
-  INVALID_FONCTION: 'La fonction est obligatoire.',
-  INVALID_COMMISSION_PARITAIRE: 'Commission paritaire incohérente avec le statut.',
-  INVALID_HEURES_SEMAINE:
-    'Heures par semaine obligatoires à temps partiel, sans dépasser celles de la référence.',
-  INVALID_HEURES_REFERENCE: 'Heures de la personne de référence obligatoires à temps partiel.',
-  INVALID_SALAIRE_MENSUEL_BRUT_CENTS: 'Montant invalide (par exemple 2850,00).',
-  INVALID_SALAIRE_HORAIRE_BRUT_CENTS: 'Montant invalide (par exemple 17,25).',
-  INVALID_SITUATION_FAMILIALE: 'Situation familiale invalide.',
-  INVALID_CONJOINT_AVEC_REVENUS: 'Précisez si le conjoint ou cohabitant a des revenus.',
-  INVALID_PERSONNES_CHARGE: 'Nombre de personnes à charge invalide (0 à 20).',
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
-  FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
-  ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable.',
-  SALARIE_NOT_FOUND: 'Ce dossier est introuvable.',
-  CABINET_READ_ONLY:
-    'Votre cabinet est en lecture seule : plus rien ne peut être modifié pour le moment.',
-};
-
-const FALLBACK = 'Une erreur est survenue. Veuillez réessayer.';
-
-const blank = (value: string) => value.trim() || undefined;
-const number = (value: string) => (value.trim() ? Number(value.replace(',', '.')) : undefined);
 
 // Le formulaire envoie le même corps que l'API attend (même schéma Zod, CONVENTIONS § 5).
 // Un montant illisible devient NaN : le schéma le refuse avec le code du champ.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCents, parseEurosToCents } from '@/lib/salarie/montant';
+import { centsToInput, formatCents, parseEurosToCents } from '@/lib/salarie/montant';
 
 describe('saisie d’un montant en euros', () => {
   it('convertit en centimes entiers', () => {
@@ -51,6 +51,17 @@ describe('affichage d’un montant en centimes', () => {
   it('est l’inverse de la saisie', () => {
     for (const cents of [1, 99, 100, 1725, 285000, 99999999]) {
       expect(parseEurosToCents(formatCents(cents))).toBe(cents);
+    }
+  });
+});
+
+describe('valeur d’un champ de saisie', () => {
+  it('écrit les centimes comme on les tape, et la saisie se relit à l’identique', () => {
+    expect(centsToInput(285000)).toBe('2850,00');
+    expect(centsToInput(1725)).toBe('17,25');
+    expect(centsToInput(7)).toBe('0,07');
+    for (const cents of [1, 99, 100, 1725, 285000, 99999999]) {
+      expect(parseEurosToCents(centsToInput(cents))).toBe(cents);
     }
   });
 });

@@ -22,3 +22,8 @@ export function formatCents(cents: number): string {
   const centimes = String(absolu % 100).padStart(2, '0');
   return `${negatif ? '-' : ''}${euros},${centimes} €`;
 }
+
+// Centimes → valeur d'un champ de saisie (« 2850,00 »), relisible par parseEurosToCents.
+export function centsToInput(cents: number): string {
+  return `${Math.trunc(cents / 100)},${String(cents % 100).padStart(2, '0')}`;
+}

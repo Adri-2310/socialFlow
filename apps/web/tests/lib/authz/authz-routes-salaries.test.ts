@@ -27,15 +27,20 @@ type ActionId = keyof typeof ACTIONS;
 
 const salaries = await import('@/app/api/entreprises/[id]/salaries/route');
 const salarieById = await import('@/app/api/salaries/[id]/route');
+const conditions = await import('@/app/api/salaries/[id]/conditions/route');
+const conditionById = await import('@/app/api/salaries/[id]/conditions/[conditionId]/route');
 
 type Handler = (
   request: Request,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string; conditionId: string }> },
 ) => Promise<Response>;
 
 const ROUTES: [string, Handler, ActionId][] = [
   ['POST entreprises/[id]/salaries', salaries.POST, 'salarie.gerer'],
   ['PATCH salaries/[id]', salarieById.PATCH, 'salarie.gerer'],
+  ['POST salaries/[id]/conditions', conditions.POST, 'salarie.gerer'],
+  ['PUT salaries/[id]/conditions/[conditionId]', conditionById.PUT, 'salarie.gerer'],
+  ['DELETE salaries/[id]/conditions/[conditionId]', conditionById.DELETE, 'salarie.gerer'],
 ];
 
 function sessionFor(role: string, cabinetId: string | null = role === 'SUPER_ADMIN' ? null : 'c1') {
@@ -48,7 +53,9 @@ async function call(handler: Handler) {
   const request = new Request('http://localhost/api/entreprises/cible/salaries', {
     method: 'POST',
   });
-  return handler(request, { params: Promise.resolve({ id: 'cible' }) }).catch(() => undefined);
+  return handler(request, { params: Promise.resolve({ id: 'cible', conditionId: 'ligne' }) }).catch(
+    () => undefined,
+  );
 }
 
 async function authorization() {
