@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Eye, Users } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
 import { SalarieCreate } from '@/components/gestionnaire/salarie-create';
@@ -85,13 +85,19 @@ export default async function SalariesEntreprisePage({
                 <th className="px-4 py-3 font-semibold">Statut</th>
                 <th className="px-4 py-3 font-semibold">Entrée</th>
                 <th className="px-4 py-3 font-semibold">Sortie</th>
+                <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {data.salaries.map((s) => (
                 <tr key={s.id}>
                   <td className="px-4 py-3 font-semibold text-foreground">
-                    {s.prenom} {s.nom}
+                    <Link
+                      href={`/dashboard/gestionnaire/salaries/${s.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {s.prenom} {s.nom}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                     {s.nissMasque}
@@ -103,6 +109,15 @@ export default async function SalariesEntreprisePage({
                   <td className="px-4 py-3 text-foreground/80">{formatDate(s.dateEntree)}</td>
                   <td className="px-4 py-3 text-foreground/80">
                     {s.dateSortie ? formatDate(s.dateSortie) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/dashboard/gestionnaire/salaries/${s.id}`}
+                      aria-label={`Voir le dossier de ${s.prenom} ${s.nom}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> Voir
+                    </Link>
                   </td>
                 </tr>
               ))}

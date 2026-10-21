@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEurosToCents } from '@/lib/salarie/montant';
+import { formatCents, parseEurosToCents } from '@/lib/salarie/montant';
 
 describe('saisie d’un montant en euros', () => {
   it('convertit en centimes entiers', () => {
@@ -32,6 +32,25 @@ describe('saisie d’un montant en euros', () => {
       '12 euros',
     ]) {
       expect(parseEurosToCents(texte), texte).toBeNull();
+    }
+  });
+});
+
+describe('affichage d’un montant en centimes', () => {
+  // L'espace des milliers de Intl est insécable : on le normalise pour comparer.
+  const texte = (cents: number) => formatCents(cents).replace(/\s/g, ' ');
+
+  it('formate en euros avec deux décimales', () => {
+    expect(texte(285000)).toBe('2 850,00 €');
+    expect(texte(1725)).toBe('17,25 €');
+    expect(texte(7)).toBe('0,07 €');
+    expect(texte(0)).toBe('0,00 €');
+    expect(texte(12345678)).toBe('123 456,78 €');
+  });
+
+  it('est l’inverse de la saisie', () => {
+    for (const cents of [1, 99, 100, 1725, 285000, 99999999]) {
+      expect(parseEurosToCents(formatCents(cents))).toBe(cents);
     }
   });
 });

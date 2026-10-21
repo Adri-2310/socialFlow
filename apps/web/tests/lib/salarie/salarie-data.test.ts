@@ -21,7 +21,7 @@ const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { resolveScope } = await import('@/lib/authz/authz');
 const { encryptField, lookupHash } = await import('@/lib/crypto/field-encryption');
-const { getEntreprisesAvecEffectif, getSalariesEntreprise } =
+const { getEntreprisesAvecEffectif, getSalariesEntreprise, getSalarieDetail } =
   await import('@/lib/salarie/salarie-data');
 
 afterAll(async () => {
@@ -244,6 +244,146 @@ describe('les autres périmètres ne passent pas par les lectures du gestionnair
     for (const scope of scopes) {
       expect(await getEntreprisesAvecEffectif(scope)).toEqual([]);
       expect(await getSalariesEntreprise(scope, entreprise.id)).toBeNull();
+    }
+  });
+});
+
+describe('fiche d’un salarié', () => {
+  async function miseEnPlace(label: string) {
+    const titulaire = await creerCompte(`${label}-a`);
+    const cabinetId = titulaire.cabinetId!;
+    const gestionnaire = await creerAvecRole(`${label}-g`, 'GESTIONNAIRE_RH', cabinetId);
+    const entreprise = await creerEntreprise(cabinetId);
+    await prisma.gestionnaireEntreprise.create({
+      data: { entrepriseId: entreprise.id, userId: gestionnaire.id },
+    });
+    return { titulaire, cabinetId, gestionnaire, entreprise };
+  }
+
+  it('renvoie le dossier avec NISS et IBAN masqués, sans clair ni auteur des conditions', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await miseEnPlace('sal-fiche-masque');
+    const { salarie, niss } = await creerSalarie(cabinetId, entreprise.id);
+    await prisma.conditionTravail.updateMany({
+      where: { salarieId: salarie.id },
+      data: { createdById: gestionnaire.id },
+    });
+
+    const fiche = await getSalarieDetail((await resolveScope(gestionnaire))!, salarie.id);
+
+    expect(fiche).toMatchObject({
+      id: salarie.id,
+      nom: 'Dupont',
+      nissMasque: '85.07.**-***.**',
+      ibanMasque: 'BE68 **** **** 7034',
+      entreprise: { id: entreprise.id },
+    });
+    const brut = JSON.stringify(fiche);
+    expect(brut).not.toContain(niss);
+    expect(brut).not.toContain('BE68539007547034');
+    expect(brut).not.toContain('Encrypted');
+    // roles/03 § 9 : le gestionnaire ne voit pas les autres gestionnaires.
+    expect(brut).not.toContain('createdBy');
+    expect(brut).not.toContain(gestionnaire.id);
+  });
+
+  it('classe l’historique : en vigueur, à venir, passée, les plus récentes d’abord', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await miseEnPlace('sal-fiche-histo');
+    const { salarie } = await creerSalarie(cabinetId, entreprise.id); // dès le 01/11/2026
+    for (const [dateEffet, fonction] of [
+      ['2027-04-01', 'Responsable'],
+      ['2028-01-01', 'Directeur'],
+    ]) {
+      await prisma.conditionTravail.create({
+        data: {
+          cabinetId,
+          salarieId: salarie.id,
+          dateEffet: new Date(dateEffet),
+          statut: 'EMPLOYE',
+          commissionParitaire: '200',
+          fonction,
+          regime: 'TEMPS_PLEIN',
+          salaireMensuelBrutCents: 300000,
+        },
+      });
+    }
+
+    const fiche = await getSalarieDetail(
+      (await resolveScope(gestionnaire))!,
+      salarie.id,
+      new Date('2027-06-01'),
+    );
+
+    expect(fiche?.conditions.map((c) => [c.fonction, c.etat])).toEqual([
+      ['Directeur', 'A_VENIR'],
+      ['Responsable', 'EN_VIGUEUR'],
+      ['Comptable', 'PASSEE'],
+    ]);
+  });
+
+  it('un salarié pas encore entré n’a aucune condition en vigueur, seulement à venir', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await miseEnPlace('sal-fiche-futur');
+    const { salarie } = await creerSalarie(cabinetId, entreprise.id);
+
+    const fiche = await getSalarieDetail(
+      (await resolveScope(gestionnaire))!,
+      salarie.id,
+      new Date('2026-01-01'),
+    );
+
+    expect(fiche?.conditions.map((c) => c.etat)).toEqual(['A_VENIR']);
+  });
+
+  it('renvoie null (404) hors périmètre : non assigné, archivé, autre cabinet, inconnu', async () => {
+    const { titulaire, cabinetId, gestionnaire, entreprise } = await miseEnPlace('sal-fiche-404');
+    const autreTitulaire = await creerCompte('sal-fiche-404-autre');
+
+    const nonAssignee = await creerEntreprise(cabinetId);
+    const entrepriseArchivee = await creerEntreprise(cabinetId, { deletedAt: new Date() });
+    const autreCabinet = await creerEntreprise(autreTitulaire.cabinetId!);
+    // Même une assignation posée par erreur ne donne accès ni à un autre cabinet ni à une archivée.
+    await prisma.gestionnaireEntreprise.createMany({
+      data: [entrepriseArchivee, autreCabinet].map((e) => ({
+        entrepriseId: e.id,
+        userId: gestionnaire.id,
+      })),
+    });
+
+    const interdits = [
+      (await creerSalarie(cabinetId, nonAssignee.id)).salarie.id,
+      (await creerSalarie(cabinetId, entrepriseArchivee.id)).salarie.id,
+      (await creerSalarie(autreTitulaire.cabinetId!, autreCabinet.id)).salarie.id,
+      (await creerSalarie(cabinetId, entreprise.id, { deletedAt: new Date() })).salarie.id,
+      'id-inconnu',
+    ];
+    const scope = (await resolveScope(gestionnaire))!;
+    for (const id of interdits) {
+      expect(await getSalarieDetail(scope, id), id).toBeNull();
+    }
+    expect(titulaire.cabinetId).toBe(cabinetId);
+  });
+
+  it('une assignation retirée coupe l’accès dès la requête suivante', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await miseEnPlace('sal-fiche-retrait');
+    const { salarie } = await creerSalarie(cabinetId, entreprise.id);
+    expect(await getSalarieDetail((await resolveScope(gestionnaire))!, salarie.id)).not.toBeNull();
+
+    await prisma.gestionnaireEntreprise.deleteMany({ where: { userId: gestionnaire.id } });
+
+    expect(await getSalarieDetail((await resolveScope(gestionnaire))!, salarie.id)).toBeNull();
+  });
+
+  it('plateforme, cabinet, entreprise et collaborateur ne passent pas par cette lecture', async () => {
+    const { cabinetId, titulaire, entreprise } = await miseEnPlace('sal-fiche-autres');
+    const { salarie } = await creerSalarie(cabinetId, entreprise.id);
+
+    const scopes = [
+      { kind: 'platform' as const }, // D8
+      { kind: 'cabinet' as const, cabinetId }, // D26 : jamais un dossier
+      { kind: 'entreprise' as const, cabinetId, entrepriseId: entreprise.id },
+      { kind: 'self' as const, userId: titulaire.id },
+    ];
+    for (const scope of scopes) {
+      expect(await getSalarieDetail(scope, salarie.id)).toBeNull();
     }
   });
 });

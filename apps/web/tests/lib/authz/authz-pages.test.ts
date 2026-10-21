@@ -46,6 +46,7 @@ const gestionnaireLayout = await import('@/app/dashboard/gestionnaire/layout');
 const gestionnaireHome = await import('@/app/dashboard/gestionnaire/page');
 const gestionnaireSalaries =
   await import('@/app/dashboard/gestionnaire/entreprises/[id]/salaries/page');
+const gestionnaireSalarie = await import('@/app/dashboard/gestionnaire/salaries/[id]/page');
 const entrepriseLayout = await import('@/app/dashboard/entreprise/layout');
 const entrepriseHome = await import('@/app/dashboard/entreprise/page');
 const profil = await import('@/app/profil/page');
@@ -76,6 +77,7 @@ const PAGES: [string, Page, string][] = [
     gestionnaireSalaries.default as Page,
     'salarie.lister',
   ],
+  ['dashboard/gestionnaire/salaries/[id]', gestionnaireSalarie.default as Page, 'salarie.voir'],
   ['dashboard/entreprise (layout)', entrepriseLayout.default as Page, 'entreprise.lister'],
   ['dashboard/entreprise', entrepriseHome.default as Page, 'entreprise.lister'],
   ['profil', profil.default as Page, 'compte.gerer'],
@@ -91,8 +93,8 @@ beforeEach(() => {
 });
 
 describe('pages protégées : autorisation par la matrice', () => {
-  it('couvre les 22 pages et layouts protégés', () => {
-    expect(PAGES).toHaveLength(22);
+  it('couvre les 23 pages et layouts protégés', () => {
+    expect(PAGES).toHaveLength(23);
   });
 
   describe.each(PAGES)('%s', (_name, page, action) => {

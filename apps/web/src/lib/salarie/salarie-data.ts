@@ -1,6 +1,6 @@
 import { entrepriseWhere, type Scope } from '@/lib/authz/authz';
 import { DecryptionError, decryptField } from '@/lib/crypto/field-encryption';
-import { maskNiss } from '@/lib/crypto/masking';
+import { maskIban, maskNiss } from '@/lib/crypto/masking';
 import { prisma } from '@/lib/prisma';
 import { conditionEnVigueur } from '@/lib/salarie/conditions';
 
@@ -117,5 +117,132 @@ export async function getSalariesEntreprise(
         dateSortie: s.dateSortie,
       };
     }),
+  };
+}
+
+export type ConditionRow = {
+  id: string;
+  dateEffet: Date;
+  statut: string;
+  commissionParitaire: string;
+  fonction: string;
+  regime: string;
+  heuresSemaine: number | null;
+  heuresReference: number | null;
+  salaireMensuelBrutCents: number | null;
+  salaireHoraireBrutCents: number | null;
+  etat: 'EN_VIGUEUR' | 'A_VENIR' | 'PASSEE';
+};
+
+// Fiche d'un salarié. Pas d'auteur des conditions (`createdById`) : roles/03 § 9, le
+// gestionnaire ne voit pas les autres gestionnaires. NISS et IBAN restent masqués ; le
+// clair ne sort que par la route de dévoilement journalisée.
+export type SalarieDetail = {
+  id: string;
+  entreprise: { id: string; name: string };
+  nom: string;
+  prenom: string;
+  dateNaissance: Date;
+  adresse: string | null;
+  codePostal: string | null;
+  ville: string | null;
+  pays: string;
+  email: string | null;
+  nissMasque: string;
+  ibanMasque: string;
+  typeContrat: string;
+  dateEntree: Date;
+  dateFinContrat: Date | null;
+  dateSortie: Date | null;
+  situationFamiliale: string;
+  conjointAvecRevenus: boolean | null;
+  personnesCharge: number;
+  // Les plus récentes d'abord.
+  conditions: ConditionRow[];
+};
+
+function masquerIban(ibanEncrypted: string): string {
+  try {
+    return maskIban(decryptField(ibanEncrypted));
+  } catch (error) {
+    if (error instanceof DecryptionError) return maskIban('');
+    throw error;
+  }
+}
+
+// Dossier actif d'une entreprise du périmètre, ou null (non assigné, archivé, autre
+// cabinet, inexistant : le 404 ne distingue pas ces cas).
+export async function getSalarieDetail(
+  scope: Scope,
+  salarieId: string,
+  at: Date = new Date(),
+): Promise<SalarieDetail | null> {
+  if (scope.kind !== 'entreprises') return null;
+
+  const salarie = await prisma.salarie.findFirst({
+    where: {
+      id: salarieId,
+      cabinetId: scope.cabinetId,
+      deletedAt: null,
+      // Relation : le filtre d'entreprises du périmètre ne peut pas être écrasé par `id`.
+      entreprise: { AND: [entrepriseWhere(scope), { deletedAt: null }] },
+    },
+    select: {
+      id: true,
+      nom: true,
+      prenom: true,
+      dateNaissance: true,
+      adresse: true,
+      codePostal: true,
+      ville: true,
+      pays: true,
+      email: true,
+      nissEncrypted: true,
+      ibanEncrypted: true,
+      typeContrat: true,
+      dateEntree: true,
+      dateFinContrat: true,
+      dateSortie: true,
+      situationFamiliale: true,
+      conjointAvecRevenus: true,
+      personnesCharge: true,
+      entreprise: { select: { id: true, name: true } },
+      conditions: {
+        orderBy: { dateEffet: 'desc' },
+        select: {
+          id: true,
+          dateEffet: true,
+          statut: true,
+          commissionParitaire: true,
+          fonction: true,
+          regime: true,
+          heuresSemaine: true,
+          heuresReference: true,
+          salaireMensuelBrutCents: true,
+          salaireHoraireBrutCents: true,
+        },
+      },
+    },
+  });
+  if (!salarie) return null;
+
+  const { nissEncrypted, ibanEncrypted, conditions, ...dossier } = salarie;
+  // Triées de la plus récente à la plus ancienne : la première déjà entrée en vigueur
+  // est la condition courante ; une condition postérieure à `at` est « à venir ».
+  const courante = conditions.find((c) => c.dateEffet.getTime() <= at.getTime());
+
+  return {
+    ...dossier,
+    nissMasque: masquerNiss(nissEncrypted),
+    ibanMasque: masquerIban(ibanEncrypted),
+    conditions: conditions.map((c) => ({
+      ...c,
+      etat:
+        c.dateEffet.getTime() > at.getTime()
+          ? 'A_VENIR'
+          : c.id === courante?.id
+            ? 'EN_VIGUEUR'
+            : 'PASSEE',
+    })),
   };
 }
