@@ -32,7 +32,7 @@ export function SalarieCreate({
       </button>
       {open && (
         <SalarieFormDialog
-          entrepriseId={entrepriseId}
+          target={{ mode: 'create', entrepriseId }}
           countries={countries}
           onClose={() => setOpen(false)}
         />

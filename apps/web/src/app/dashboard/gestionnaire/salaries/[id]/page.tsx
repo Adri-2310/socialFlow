@@ -3,6 +3,11 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { SalarieEdit } from '@/components/gestionnaire/salarie-edit';
+import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
+import { countryOptions } from '@/lib/countries';
+import { prisma } from '@/lib/prisma';
+import { toFormValues } from '@/lib/salarie/salarie-form';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
 import { getSalarieDetail, type ConditionRow } from '@/lib/salarie/salarie-data';
@@ -81,6 +86,13 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
   const salarie = await getSalarieDetail(scope, id);
   if (!salarie) notFound();
 
+  // D29, D71 : cabinet en lecture seule, la modification est désactivée (le serveur refuse aussi).
+  const cabinet = await prisma.cabinet.findUnique({
+    where: { id: user.cabinetId ?? '' },
+    select: { billingStatus: true, status: true, suspensionType: true },
+  });
+  const readOnly = !cabinet || isCabinetReadOnly(cabinet);
+
   // Condition courante ; à défaut (salarié qui n'est pas encore entré), la prochaine prévue.
   const courante =
     salarie.conditions.find((c) => c.etat === 'EN_VIGUEUR') ??
@@ -92,16 +104,27 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-4">
-      <div>
-        <Link
-          href={`/dashboard/gestionnaire/entreprises/${salarie.entreprise.id}/salaries`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> {salarie.entreprise.name}
-        </Link>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-          {salarie.prenom} {salarie.nom}
-        </h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <Link
+            href={`/dashboard/gestionnaire/entreprises/${salarie.entreprise.id}/salaries`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> {salarie.entreprise.name}
+          </Link>
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            {salarie.prenom} {salarie.nom}
+          </h2>
+        </div>
+        <SalarieEdit
+          salarieId={salarie.id}
+          initial={toFormValues(salarie)}
+          nissMasque={salarie.nissMasque}
+          ibanMasque={salarie.ibanMasque}
+          // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
+          countries={countryOptions()}
+          readOnly={readOnly}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

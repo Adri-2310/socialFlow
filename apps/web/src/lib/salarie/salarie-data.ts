@@ -75,6 +75,24 @@ export async function findEntrepriseInScope(
   });
 }
 
+// Le dossier actif si son entreprise est dans le périmètre du gestionnaire, sinon null
+// (non assigné, archivé, autre cabinet, inexistant : le 404 ne distingue pas ces cas).
+export async function findSalarieInScope(
+  scope: Scope,
+  salarieId: string,
+): Promise<{ id: string; entrepriseId: string } | null> {
+  if (scope.kind !== 'entreprises') return null;
+  return prisma.salarie.findFirst({
+    where: {
+      id: salarieId,
+      cabinetId: scope.cabinetId,
+      deletedAt: null,
+      entreprise: { AND: [entrepriseWhere(scope), { deletedAt: null }] },
+    },
+    select: { id: true, entrepriseId: true },
+  });
+}
+
 // Salariés actifs d'une entreprise du périmètre, ou null si l'entreprise n'y est pas
 // (non assignée, archivée, d'un autre cabinet, inexistante).
 export async function getSalariesEntreprise(

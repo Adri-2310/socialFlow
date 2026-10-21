@@ -26,6 +26,7 @@ const { ACTIONS, ROLES, authorize } = await import('@/lib/authz/authz');
 type ActionId = keyof typeof ACTIONS;
 
 const salaries = await import('@/app/api/entreprises/[id]/salaries/route');
+const salarieById = await import('@/app/api/salaries/[id]/route');
 
 type Handler = (
   request: Request,
@@ -34,6 +35,7 @@ type Handler = (
 
 const ROUTES: [string, Handler, ActionId][] = [
   ['POST entreprises/[id]/salaries', salaries.POST, 'salarie.gerer'],
+  ['PATCH salaries/[id]', salarieById.PATCH, 'salarie.gerer'],
 ];
 
 function sessionFor(role: string, cabinetId: string | null = role === 'SUPER_ADMIN' ? null : 'c1') {

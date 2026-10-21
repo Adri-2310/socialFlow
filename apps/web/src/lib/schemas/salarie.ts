@@ -82,56 +82,91 @@ export const conditionTravailSchema = z
 
 export type ConditionTravailInput = z.infer<typeof conditionTravailSchema>;
 
+// Identité : commune à la création et à la modification.
+const identiteFields = {
+  nom: text(100),
+  prenom: text(100),
+  dateNaissance: isoDate,
+  adresse: optionalText(200),
+  codePostal: optionalText(10),
+  ville: optionalText(100),
+  pays: z.string().trim().length(2).toUpperCase().default('BE'),
+  email: z.email().max(254).optional(),
+};
+const nissField = z.string().transform(normalizeNiss).refine(isValidNiss);
+const ibanField = z.string().transform(normalizeIban).refine(isValidIban);
+
+const contratFields = {
+  typeContrat: z.enum(TYPES_CONTRAT),
+  dateEntree: isoDate,
+  dateFinContrat: isoDate.optional(),
+  dateSortie: isoDate.optional(),
+};
+
+// Fiscal (précompte professionnel) : non daté, voir roles/03 § 4.2.
+const fiscalFields = {
+  situationFamiliale: z.enum(SITUATIONS_FAMILIALES),
+  conjointAvecRevenus: z.boolean().optional(),
+  personnesCharge: z.number().int().min(0).max(20),
+};
+
+type ContratFields = z.infer<z.ZodObject<typeof contratFields>> & { dateNaissance: string };
+type FiscalFields = z.infer<z.ZodObject<typeof fiscalFields>>;
+
+function checkContrat(s: ContratFields, fail: Fail) {
+  if (s.typeContrat === 'CDD' && !s.dateFinContrat) fail('dateFinContrat');
+  if (s.typeContrat === 'CDI' && s.dateFinContrat) fail('dateFinContrat');
+  if (s.dateFinContrat && s.dateFinContrat <= s.dateEntree) fail('dateFinContrat');
+  if (s.dateSortie && s.dateSortie < s.dateEntree) fail('dateSortie');
+  if (s.dateNaissance >= s.dateEntree) fail('dateNaissance');
+}
+
+function checkFiscal(s: FiscalFields, fail: Fail) {
+  if (s.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL' && s.conjointAvecRevenus === undefined) {
+    fail('conjointAvecRevenus');
+  }
+  if (s.situationFamiliale === 'ISOLE' && s.conjointAvecRevenus !== undefined) {
+    fail('conjointAvecRevenus');
+  }
+}
+
 export const salarieSchema = z
   .object({
-    // Identité
-    nom: text(100),
-    prenom: text(100),
-    niss: z.string().transform(normalizeNiss).refine(isValidNiss),
-    dateNaissance: isoDate,
-    adresse: optionalText(200),
-    codePostal: optionalText(10),
-    ville: optionalText(100),
-    pays: z.string().trim().length(2).toUpperCase().default('BE'),
-    email: z.email().max(254).optional(),
-    iban: z.string().transform(normalizeIban).refine(isValidIban),
-
-    // Contrat
-    typeContrat: z.enum(TYPES_CONTRAT),
-    dateEntree: isoDate,
-    dateFinContrat: isoDate.optional(),
-    dateSortie: isoDate.optional(),
-
+    ...identiteFields,
+    niss: nissField,
+    iban: ibanField,
+    ...contratFields,
     // Conditions de travail initiales : elles deviennent la première ligne de
     // l'historique daté (ConditionTravail), à la date d'entrée.
     ...conditionFields,
-
-    // Fiscal (précompte professionnel)
-    situationFamiliale: z.enum(SITUATIONS_FAMILIALES),
-    conjointAvecRevenus: z.boolean().optional(),
-    personnesCharge: z.number().int().min(0).max(20),
+    ...fiscalFields,
   })
   .superRefine((s, ctx) => {
     const fail = issueAdder(ctx);
-
-    if (s.typeContrat === 'CDD' && !s.dateFinContrat) fail('dateFinContrat');
-    if (s.typeContrat === 'CDI' && s.dateFinContrat) fail('dateFinContrat');
-    if (s.dateFinContrat && s.dateFinContrat <= s.dateEntree) fail('dateFinContrat');
-    if (s.dateSortie && s.dateSortie < s.dateEntree) fail('dateSortie');
-    if (s.dateNaissance >= s.dateEntree) fail('dateNaissance');
-
+    checkContrat(s, fail);
     checkCondition(s, fail);
-
-    if (
-      s.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL' &&
-      s.conjointAvecRevenus === undefined
-    ) {
-      fail('conjointAvecRevenus');
-    }
-    if (s.situationFamiliale === 'ISOLE' && s.conjointAvecRevenus !== undefined) {
-      fail('conjointAvecRevenus');
-    }
+    checkFiscal(s, fail);
   });
+
+// Modification d'un dossier (5c) : le formulaire renvoie tout le dossier, un champ facultatif
+// absent est effacé. NISS et IBAN ne sont jamais préremplis en clair (le dévoilement est
+// journalisé) : absents, ils restent inchangés. Rémunération, régime, fonction et statut ne
+// passent pas ici : ils sont datés et se changent par une nouvelle condition de travail.
+export const salarieModificationSchema = z
+  .object({
+    ...identiteFields,
+    niss: nissField.optional(),
+    iban: ibanField.optional(),
+    ...contratFields,
+    ...fiscalFields,
+  })
+  .superRefine((s, ctx) => {
+    const fail = issueAdder(ctx);
+    checkContrat(s, fail);
+    checkFiscal(s, fail);
+  });
+
+export type SalarieModificationInput = z.infer<typeof salarieModificationSchema>;
 
 export type SalarieInput = z.infer<typeof salarieSchema>;
 

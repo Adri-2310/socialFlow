@@ -2,61 +2,12 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, Pencil, UserPlus } from 'lucide-react';
 import { Field, inputClass } from '@/components/gestionnaire/form-field';
 import type { CountryOption } from '@/lib/countries';
 import { parseEurosToCents } from '@/lib/salarie/montant';
-import { invalidFields, salarieSchema } from '@/lib/schemas/salarie';
-
-type FormValues = {
-  prenom: string;
-  nom: string;
-  dateNaissance: string;
-  niss: string;
-  iban: string;
-  email: string;
-  adresse: string;
-  codePostal: string;
-  ville: string;
-  pays: string;
-  statut: 'EMPLOYE' | 'OUVRIER';
-  typeContrat: 'CDI' | 'CDD';
-  dateEntree: string;
-  dateFinContrat: string;
-  fonction: string;
-  regime: 'TEMPS_PLEIN' | 'TEMPS_PARTIEL';
-  heuresSemaine: string;
-  heuresReference: string;
-  salaire: string; // en euros : mensuel pour un employé, horaire pour un ouvrier
-  situationFamiliale: 'ISOLE' | 'MARIE_OU_COHABITANT_LEGAL';
-  conjointAvecRevenus: '' | 'oui' | 'non';
-  personnesCharge: string;
-};
-
-const INITIAL: FormValues = {
-  prenom: '',
-  nom: '',
-  dateNaissance: '',
-  niss: '',
-  iban: '',
-  email: '',
-  adresse: '',
-  codePostal: '',
-  ville: '',
-  pays: 'BE',
-  statut: 'EMPLOYE',
-  typeContrat: 'CDI',
-  dateEntree: '',
-  dateFinContrat: '',
-  fonction: '',
-  regime: 'TEMPS_PLEIN',
-  heuresSemaine: '',
-  heuresReference: '',
-  salaire: '',
-  situationFamiliale: 'ISOLE',
-  conjointAvecRevenus: '',
-  personnesCharge: '0',
-};
+import { INITIAL, type FormValues } from '@/lib/salarie/salarie-form';
+import { invalidFields, salarieModificationSchema, salarieSchema } from '@/lib/schemas/salarie';
 
 // Message affiché sous un champ, d'après le code renvoyé par le schéma ou par l'API.
 const FIELD_ERRORS: Record<string, string> = {
@@ -64,6 +15,8 @@ const FIELD_ERRORS: Record<string, string> = {
   INVALID_PRENOM: 'Le prénom est obligatoire.',
   INVALID_DATE_NAISSANCE: 'Date de naissance invalide, ou postérieure à la date d’entrée.',
   INVALID_NISS: 'NISS invalide : 11 chiffres avec une clé de contrôle correcte.',
+  DATE_ENTREE_CONFLICT:
+    'Une condition de travail est datée avant cette entrée (ou le même jour), ou l’entrée suit la date de sortie.',
   NISS_ALREADY_USED:
     'Un salarié de cette entreprise porte déjà ce NISS (peut-être archivé : restaurez-le plutôt).',
   INVALID_IBAN: 'IBAN belge invalide (BE suivi de 14 chiffres, clé de contrôle comprise).',
@@ -89,6 +42,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable.',
+  SALARIE_NOT_FOUND: 'Ce dossier est introuvable.',
   CABINET_READ_ONLY:
     'Votre cabinet est en lecture seule : plus rien ne peut être modifié pour le moment.',
 };
@@ -106,8 +60,9 @@ function toPayload(f: FormValues) {
     prenom: f.prenom,
     nom: f.nom,
     dateNaissance: f.dateNaissance,
-    niss: f.niss,
-    iban: f.iban,
+    // Vide = absent : à la création le schéma le refuse, à la modification il reste inchangé.
+    niss: blank(f.niss),
+    iban: blank(f.iban),
     email: blank(f.email),
     adresse: blank(f.adresse),
     codePostal: blank(f.codePostal),
@@ -134,20 +89,49 @@ function toPayload(f: FormValues) {
   };
 }
 
-// Création du dossier d'un salarié (D6, roles/03 § 4.1). Le serveur revalide tout ; les
-// erreurs reviennent champ par champ. NISS et IBAN ne sont jamais conservés ailleurs
-// que dans ce formulaire, le temps de la saisie.
+// La modification ne touche ni aux conditions de travail (datées, voir « Ajouter une
+// condition ») ni à la date de sortie : on retire ces champs de la charge utile.
+function toModificationPayload(f: FormValues) {
+  const {
+    statut: _statut,
+    commissionParitaire: _cp,
+    fonction: _fonction,
+    regime: _regime,
+    heuresSemaine: _heuresSemaine,
+    heuresReference: _heuresReference,
+    salaireMensuelBrutCents: _mensuel,
+    salaireHoraireBrutCents: _horaire,
+    ...dossier
+  } = toPayload(f);
+  return dossier;
+}
+
+// Création (D6, roles/03 § 4.1) ou modification (§ 4.2) du dossier d'un salarié. Le serveur
+// revalide tout ; les erreurs reviennent champ par champ. NISS et IBAN ne sont jamais
+// conservés ailleurs que dans ce formulaire, le temps de la saisie, et jamais préremplis.
+export type SalarieFormTarget =
+  | { mode: 'create'; entrepriseId: string }
+  | {
+      mode: 'edit';
+      salarieId: string;
+      initial: FormValues;
+      // Valeurs masquées, affichées en indication : le clair ne sort que par le dévoilement.
+      nissMasque: string;
+      ibanMasque: string;
+    };
+
 export function SalarieFormDialog({
-  entrepriseId,
+  target,
   countries,
   onClose,
 }: {
-  entrepriseId: string;
+  target: SalarieFormTarget;
   countries: CountryOption[];
   onClose: () => void;
 }) {
+  const edit = target.mode === 'edit';
   const router = useRouter();
-  const [form, setForm] = useState<FormValues>(INITIAL);
+  const [form, setForm] = useState<FormValues>(target.mode === 'edit' ? target.initial : INITIAL);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -168,8 +152,8 @@ export function SalarieFormDialog({
     setError(null);
     setFieldErrors({});
 
-    const payload = toPayload(form);
-    const check = salarieSchema.safeParse(payload);
+    const payload = edit ? toModificationPayload(form) : toPayload(form);
+    const check = (edit ? salarieModificationSchema : salarieSchema).safeParse(payload);
     if (!check.success) {
       setFieldErrors(invalidFields(check.error));
       return;
@@ -177,11 +161,16 @@ export function SalarieFormDialog({
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/entreprises/${entrepriseId}/salaries`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        target.mode === 'edit'
+          ? `/api/salaries/${target.salarieId}`
+          : `/api/entreprises/${target.entrepriseId}/salaries`,
+        {
+          method: target.mode === 'edit' ? 'PATCH' : 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
       const body = await res.json().catch(() => null);
 
       if (!res.ok) {
@@ -214,14 +203,16 @@ export function SalarieFormDialog({
       >
         <div className="flex items-start gap-4">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-            <UserPlus className="h-5 w-5" />
+            {edit ? <Pencil className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
           </span>
           <div>
             <h3 id="salarie-form-title" className="text-lg font-semibold text-foreground">
-              Nouveau salarié
+              {edit ? 'Modifier le dossier' : 'Nouveau salarié'}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Le NISS et l’IBAN sont chiffrés à l’enregistrement et masqués à l’affichage.
+              {edit
+                ? 'Le statut, la fonction, le régime et la rémunération sont datés : ils se changent par « Ajouter une condition ».'
+                : 'Le NISS et l’IBAN sont chiffrés à l’enregistrement et masqués à l’affichage.'}
             </p>
           </div>
         </div>
@@ -255,7 +246,16 @@ export function SalarieFormDialog({
               className={inputClass}
             />
           </Field>
-          <Field id="sal-niss" label="NISS" error={err('niss')} hint="Par exemple 85.07.30-033.28">
+          <Field
+            id="sal-niss"
+            label="NISS"
+            error={err('niss')}
+            hint={
+              target.mode === 'edit'
+                ? `Actuel : ${target.nissMasque}. Laissez vide pour ne pas le changer.`
+                : 'Par exemple 85.07.30-033.28'
+            }
+          >
             <input
               id="sal-niss"
               value={form.niss}
@@ -270,7 +270,11 @@ export function SalarieFormDialog({
               id="sal-iban"
               label="IBAN"
               error={err('iban')}
-              hint="IBAN belge, par exemple BE68 5390 0754 7034"
+              hint={
+                target.mode === 'edit'
+                  ? `Actuel : ${target.ibanMasque}. Laissez vide pour ne pas le changer.`
+                  : 'IBAN belge, par exemple BE68 5390 0754 7034'
+              }
             >
               <input
                 id="sal-iban"
@@ -342,33 +346,39 @@ export function SalarieFormDialog({
 
         <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
           <legend className="mb-1 text-sm font-semibold text-foreground">Contrat</legend>
-          <Field
-            id="sal-statut"
-            label="Statut"
-            error={err('statut')}
-            hint={
-              form.statut === 'EMPLOYE' ? 'Commission paritaire 200' : 'Commission paritaire 100'
-            }
-          >
-            <select
-              id="sal-statut"
-              value={form.statut}
-              onChange={set('statut')}
-              className={inputClass}
-            >
-              <option value="EMPLOYE">Employé</option>
-              <option value="OUVRIER">Ouvrier</option>
-            </select>
-          </Field>
-          <Field id="sal-fonction" label="Fonction" error={err('fonction')}>
-            <input
-              id="sal-fonction"
-              value={form.fonction}
-              onChange={set('fonction')}
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
+          {!edit && (
+            <>
+              <Field
+                id="sal-statut"
+                label="Statut"
+                error={err('statut')}
+                hint={
+                  form.statut === 'EMPLOYE'
+                    ? 'Commission paritaire 200'
+                    : 'Commission paritaire 100'
+                }
+              >
+                <select
+                  id="sal-statut"
+                  value={form.statut}
+                  onChange={set('statut')}
+                  className={inputClass}
+                >
+                  <option value="EMPLOYE">Employé</option>
+                  <option value="OUVRIER">Ouvrier</option>
+                </select>
+              </Field>
+              <Field id="sal-fonction" label="Fonction" error={err('fonction')}>
+                <input
+                  id="sal-fonction"
+                  value={form.fonction}
+                  onChange={set('fonction')}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+              </Field>
+            </>
+          )}
           <Field id="sal-type" label="Type de contrat" error={err('typeContrat')}>
             <select
               id="sal-type"
@@ -407,71 +417,73 @@ export function SalarieFormDialog({
           )}
         </fieldset>
 
-        <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
-          <legend className="mb-1 text-sm font-semibold text-foreground">
-            Temps de travail et rémunération
-          </legend>
-          <Field id="sal-regime" label="Régime" error={err('regime')}>
-            <select
-              id="sal-regime"
-              value={form.regime}
-              onChange={set('regime')}
-              className={inputClass}
-            >
-              <option value="TEMPS_PLEIN">Temps plein</option>
-              <option value="TEMPS_PARTIEL">Temps partiel</option>
-            </select>
-          </Field>
-          <Field
-            id="sal-salaire"
-            label={
-              form.statut === 'EMPLOYE' ? 'Salaire mensuel brut (€)' : 'Salaire horaire brut (€)'
-            }
-            error={salaireErr}
-            hint={form.statut === 'EMPLOYE' ? 'Par exemple 2850,00' : 'Par exemple 17,25'}
-          >
-            <input
+        {!edit && (
+          <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
+            <legend className="mb-1 text-sm font-semibold text-foreground">
+              Temps de travail et rémunération
+            </legend>
+            <Field id="sal-regime" label="Régime" error={err('regime')}>
+              <select
+                id="sal-regime"
+                value={form.regime}
+                onChange={set('regime')}
+                className={inputClass}
+              >
+                <option value="TEMPS_PLEIN">Temps plein</option>
+                <option value="TEMPS_PARTIEL">Temps partiel</option>
+              </select>
+            </Field>
+            <Field
               id="sal-salaire"
-              value={form.salaire}
-              onChange={set('salaire')}
-              inputMode="decimal"
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          {partiel && (
-            <>
-              <Field
-                id="sal-heures"
-                label="Heures par semaine du salarié"
-                error={err('heuresSemaine')}
-              >
-                <input
+              label={
+                form.statut === 'EMPLOYE' ? 'Salaire mensuel brut (€)' : 'Salaire horaire brut (€)'
+              }
+              error={salaireErr}
+              hint={form.statut === 'EMPLOYE' ? 'Par exemple 2850,00' : 'Par exemple 17,25'}
+            >
+              <input
+                id="sal-salaire"
+                value={form.salaire}
+                onChange={set('salaire')}
+                inputMode="decimal"
+                autoComplete="off"
+                className={inputClass}
+              />
+            </Field>
+            {partiel && (
+              <>
+                <Field
                   id="sal-heures"
-                  value={form.heuresSemaine}
-                  onChange={set('heuresSemaine')}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  className={inputClass}
-                />
-              </Field>
-              <Field
-                id="sal-heures-ref"
-                label="Heures par semaine de la personne de référence"
-                error={err('heuresReference')}
-              >
-                <input
+                  label="Heures par semaine du salarié"
+                  error={err('heuresSemaine')}
+                >
+                  <input
+                    id="sal-heures"
+                    value={form.heuresSemaine}
+                    onChange={set('heuresSemaine')}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field
                   id="sal-heures-ref"
-                  value={form.heuresReference}
-                  onChange={set('heuresReference')}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  className={inputClass}
-                />
-              </Field>
-            </>
-          )}
-        </fieldset>
+                  label="Heures par semaine de la personne de référence"
+                  error={err('heuresReference')}
+                >
+                  <input
+                    id="sal-heures-ref"
+                    value={form.heuresReference}
+                    onChange={set('heuresReference')}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className={inputClass}
+                  />
+                </Field>
+              </>
+            )}
+          </fieldset>
+        )}
 
         <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
           <legend className="mb-1 text-sm font-semibold text-foreground">Situation fiscale</legend>
@@ -543,7 +555,7 @@ export function SalarieFormDialog({
             className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Créer le dossier
+            {edit ? 'Enregistrer' : 'Créer le dossier'}
           </button>
         </div>
       </form>

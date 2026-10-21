@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { conditionTravailSchema, invalidFieldCode, salarieSchema } from '@/lib/schemas/salarie';
+import {
+  conditionTravailSchema,
+  invalidFieldCode,
+  salarieModificationSchema,
+  salarieSchema,
+} from '@/lib/schemas/salarie';
 
 const employe = {
   nom: 'Dupont',
@@ -161,6 +166,50 @@ describe('schéma d’une condition de travail datée', () => {
     );
     expect(codeOfCondition({ ...condition, regime: 'TEMPS_PARTIEL' })).toBe(
       'INVALID_HEURES_SEMAINE',
+    );
+  });
+});
+
+describe('schéma de modification d’un dossier', () => {
+  // Le dossier sans conditions de travail ni NISS et IBAN : ils se changent à part.
+  const {
+    niss: _niss,
+    iban: _iban,
+    statut: _statut,
+    commissionParitaire: _cp,
+    fonction: _fonction,
+    regime: _regime,
+    salaireMensuelBrutCents: _salaire,
+    ...dossier
+  } = employe;
+  const codeOfModification = (input: unknown): string | null => {
+    const result = salarieModificationSchema.safeParse(input);
+    return result.success ? null : invalidFieldCode(result.error);
+  };
+
+  it('accepte le dossier sans NISS ni IBAN (inchangés) ni conditions de travail', () => {
+    expect(codeOfModification(dossier)).toBeNull();
+  });
+
+  it('valide et normalise un nouveau NISS ou IBAN quand il est fourni', () => {
+    const parsed = salarieModificationSchema.parse({
+      ...dossier,
+      niss: '85.07.30-033.28',
+      iban: 'be68 5390 0754 7034',
+    });
+    expect(parsed.niss).toBe('85073003328');
+    expect(parsed.iban).toBe('BE68539007547034');
+    expect(codeOfModification({ ...dossier, niss: '85073003329' })).toBe('INVALID_NISS');
+    expect(codeOfModification({ ...dossier, iban: 'NL91ABNA0417164300' })).toBe('INVALID_IBAN');
+  });
+
+  it('applique les règles de contrat et de fiscalité du dossier', () => {
+    expect(codeOfModification({ ...dossier, typeContrat: 'CDD' })).toBe('INVALID_DATE_FIN_CONTRAT');
+    expect(codeOfModification({ ...dossier, dateEntree: '1980-01-01' })).toBe(
+      'INVALID_DATE_NAISSANCE',
+    );
+    expect(codeOfModification({ ...dossier, conjointAvecRevenus: undefined })).toBe(
+      'INVALID_CONJOINT_AVEC_REVENUS',
     );
   });
 });
