@@ -60,6 +60,21 @@ function masquerNiss(nissEncrypted: string): string {
   }
 }
 
+// L'entreprise si elle est dans le périmètre du gestionnaire, sinon null (non assignée,
+// archivée, autre cabinet, inconnue : le 404 ne distingue pas ces cas).
+export async function findEntrepriseInScope(
+  scope: Scope,
+  entrepriseId: string,
+): Promise<{ id: string; name: string } | null> {
+  if (scope.kind !== 'entreprises') return null;
+  return prisma.entreprise.findFirst({
+    // AND et non une fusion d'objets : entrepriseWhere(scope) pose déjà un filtre sur `id`
+    // (les entreprises assignées), qu'un `id` ajouté à côté écraserait.
+    where: { AND: [entrepriseWhere(scope), { id: entrepriseId, deletedAt: null }] },
+    select: { id: true, name: true },
+  });
+}
+
 // Salariés actifs d'une entreprise du périmètre, ou null si l'entreprise n'y est pas
 // (non assignée, archivée, d'un autre cabinet, inexistante).
 export async function getSalariesEntreprise(
@@ -69,12 +84,7 @@ export async function getSalariesEntreprise(
 ): Promise<{ entreprise: { id: string; name: string }; salaries: SalarieRow[] } | null> {
   if (scope.kind !== 'entreprises') return null;
 
-  const entreprise = await prisma.entreprise.findFirst({
-    // AND et non une fusion d'objets : entrepriseWhere(scope) pose déjà un filtre sur `id`
-    // (les entreprises assignées), qu'un `id` ajouté à côté écraserait.
-    where: { AND: [entrepriseWhere(scope), { id: entrepriseId, deletedAt: null }] },
-    select: { id: true, name: true },
-  });
+  const entreprise = await findEntrepriseInScope(scope, entrepriseId);
   if (!entreprise) return null;
 
   const salaries = await prisma.salarie.findMany({

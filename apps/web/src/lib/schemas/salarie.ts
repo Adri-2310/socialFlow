@@ -135,10 +135,23 @@ export const salarieSchema = z
 
 export type SalarieInput = z.infer<typeof salarieSchema>;
 
-// 400 INVALID_<CHAMP> (CONVENTIONS § 3) : le code du premier champ en erreur,
-// par exemple `dateFinContrat` → INVALID_DATE_FIN_CONTRAT.
+// 400 INVALID_<CHAMP> (CONVENTIONS § 3) : `dateFinContrat` → INVALID_DATE_FIN_CONTRAT.
+export function fieldCode(field: string): string {
+  return `INVALID_${field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase()}`;
+}
+
+// Le code du premier champ en erreur.
 export function invalidFieldCode(error: z.ZodError): string {
   const field = String(error.issues[0]?.path[0] ?? '');
-  if (!field) return 'INVALID_REQUEST';
-  return `INVALID_${field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase()}`;
+  return field ? fieldCode(field) : 'INVALID_REQUEST';
+}
+
+// Un code par champ en erreur, pour que le formulaire l'affiche au bon endroit.
+export function invalidFields(error: z.ZodError): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const field = String(issue.path[0] ?? '');
+    if (field && !(field in fields)) fields[field] = fieldCode(field);
+  }
+  return fields;
 }

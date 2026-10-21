@@ -4,6 +4,10 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Users } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
+import { SalarieCreate } from '@/components/gestionnaire/salarie-create';
+import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
+import { countryOptions } from '@/lib/countries';
+import { prisma } from '@/lib/prisma';
 import { getSalariesEntreprise } from '@/lib/salarie/salarie-data';
 
 export const metadata: Metadata = {
@@ -30,20 +34,36 @@ export default async function SalariesEntreprisePage({
   // Entreprise hors périmètre (non assignée, archivée, autre cabinet) : 404, on ne
   // révèle pas son existence.
   const data = await getSalariesEntreprise(scope, id);
-  if (!data) notFound();
+  // scope.kind : toujours « entreprises » ici (sinon data serait null), mais TypeScript l'ignore.
+  if (!data || scope.kind !== 'entreprises') notFound();
+
+  // D29, D71 : cabinet en lecture seule, la création est désactivée (le serveur refuse aussi).
+  const cabinet = await prisma.cabinet.findUnique({
+    where: { id: scope.cabinetId },
+    select: { billingStatus: true, status: true, suspensionType: true },
+  });
+  const readOnly = !cabinet || isCabinetReadOnly(cabinet);
 
   return (
     <section className="space-y-4">
-      <div>
-        <Link
-          href="/dashboard/gestionnaire"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Mes entreprises
-        </Link>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-          {data.entreprise.name}
-        </h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <Link
+            href="/dashboard/gestionnaire"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Mes entreprises
+          </Link>
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            {data.entreprise.name}
+          </h2>
+        </div>
+        <SalarieCreate
+          entrepriseId={data.entreprise.id}
+          // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
+          countries={countryOptions()}
+          readOnly={readOnly}
+        />
       </div>
 
       {data.salaries.length === 0 ? (
