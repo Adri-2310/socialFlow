@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ConditionAdd } from '@/components/gestionnaire/condition-add';
 import { ConditionRowActions } from '@/components/gestionnaire/condition-row-actions';
 import { SalarieEdit } from '@/components/gestionnaire/salarie-edit';
+import { SensitiveValue } from '@/components/gestionnaire/sensitive-value';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
@@ -135,8 +136,28 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Identité">
           <Row label="Date de naissance" value={formatDate(salarie.dateNaissance)} />
-          <Row label="NISS" value={salarie.nissMasque} mono />
-          <Row label="IBAN" value={salarie.ibanMasque} mono />
+          <Row
+            label="NISS"
+            value={
+              <SensitiveValue
+                salarieId={salarie.id}
+                field="niss"
+                label="NISS"
+                masked={salarie.nissMasque}
+              />
+            }
+          />
+          <Row
+            label="IBAN"
+            value={
+              <SensitiveValue
+                salarieId={salarie.id}
+                field="iban"
+                label="IBAN"
+                masked={salarie.ibanMasque}
+              />
+            }
+          />
           <Row label="Email" value={salarie.email} />
           <div className="sm:col-span-2">
             <Row label="Adresse" value={adresse} />

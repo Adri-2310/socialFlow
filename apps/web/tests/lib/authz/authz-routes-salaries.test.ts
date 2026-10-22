@@ -28,6 +28,7 @@ type ActionId = keyof typeof ACTIONS;
 const salaries = await import('@/app/api/entreprises/[id]/salaries/route');
 const salarieById = await import('@/app/api/salaries/[id]/route');
 const conditions = await import('@/app/api/salaries/[id]/conditions/route');
+const reveal = await import('@/app/api/salaries/[id]/reveal/route');
 const conditionById = await import('@/app/api/salaries/[id]/conditions/[conditionId]/route');
 
 type Handler = (
@@ -41,6 +42,7 @@ const ROUTES: [string, Handler, ActionId][] = [
   ['POST salaries/[id]/conditions', conditions.POST, 'salarie.gerer'],
   ['PUT salaries/[id]/conditions/[conditionId]', conditionById.PUT, 'salarie.gerer'],
   ['DELETE salaries/[id]/conditions/[conditionId]', conditionById.DELETE, 'salarie.gerer'],
+  ['POST salaries/[id]/reveal', reveal.POST, 'salarie.devoiler-donnees-sensibles'],
 ];
 
 function sessionFor(role: string, cabinetId: string | null = role === 'SUPER_ADMIN' ? null : 'c1') {
@@ -105,16 +107,28 @@ describe('routes des salariés : autorisation par la matrice', () => {
       expect(authz.scope).toEqual({ kind: 'entreprises', cabinetId: 'c1', entrepriseIds: ['e1'] });
     });
 
-    it('423 CABINET_READ_ONLY quand le cabinet est en lecture seule', async () => {
-      cabinetFindUnique.mockResolvedValue({
-        billingStatus: 'IMPAYE',
-        status: 'actif',
-        suspensionType: null,
-      });
-      sessionFor('GESTIONNAIRE_RH');
-      const res = await call(handler);
-      expect(res?.status).toBe(423);
-      expect(await res?.json()).toEqual({ error: 'CABINET_READ_ONLY' });
-    });
+    // Une action d'écriture est refusée en lecture seule (423) ; consulter, y compris
+    // dévoiler un NISS (journalisé), reste possible (D29).
+    const isWrite = 'write' in ACTIONS[action];
+    it(
+      isWrite
+        ? '423 CABINET_READ_ONLY quand le cabinet est en lecture seule'
+        : 'reste possible quand le cabinet est en lecture seule',
+      async () => {
+        cabinetFindUnique.mockResolvedValue({
+          billingStatus: 'IMPAYE',
+          status: 'actif',
+          suspensionType: null,
+        });
+        sessionFor('GESTIONNAIRE_RH');
+        const res = await call(handler);
+        if (isWrite) {
+          expect(res?.status).toBe(423);
+          expect(await res?.json()).toEqual({ error: 'CABINET_READ_ONLY' });
+        } else {
+          expect((await authorization()).response).toBeUndefined();
+        }
+      },
+    );
   });
 });

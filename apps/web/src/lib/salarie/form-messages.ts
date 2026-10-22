@@ -44,6 +44,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   CONDITION_NOT_FOUND: 'Cette condition est introuvable.',
   CONDITION_NOT_REMOVABLE:
     'Seul un changement à venir peut être annulé (jamais la première ligne, ni une ligne déjà en vigueur).',
+  DECRYPTION_FAILED: 'Cette valeur est illisible : contactez le support.',
+  INVALID_FIELD: 'Champ inconnu.',
   CABINET_READ_ONLY:
     'Votre cabinet est en lecture seule : plus rien ne peut être modifié pour le moment.',
 };
