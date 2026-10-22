@@ -84,7 +84,15 @@ export async function buildCabinetExport(cabinetId: string, now: Date = new Date
       // D26 : les actions sur les dossiers salaries (SALARIE_*, SALARIES_IMPORTED) ne sont pas
       // dans le journal du cabinet (D31) ; elles n'entrent pas non plus dans son export. Leur
       // acteur peut etre le compte du salarie lui-meme (acceptation d'invitation) : nom et email.
-      where: { cabinetId, NOT: { action: { startsWith: 'SALARIE' } } },
+      // D90 : meme regle pour la paie (PERIODE_*, PRESTATION_*), le Cabinet RH n'en a que des agregats.
+      where: {
+        cabinetId,
+        NOT: [
+          { action: { startsWith: 'SALARIE' } },
+          { action: { startsWith: 'PERIODE' } },
+          { action: { startsWith: 'PRESTATION' } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take: EXPORT_AUDIT_LIMIT,
       select: {
