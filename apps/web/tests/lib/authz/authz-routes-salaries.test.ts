@@ -30,6 +30,7 @@ const salarieById = await import('@/app/api/salaries/[id]/route');
 const conditions = await import('@/app/api/salaries/[id]/conditions/route');
 const reveal = await import('@/app/api/salaries/[id]/reveal/route');
 const sortie = await import('@/app/api/salaries/[id]/sortie/route');
+const invitation = await import('@/app/api/salaries/[id]/invitation/route');
 const importCsv = await import('@/app/api/entreprises/[id]/salaries/import/route');
 const importModele = await import('@/app/api/entreprises/[id]/salaries/import/modele/route');
 const conditionById = await import('@/app/api/salaries/[id]/conditions/[conditionId]/route');
@@ -47,6 +48,8 @@ const ROUTES: [string, Handler, ActionId, boolean?][] = [
   ['DELETE salaries/[id]', salarieById.DELETE, 'salarie.gerer'],
   ['PUT salaries/[id]', salarieById.PUT, 'salarie.gerer'],
   ['PUT salaries/[id]/sortie', sortie.PUT, 'salarie.gerer'],
+  ['POST salaries/[id]/invitation', invitation.POST, 'salarie.inviter-portail'],
+  ['DELETE salaries/[id]/invitation', invitation.DELETE, 'salarie.inviter-portail'],
   ['POST entreprises/[id]/salaries/import', importCsv.POST, 'salarie.gerer'],
   ['GET entreprises/[id]/salaries/import/modele', importModele.GET, 'salarie.gerer', false],
   ['POST salaries/[id]/conditions', conditions.POST, 'salarie.gerer'],

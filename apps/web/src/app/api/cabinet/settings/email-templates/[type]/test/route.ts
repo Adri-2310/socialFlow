@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { authorize } from '@/lib/authz/authz';
 import { getCabinetEmailBrand } from '@/lib/email/cabinet-email-brand';
-import { sendEntrepriseInvitationEmail, sendGestionnaireInvitationEmail } from '@/lib/email/email';
+import {
+  sendCollaborateurInvitationEmail,
+  sendEntrepriseInvitationEmail,
+  sendGestionnaireInvitationEmail,
+} from '@/lib/email/email';
 import { TEMPLATES, isTemplateType, validateTemplate } from '@/lib/email/email-templates';
 
 // Envoi d'un email de test du modele (brouillon, non enregistre) (D68). Il part
@@ -39,7 +43,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
   try {
     const brand = await getCabinetEmailBrand(cabinetId);
     const options = { subjectPrefix: '[Test] ' };
-    if (type === 'INVITATION_ENTREPRISE') {
+    if (type === 'INVITATION_COLLABORATEUR') {
+      await sendCollaborateurInvitationEmail(
+        ownEmail,
+        brand,
+        sample.prenom,
+        sample.entreprise_nom,
+        link,
+        validation.value,
+        options,
+      );
+    } else if (type === 'INVITATION_ENTREPRISE') {
       await sendEntrepriseInvitationEmail(
         ownEmail,
         brand,

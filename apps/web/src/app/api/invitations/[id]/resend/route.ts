@@ -21,8 +21,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const cabinetId = session.user.cabinetId as string;
   const { id } = await params;
 
+  // D26 : l'invitation d'un salarie (COLLABORATEUR) se gere depuis son dossier, par le
+  // gestionnaire assigne ; le Cabinet RH ne la voit pas, meme avec son identifiant : 404.
   const invitation = await prisma.invitation.findFirst({
-    where: { id, cabinetId },
+    where: { id, cabinetId, role: { not: 'COLLABORATEUR' } },
     select: {
       id: true,
       email: true,

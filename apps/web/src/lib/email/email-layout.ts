@@ -158,6 +158,20 @@ export function buildEntrepriseInvitation(input: {
   return buildInvitation({ type: 'INVITATION_ENTREPRISE', ...input });
 }
 
+// Invitation d'un salarié à son espace (roles/03 § 4.3) : même gabarit, avec son prénom et le
+// nom de son entreprise. Pas de nom d'invitant : c'est le cabinet qui écrit au salarié.
+export function buildCollaborateurInvitation(input: {
+  brand: CabinetEmailBrand;
+  prenom: string;
+  entrepriseName: string;
+  url: string;
+  template?: { subject: string; body: string } | null;
+  subjectPrefix?: string;
+  portalUrl?: string;
+}): { subject: string; html: string } {
+  return buildInvitation({ type: 'INVITATION_COLLABORATEUR', inviterName: '', ...input });
+}
+
 // Apercu d'un modele quel que soit son type : l'editeur n'a pas a connaitre les
 // variables propres a chaque invitation.
 export function buildTemplatePreview(
@@ -173,6 +187,7 @@ export function buildTemplatePreview(
     brand: input.brand,
     inviterName: sample.invitant_nom,
     entrepriseName: sample.entreprise_nom,
+    prenom: sample.prenom,
     url: sample.lien,
     template: input.template,
     // Domaine reserve : ne mene jamais a un vrai site.
@@ -253,6 +268,8 @@ function buildInvitation(input: {
   brand: CabinetEmailBrand;
   inviterName: string;
   entrepriseName?: string;
+  // Prénom du salarié (invitation COLLABORATEUR).
+  prenom?: string;
   url: string;
   template?: { subject: string; body: string } | null;
   subjectPrefix?: string;
@@ -269,11 +286,14 @@ function buildInvitation(input: {
     invitant_nom: inviterName,
     lien: url,
     ...(input.entrepriseName ? { entreprise_nom: input.entrepriseName } : {}),
+    ...(input.prenom ? { prenom: input.prenom } : {}),
   };
   const title =
-    type === 'INVITATION_ENTREPRISE' && input.entrepriseName
-      ? `Accédez à l’espace de ${escapeHtml(input.entrepriseName)}`
-      : `Vous êtes invité à rejoindre ${name}`;
+    type === 'INVITATION_COLLABORATEUR'
+      ? 'Accédez à votre espace salarié'
+      : type === 'INVITATION_ENTREPRISE' && input.entrepriseName
+        ? `Accédez à l’espace de ${escapeHtml(input.entrepriseName)}`
+        : `Vous êtes invité à rejoindre ${name}`;
 
   const html = emailShell(
     `

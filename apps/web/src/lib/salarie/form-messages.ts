@@ -44,6 +44,12 @@ export const ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable.',
   SALARIE_NOT_FOUND: 'Ce dossier est introuvable.',
+  SALARIE_HAS_NO_EMAIL:
+    'Ce dossier n’a pas d’adresse email : ajoutez-la d’abord (bouton « Modifier »).',
+  SALARIE_ALREADY_HAS_ACCOUNT: 'Ce salarié a déjà un compte.',
+  EMAIL_ALREADY_USED: 'Cette adresse est déjà utilisée par un autre compte.',
+  INVITATION_ALREADY_PENDING: 'Une autre invitation est déjà en attente pour cette adresse.',
+  INVITATION_NOT_FOUND: 'Aucune invitation en attente pour ce dossier.',
   SALARIE_ALREADY_ARCHIVED: 'Ce dossier est déjà archivé.',
   SALARIE_NOT_ARCHIVED: 'Ce dossier n’est pas archivé.',
   CONDITION_NOT_FOUND: 'Cette condition est introuvable.',

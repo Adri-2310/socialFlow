@@ -266,6 +266,8 @@ model Salarie {
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
   conditions ConditionTravail[]
+  // Invitations au portail Collaborateur envoyees pour ce dossier (une seule en attente a la fois).
+  invitations Invitation[]
 
   @@unique([entrepriseId, nissHash])
   @@index([cabinetId])
@@ -379,9 +381,15 @@ model Invitation {
   // une premiere invitation. Pas de cle etrangere : l'id sert de preuve que l'admin n'a
   // pas change entre-temps.
   replacesAdminId String?
+  // Invitation COLLABORATEUR (roles/03 § 4.3) : le dossier salarie que le compte rejoindra, lie a
+  // l'acceptation (Salarie.userId). null pour une invitation de gestionnaire ou d'administrateur
+  // d'entreprise. Cascade : si le dossier disparait, l'invitation n'a plus d'objet.
+  salarieId String?
+  salarie   Salarie? @relation(fields: [salarieId], references: [id], onDelete: Cascade)
 
   @@index([email])
   @@index([entrepriseId])
+  @@index([salarieId])
   @@map("invitation")
 }
 

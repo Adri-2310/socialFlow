@@ -2,6 +2,7 @@ import { resend, safeSubject } from '@/lib/email/email-core';
 import { emailTheme, formatFrom, type CabinetEmailBrand } from '@/lib/email/email-brand';
 import {
   buildAdminReplaced,
+  buildCollaborateurInvitation,
   buildEntrepriseInvitation,
   buildGestionnaireInvitation,
   buildWelcomeAccount,
@@ -60,6 +61,38 @@ export async function sendEntrepriseInvitationEmail(
   const { subject, html } = buildEntrepriseInvitation({
     brand,
     inviterName,
+    entrepriseName,
+    url,
+    template,
+    subjectPrefix: options?.subjectPrefix,
+    portalUrl: options?.portalUrl,
+  });
+
+  const { error } = await resend.emails.send({
+    from: formatFrom(brand.name, process.env.RESEND_FROM_EMAIL as string),
+    to: email,
+    subject,
+    html,
+    ...(brand.replyTo ? { replyTo: brand.replyTo } : {}),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+// Invitation d'un salarié à son espace (roles/03 § 4.3), envoyée au nom du cabinet. Le cabinet
+// ne voit jamais l'adresse du salarié : elle ne passe que par ici, jamais par un journal.
+export async function sendCollaborateurInvitationEmail(
+  email: string,
+  brand: CabinetEmailBrand,
+  prenom: string,
+  entrepriseName: string,
+  url: string,
+  template?: { subject: string; body: string } | null,
+  options?: { subjectPrefix?: string; portalUrl?: string },
+) {
+  const { subject, html } = buildCollaborateurInvitation({
+    brand,
+    prenom,
     entrepriseName,
     url,
     template,

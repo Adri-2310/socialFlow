@@ -3,6 +3,7 @@ import { DecryptionError, decryptField } from '@/lib/crypto/field-encryption';
 import { maskIban, maskNiss } from '@/lib/crypto/masking';
 import { prisma } from '@/lib/prisma';
 import { conditionEnVigueur } from '@/lib/salarie/conditions';
+import { etatPortail, type EtatPortail } from '@/lib/salarie/portail';
 
 // Lectures du Gestionnaire RH (roles/03 § 2 et § 4). Règle de FONCTIONNEMENT § 4 :
 // chaque fonction reçoit le périmètre calculé par resolveScope, jamais un
@@ -195,6 +196,8 @@ export type SalarieDetail = {
   personnesCharge: number;
   // Dossier archivé : lisible, mais plus modifiable (roles/03 § 4.2).
   archive: boolean;
+  // Accès au portail Collaborateur (roles/03 § 4.3) : compte lié, invitation en attente ou rien.
+  portail: EtatPortail;
   // Les plus récentes d'abord.
   conditions: ConditionRow[];
 };
@@ -247,6 +250,14 @@ export async function getSalarieDetail(
       conjointAvecRevenus: true,
       personnesCharge: true,
       deletedAt: true,
+      userId: true,
+      // Seulement la dernière invitation en attente : ni l'adresse ni le jeton ne sont lus.
+      invitations: {
+        where: { status: 'pending' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { expiresAt: true },
+      },
       entreprise: { select: { id: true, name: true } },
       conditions: {
         orderBy: { dateEffet: 'desc' },
@@ -267,7 +278,8 @@ export async function getSalarieDetail(
   });
   if (!salarie) return null;
 
-  const { nissEncrypted, ibanEncrypted, conditions, deletedAt, ...dossier } = salarie;
+  const { nissEncrypted, ibanEncrypted, conditions, deletedAt, userId, invitations, ...dossier } =
+    salarie;
   // Triées de la plus récente à la plus ancienne : la première déjà entrée en vigueur
   // est la condition courante ; une condition postérieure à `at` est « à venir ».
   const courante = conditions.find((c) => c.dateEffet.getTime() <= at.getTime());
@@ -275,6 +287,7 @@ export async function getSalarieDetail(
   return {
     ...dossier,
     archive: deletedAt !== null,
+    portail: etatPortail({ userId, invitations }, at),
     nissMasque: masquerNiss(nissEncrypted),
     ibanMasque: masquerIban(ibanEncrypted),
     conditions: conditions.map((c) => ({

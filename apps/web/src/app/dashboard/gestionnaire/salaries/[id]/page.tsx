@@ -7,6 +7,7 @@ import { ConditionAdd } from '@/components/gestionnaire/condition-add';
 import { ConditionRowActions } from '@/components/gestionnaire/condition-row-actions';
 import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
 import { SalarieEdit } from '@/components/gestionnaire/salarie-edit';
+import { SalariePortail } from '@/components/gestionnaire/salarie-portail';
 import { SalarieSortie } from '@/components/gestionnaire/salarie-sortie';
 import { SensitiveValue } from '@/components/gestionnaire/sensitive-value';
 import { SortieBadge } from '@/components/gestionnaire/sortie-badge';
@@ -260,6 +261,21 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
           <Row label="Personnes à charge" value={String(salarie.personnesCharge)} />
         </Section>
       </div>
+
+      {/* Un dossier archivé n'invite plus personne : il se restaure d'abord. */}
+      {!salarie.archive && (
+        <SalariePortail
+          salarieId={salarie.id}
+          // Les dates passent en texte : un composant client ne reçoit pas d'objet Date.
+          etat={
+            salarie.portail.etat === 'EN_ATTENTE' || salarie.portail.etat === 'EXPIREE'
+              ? { etat: salarie.portail.etat, expiresAt: salarie.portail.expiresAt.toISOString() }
+              : { etat: salarie.portail.etat }
+          }
+          aUnEmail={!!salarie.email}
+          readOnly={readOnly}
+        />
+      )}
 
       <section className="rounded-2xl border border-border bg-card">
         <div className="flex flex-col gap-2 px-5 pt-5 sm:flex-row sm:items-center sm:justify-between">
