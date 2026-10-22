@@ -37,6 +37,10 @@ export default async function DashboardPage() {
     redirect('/dashboard/cabinet');
   }
 
+  if (user.role === 'GESTIONNAIRE_RH' && user.cabinetId) {
+    redirect('/dashboard/gestionnaire');
+  }
+
   if (user.role === 'ENTREPRISE_CLIENTE' && user.cabinetId) {
     redirect('/dashboard/entreprise');
   }

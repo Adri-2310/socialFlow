@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/prisma';
-import { hashInvitationToken, isAdminSeatAvailable } from '@/lib/invitations/invitations';
+import {
+  hashInvitationToken,
+  isAdminSeatAvailable,
+  isSalarieInvitable,
+} from '@/lib/invitations/invitations';
 
 // Ce que la page d'acceptation d'une invitation montre du cabinet qui invite
 // (D33) : son nom, son logo et sa couleur, pour que le futur gestionnaire le
@@ -16,6 +20,10 @@ export type InvitationPreview = {
   // Invitation d'administrateur d'entreprise (D5) : nom de l'entreprise ; null
   // pour une invitation de gestionnaire.
   entrepriseName: string | null;
+  // Pour qui est l'invitation : la page adapte ses textes. Un salarié (roles/03 § 4.3) voit le
+  // nom de SON entreprise, mais ce n'est pas un compte d'entreprise.
+  espace: 'GESTIONNAIRE' | 'ENTREPRISE' | 'SALARIE';
+  salarieEntrepriseName: string | null;
 };
 
 export async function getInvitationPreview(
@@ -30,7 +38,15 @@ export async function getInvitationPreview(
       status: true,
       expiresAt: true,
       replacesAdminId: true,
+      salarieId: true,
       entreprise: { select: { name: true, deletedAt: true, adminUserId: true } },
+      salarie: {
+        select: {
+          deletedAt: true,
+          userId: true,
+          entreprise: { select: { name: true, deletedAt: true } },
+        },
+      },
       cabinet: {
         select: {
           name: true,
@@ -60,6 +76,9 @@ export async function getInvitationPreview(
     return null;
   }
 
+  // Meme regle que l'acceptation (roles/03 § 4.3) : dossier archive ou deja pourvu d'un compte.
+  if (invitation.salarieId && !isSalarieInvitable(invitation.salarie)) return null;
+
   return {
     email: invitation.email,
     cabinetName: cabinet.name,
@@ -68,5 +87,7 @@ export async function getInvitationPreview(
     secondaryColor: cabinet.secondaryColor,
     logoUrl: cabinet.logoUrl,
     entrepriseName: entreprise?.name ?? null,
+    espace: invitation.salarieId ? 'SALARIE' : entreprise ? 'ENTREPRISE' : 'GESTIONNAIRE',
+    salarieEntrepriseName: invitation.salarie?.entreprise.name ?? null,
   };
 }

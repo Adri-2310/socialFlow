@@ -59,9 +59,12 @@ D78 : le gestionnaire assigné ne peut que **remplacer** l'administrateur d'une 
 
 | Action | SuperAdmin | Cabinet RH | Gestionnaire | Entreprise | Collaborateur | Identifiant |
 |---|---|---|---|---|---|---|
+| Voir les périodes et les prestations | ❌ | ❌ | 🔸 | 🔸 la sienne | ❌ | `periode.voir` |
 | Ouvrir une période | ❌ | ❌ | 🔸 | ❌ | ❌ | `periode.ouvrir` |
 | Encoder les prestations | ❌ | ❌ | 🔸 (toujours) | 🔸 jusqu'à la date limite | ❌ | `prestation.encoder` |
 | Verrouiller les prestations | ❌ | ❌ | 🔸 | ❌ | ❌ | `prestation.verrouiller` |
+
+D90, D91 : `periode.ouvrir` couvre aussi le décalage de la date limite d'une période, et `prestation.verrouiller` aussi le déverrouillage.
 | Créer / modifier / recalculer une fiche `BROUILLON` | ❌ | ❌ | 🔸 | ❌ | ❌ | `fiche.gerer-brouillon` |
 | Soumettre à validation | ❌ | ❌ | 🔸 | ❌ | ❌ | `fiche.soumettre` |
 | Valider / rejeter (motif obligatoire) | ❌ | ❌ | ❌ | 🔸 | ❌ | `fiche.valider` |
@@ -102,4 +105,4 @@ D78 : le gestionnaire assigné ne peut que **remplacer** l'administrateur d'une 
 - **Pages** : `requireAuthorized('<identifiant>')` (`lib/authz/authz-page.ts`) en tête de chaque layout **et de chaque page**, car un layout n'est pas ré-exécuté à chaque navigation. Redirections : `/login` sans session, `/dashboard` si le rôle est refusé, `/profil?2fa=requise` pour un SuperAdmin sans 2FA. L'aiguillage `dashboard/page.tsx` n'est pas une décision d'accès et n'utilise que `requireSession()`.
 - **Périmètre (`scope`)** : déduit de la base à chaque requête (jamais d'une liste stockée dans la session, ni envoyée par le client) : SuperAdmin → plateforme (jamais les données métier, D8) ; Cabinet RH → son cabinet ; Gestionnaire → ses entreprises assignées et non archivées ; Entreprise → sa seule entreprise ; Collaborateur → son seul compte (le périmètre de son dossier viendra avec son modèle de données). `entrepriseWhere(scope)` produit le filtre Prisma et ne laisse **rien** voir à la plateforme ni au collaborateur. Une ressource hors périmètre répond `404`.
 - **Cas particuliers** : D78, `entreprise.remplacer-admin` est ouvert au gestionnaire assigné mais `entreprise.inviter-admin` ne l'est pas ; `cabinet.modifier-identite` est ouvert au SuperAdmin par la matrice (chantier A4), mais la route actuelle ne sert que le cabinet de la session et lui répond `403` ; la révocation et le renvoi d'une invitation (`invitations/[id]`) sont communs à tous les types d'invitation et passent par `gestionnaire.inviter`.
-- **Tests** : `authz.test.ts` (catalogue contre ce document, décision `authorize` sur les 51 actions × 5 rôles, 2FA, cabinet, lecture seule, `resolveScope`, `entrepriseWhere`) ; `authz-scope.test.ts` (périmètres sur la vraie base : gestionnaire, entreprise, isolation entre cabinets) ; `authz-page.test.ts` (pages, toute la matrice) ; `authz-routes-*.test.ts` et `authz-pages.test.ts` (chaque route et chaque page appelle l'action prévue et refuse les autres rôles) ; `rbac-*.test.ts` (effets des routes avec de vraies sessions).
+- **Tests** : `authz.test.ts` (catalogue contre ce document, décision `authorize` sur les 52 actions × 5 rôles, 2FA, cabinet, lecture seule, `resolveScope`, `entrepriseWhere`) ; `authz-scope.test.ts` (périmètres sur la vraie base : gestionnaire, entreprise, isolation entre cabinets) ; `authz-page.test.ts` (pages, toute la matrice) ; `authz-routes-*.test.ts` et `authz-pages.test.ts` (chaque route et chaque page appelle l'action prévue et refuse les autres rôles) ; `rbac-*.test.ts` (effets des routes avec de vraies sessions).

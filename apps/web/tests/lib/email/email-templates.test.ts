@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { buildCollaborateurInvitation } from '@/lib/email/email-layout';
 import {
   BODY_MAX,
   SUBJECT_MAX,
@@ -124,5 +125,81 @@ describe('renderBody : un cabinet ne peut pas injecter de HTML ni de script', ()
 
   it('une variable inconnue au rendu est laissee vide', () => {
     expect(renderBody('A {{inconnue}} B', values)).toContain('A  B');
+  });
+});
+
+
+describe('invitation d’un salarié à son espace (roles/03 § 4.3)', () => {
+  const brand = { name: 'Alicia Cabinet', primaryColor: null, logoUrl: null, replyTo: null };
+  const lien = 'https://app.test/invitations/accept?token=abc';
+
+  it('est un type de modèle reconnu, avec ses propres variables', () => {
+    expect(isTemplateType('INVITATION_COLLABORATEUR')).toBe(true);
+    expect(TEMPLATES.INVITATION_COLLABORATEUR.variables.map((v) => v.name)).toEqual([
+      'cabinet_nom',
+      'entreprise_nom',
+      'prenom',
+      'lien',
+    ]);
+  });
+
+  it('propose un modèle par défaut valide, qui contient le lien d’invitation', () => {
+    const { defaults } = TEMPLATES.INVITATION_COLLABORATEUR;
+    expect(validateTemplate('INVITATION_COLLABORATEUR', defaults).ok).toBe(true);
+    expect(defaults.subject).toContain('{{cabinet_nom}}');
+    expect(defaults.body).toContain('{{prenom}}');
+  });
+
+  it('n’expose pas le nom du gestionnaire : {{invitant_nom}} y est inconnu', () => {
+    const resultat = validateTemplate('INVITATION_COLLABORATEUR', {
+      subject: 'Bonjour',
+      body: '{{invitant_nom}} vous invite',
+    });
+    expect(resultat.ok).toBe(false);
+    // Et inversement, {{prenom}} n'existe pas pour les autres invitations.
+    expect(validateTemplate('INVITATION_ENTREPRISE', { subject: '{{prenom}}', body: 'x' }).ok).toBe(
+      false,
+    );
+  });
+
+  it('remplit le prénom, l’entreprise et le cabinet, avec le titre propre au salarié', () => {
+    const { subject, html } = buildCollaborateurInvitation({
+      brand,
+      prenom: 'Camille',
+      entrepriseName: 'Boulangerie Dupont',
+      url: lien,
+    });
+    expect(subject).toBe('Alicia Cabinet vous invite à accéder à votre espace salarié');
+    expect(html).toContain('Bonjour Camille');
+    expect(html).toContain('Boulangerie Dupont');
+    expect(html).toContain('Accédez à votre espace salarié');
+    expect(html).toContain(`href="${lien}"`);
+  });
+
+  it('échappe un prénom ou une entreprise piégés : aucun HTML ne passe', () => {
+    const { html } = buildCollaborateurInvitation({
+      brand,
+      prenom: '<script>alert(1)</script>',
+      entrepriseName: '"><img src=x onerror=alert(2)>',
+      url: lien,
+    });
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('applique le modèle personnalisé du cabinet', () => {
+    const { subject, html } = buildCollaborateurInvitation({
+      brand,
+      prenom: 'Camille',
+      entrepriseName: 'Boulangerie Dupont',
+      url: lien,
+      template: {
+        subject: 'Salut {{prenom}} !',
+        body: 'Votre espace chez **{{entreprise_nom}}** est prêt.',
+      },
+    });
+    expect(subject).toBe('Salut Camille !');
+    expect(html).toContain('<strong>Boulangerie Dupont</strong>');
   });
 });

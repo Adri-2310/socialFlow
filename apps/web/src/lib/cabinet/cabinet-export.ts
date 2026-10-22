@@ -66,7 +66,9 @@ export async function buildCabinetExport(cabinetId: string, now: Date = new Date
       },
     }),
     prisma.invitation.findMany({
-      where: { cabinetId },
+      // D26 : l'invitation d'un salarie (COLLABORATEUR) porte son email, une donnee de dossier
+      // que le Cabinet RH ne voit jamais : elle n'entre pas dans son export.
+      where: { cabinetId, role: { not: 'COLLABORATEUR' } },
       orderBy: { createdAt: 'desc' },
       select: {
         email: true,
@@ -79,7 +81,18 @@ export async function buildCabinetExport(cabinetId: string, now: Date = new Date
       },
     }),
     prisma.auditLog.findMany({
-      where: { cabinetId },
+      // D26 : les actions sur les dossiers salaries (SALARIE_*, SALARIES_IMPORTED) ne sont pas
+      // dans le journal du cabinet (D31) ; elles n'entrent pas non plus dans son export. Leur
+      // acteur peut etre le compte du salarie lui-meme (acceptation d'invitation) : nom et email.
+      // D90 : meme regle pour la paie (PERIODE_*, PRESTATION_*), le Cabinet RH n'en a que des agregats.
+      where: {
+        cabinetId,
+        NOT: [
+          { action: { startsWith: 'SALARIE' } },
+          { action: { startsWith: 'PERIODE' } },
+          { action: { startsWith: 'PRESTATION' } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take: EXPORT_AUDIT_LIMIT,
       select: {

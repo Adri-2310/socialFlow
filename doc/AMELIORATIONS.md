@@ -11,6 +11,7 @@
 | Branche Neon par défaut | L'intégration Vercel s'appuie sur la branche par défaut de Neon : la passer à `production` pourrait réécrire les variables de tous les environnements | Garder `dev` par défaut jusqu'à la mise en ligne, puis régler l'intégration proprement |
 | Variables de l'intégration | `PG*` et `POSTGRES_*` (gérées par l'intégration Neon) restent sur tous les environnements, donc sur `dev`, alors que le code ne lit que `DATABASE_URL` et `DATABASE_URL_UNPOOLED` ; le badge « Needs Attention » n'a pas été expliqué | Les supprimer ou les séparer par environnement, comprendre le badge |
 | Branche `test` | Une branche Neon *schema only* n'a pas l'historique des migrations : la première exécution de `migrate deploy` échoue | Vider le schéma (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`) une fois, la CI applique ensuite les migrations |
+| Migrations des dossiers salariés | `add_salarie` et `add_invitation_salarie` sont appliquées sur `dev` seulement | Les appliquer sur `production` avant la mise en ligne ; ajouter la variable `ENCRYPTION_KEY` sur Vercel, une clé différente par environnement (la **sauvegarder** : une clé perdue rend NISS et IBAN illisibles). La CI utilise une clé factice dans `ci.yml`, sans secret GitHub |
 
 ## 2. Tests et intégration continue
 
@@ -23,6 +24,7 @@
 | Avertissements de GitHub Actions | `actions/checkout@v4` et `actions/setup-node@v4` ciblent Node 20, que GitHub force déjà sur Node 24 ; `ubuntu-latest` bascule vers Ubuntu 26 (octobre 2026) | Monter les versions des actions quand une version Node 24 est publiée, et épingler la version d'Ubuntu si un comportement change |
 | Tests dépendants de la base de dev | La CI sur une base vide a révélé des tests qui supposaient un SuperAdmin ou des identifiants Google et Microsoft déjà présents (corrigés : fixtures et variables factices) | Chaque nouveau test crée ses propres données, jamais celles de `dev` |
 | Vérification manuelle | Les redirections des trois espaces (console SuperAdmin, Cabinet RH, Entreprise) et de `/profil` n'ont été testées qu'automatiquement | Naviguer à la main après chaque changement des gardes |
+| Tests lents du gestionnaire | Chaque fichier `rbac-salaries-*.test.ts` crée plusieurs comptes réels : de 1 à 2 minutes par fichier | Fixtures partagées par fichier, ou une base par processus |
 
 ## 3. Code
 
@@ -34,6 +36,10 @@
 | Invitations | La révocation et le renvoi (`invitations/[id]`) passent par `gestionnaire.inviter` pour tous les types d'invitation | Choisir l'action selon le type si les lignes de la matrice divergent |
 | SuperAdmin | `cabinet.modifier-identite` est ouvert au SuperAdmin par la matrice, mais la route ne sert que le cabinet de la session | Chantier A4 de `roles/01` ; l'écran « Inviter un SuperAdmin » (seconde moitié de A2) reste à construire |
 | Façade email | `email/email.ts` ré-exporte les trois fichiers d'envoi pour garder les mocks des tests | Règle : le code importe `@/lib/email/email`, jamais les sous-fichiers |
+| Formatage | Plusieurs fichiers existants ne respectent pas Prettier (par exemple `api/invitations/*`, `lib/email/*`) : lancer `prettier --write` sur un dossier réécrit des fichiers sans rapport avec le changement | Un commit de formatage dédié, puis `prettier --check` dans la CI ; en attendant, ne formater que ses propres fichiers |
+| Garde-fous à durcir en G2 | Corriger ou annuler une condition de travail, archiver un dossier ou changer la date d'entrée ne regardent pas encore les fiches de paie (elles n'existent pas) ; la sortie n'est pas verrouillée après l'envoi d'une DIMONA OUT | Refuser ces actions dès qu'une fiche ou une déclaration envoyée les concerne (D83, D85) |
+| Dévoilement du NISS | Pas de limitation de débit : seul l'audit trace chaque appel | Limite par utilisateur si une alerte d'usage anormal est ajoutée |
+| Rotation de la clé | Les valeurs chiffrées portent un préfixe de version (`v1:`), mais aucune procédure de rotation de `ENCRYPTION_KEY` n'existe | Script de rechiffrement `v1` vers `v2` avant la mise en production |
 
 ## 4. Emails
 
@@ -48,3 +54,10 @@
 |---|---|
 | Anciens chemins | `DECISIONS.md`, `JOURNAL.md` et `analysis/` citent encore les chemins de `lib/` d'avant la réorganisation : volontairement conservés, car ils décrivent l'état du moment |
 | Source des identifiants | Les identifiants d'actions de `PERMISSIONS.md` sont vérifiés contre le catalogue de `lib/authz/authz.ts` par `authz.test.ts` : toute nouvelle action s'ajoute aux deux |
+
+## 6. Interface
+
+| Sujet | Constat | À faire |
+|---|---|---|
+| shadcn/ui | Configuré (`components.json`, style `base-nova`, Base UI) mais **aucun composant installé** : tout le site (console, cabinet, gestionnaire) est en éléments HTML bruts, et les fenêtres modales sont faites à la main, sans fermeture par Échap, sans piège du focus ni retour du focus (`CONVENTIONS.md` § 5 demande la navigation au clavier) | Passage de tout le site sur shadcn, prévu par Adrien depuis `dev` |
+| Barre de défilement | La barre native reste blanche en mode sombre (tableau des problèmes de l'import CSV) | `color-scheme` ou le composant de défilement de shadcn |

@@ -105,6 +105,9 @@ export const ACTIONS = {
   'demande.traiter': rule('Traiter une demande (accepter / refuser)', [D, D, S, D, D], { write: true }),
 
   // --- Paie ---
+  // D90 : `periode.ouvrir` couvre aussi le décalage de la date limite (D91) ; `prestation.verrouiller`
+  // couvre aussi le déverrouillage. Lire les périodes et les prestations est une action à part.
+  'periode.voir': rule('Voir les périodes et les prestations', [D, D, S, S, D]),
   'periode.ouvrir': rule('Ouvrir une période', [D, D, S, D, D], { write: true }),
   'prestation.encoder': rule('Encoder les prestations', [D, D, S, S, D], { write: true }),
   'prestation.verrouiller': rule('Verrouiller les prestations', [D, D, S, D, D], { write: true }),

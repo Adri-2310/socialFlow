@@ -14,6 +14,19 @@ export function isAdminSeatAvailable(
   return !currentAdminId || currentAdminId === replacesAdminId;
 }
 
+// roles/03 § 4.3 : un dossier salarié n'est invitable (et son invitation utilisable) que s'il est
+// actif, dans une entreprise non archivée, et sans compte lié (un dossier = un compte). Règle
+// UNIQUE, partagée par l'aperçu de la page d'acceptation et par l'acceptation elle-même.
+export function isSalarieInvitable(
+  salarie: {
+    deletedAt: Date | null;
+    userId: string | null;
+    entreprise: { deletedAt: Date | null };
+  } | null,
+): boolean {
+  return !!salarie && !salarie.deletedAt && !salarie.userId && !salarie.entreprise.deletedAt;
+}
+
 // C3 : seul sha256(jeton) est stocke en base (Invitation.tokenHash) ; le jeton
 // en clair n'existe que dans l'email envoye. Sha256 sans sel suffit ici : le
 // jeton est aleatoire sur 256 bits, pas un mot de passe choisi par un humain.

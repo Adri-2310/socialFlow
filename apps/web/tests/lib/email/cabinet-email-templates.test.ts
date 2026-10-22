@@ -93,6 +93,7 @@ describe('modeles d email du cabinet (D68)', () => {
     expect((await listEmailTemplates(cabinetId)).map((t) => t.type)).toEqual([
       TYPE,
       'INVITATION_ENTREPRISE',
+      'INVITATION_COLLABORATEUR',
     ]);
   });
 

@@ -1,6 +1,10 @@
 import { auth } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
-import { hashInvitationToken, isAdminSeatAvailable } from '@/lib/invitations/invitations';
+import {
+  hashInvitationToken,
+  isAdminSeatAvailable,
+  isSalarieInvitable,
+} from '@/lib/invitations/invitations';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 
 // Acceptation d'une invitation (C4, C6) : cree le compte avec le role et le
@@ -43,6 +47,8 @@ type LoadedInvitation = {
   entrepriseName: string | null;
   // D78 : administrateur que cette invitation remplace (archive a l'acceptation).
   replacesAdminId: string | null;
+  // roles/03 § 4.3 : dossier salarie que le compte rejoindra (invitation COLLABORATEUR).
+  salarieId: string | null;
 };
 
 // Format de l'identifiant de fournisseur d'un compte « mot de passe » dans
@@ -55,6 +61,9 @@ const NAME_MAX = 200;
 // Leve dans la transaction quand l'entreprise a trouve son administrateur entre
 // la verification et l'ecriture (D5).
 class EntrepriseAdminTaken extends Error {}
+// Leve quand le dossier salarie a trouve son compte (ou a ete archive) entre la verification et
+// l'ecriture : un dossier = un compte.
+class SalarieUnavailable extends Error {}
 // Leve quand l'invitation a ete consommee ou revoquee entre-temps.
 class InvitationConsumed extends Error {}
 
@@ -75,10 +84,18 @@ export async function loadAcceptableInvitation(
       cabinetId: true,
       entrepriseId: true,
       replacesAdminId: true,
+      salarieId: true,
       cabinet: {
         select: { name: true, billingStatus: true, status: true, suspensionType: true, deletedAt: true },
       },
       entreprise: { select: { name: true, deletedAt: true, adminUserId: true } },
+      salarie: {
+        select: {
+          deletedAt: true,
+          userId: true,
+          entreprise: { select: { name: true, deletedAt: true } },
+        },
+      },
     },
   });
   if (
@@ -98,6 +115,10 @@ export async function loadAcceptableInvitation(
       return { ok: false, error: 'INVALID_TOKEN' };
     }
   }
+  // roles/03 § 4.3 : le dossier doit toujours pouvoir recevoir un compte.
+  if (invitation.salarieId && !isSalarieInvitable(invitation.salarie)) {
+    return { ok: false, error: 'INVALID_TOKEN' };
+  }
   // D29, D71 : un cabinet en lecture seule ne peut pas accueillir de nouveau compte.
   if (isCabinetReadOnly(invitation.cabinet)) {
     return { ok: false, error: 'CABINET_READ_ONLY' };
@@ -112,8 +133,10 @@ export async function loadAcceptableInvitation(
       cabinetId: invitation.cabinetId,
       cabinetName: invitation.cabinet.name,
       entrepriseId: invitation.entrepriseId,
-      entrepriseName: invitation.entreprise?.name ?? null,
+      // Pour un salarie, l'entreprise de son dossier (email de bienvenue).
+      entrepriseName: invitation.entreprise?.name ?? invitation.salarie?.entreprise.name ?? null,
       replacesAdminId: invitation.replacesAdminId,
+      salarieId: invitation.salarieId,
     },
   };
 }
@@ -150,6 +173,15 @@ async function applyInvitation(
     if (count === 0) throw new EntrepriseAdminTaken();
     replacedAdminId = holder;
   }
+  // roles/03 § 4.3 : le compte est lie au dossier, seulement s'il est encore actif et sans compte
+  // (la condition est dans l'ecriture : une course avec une archive ou une autre acceptation echoue).
+  if (invitation.salarieId) {
+    const { count } = await tx.salarie.updateMany({
+      where: { id: invitation.salarieId, userId: null, deletedAt: null },
+      data: { userId },
+    });
+    if (count === 0) throw new SalarieUnavailable();
+  }
   // D78 : l'ancien administrateur est archive avec ses sessions coupees, dans la meme
   // transaction (meme traitement que son retrait, lib/entreprise/entreprise-admin.ts).
   let replacedAdmin: { email: string; name: string } | null = null;
@@ -185,25 +217,50 @@ async function applyInvitation(
     data: { status: 'accepted', acceptedAt: new Date() },
   });
   if (count === 0) throw new InvitationConsumed();
-  await tx.auditLog.create({
-    data: {
-      action: 'INVITATION_ACCEPTED',
-      actorId: userId,
-      cabinetId: invitation.cabinetId,
-      metadata: {
-        invitationId: invitation.id,
-        email: invitation.email,
-        ...(invitation.entrepriseId
-          ? { entrepriseId: invitation.entrepriseId, entreprise: invitation.entrepriseName }
-          : {}),
+  // D26 : l'acceptation d'un salarie n'entre pas dans le journal du cabinet (INVITATION_ACCEPTED
+  // porte l'email) : action propre, identifiants seulement.
+  if (invitation.salarieId) {
+    const dossier = await tx.salarie.findUnique({
+      where: { id: invitation.salarieId },
+      select: { entrepriseId: true },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'SALARIE_PORTAL_ACCEPTED',
+        actorId: userId,
+        cabinetId: invitation.cabinetId,
+        metadata: {
+          salarieId: invitation.salarieId,
+          entrepriseId: dossier?.entrepriseId ?? null,
+          invitationId: invitation.id,
+        },
       },
-    },
-  });
+    });
+  } else {
+    await tx.auditLog.create({
+      data: {
+        action: 'INVITATION_ACCEPTED',
+        actorId: userId,
+        cabinetId: invitation.cabinetId,
+        metadata: {
+          invitationId: invitation.id,
+          email: invitation.email,
+          ...(invitation.entrepriseId
+            ? { entrepriseId: invitation.entrepriseId, entreprise: invitation.entrepriseName }
+            : {}),
+        },
+      },
+    });
+  }
   return { replacedAdmin };
 }
 
 function mapRaceError(error: unknown): AcceptError | null {
-  if (error instanceof EntrepriseAdminTaken || error instanceof InvitationConsumed) {
+  if (
+    error instanceof EntrepriseAdminTaken ||
+    error instanceof InvitationConsumed ||
+    error instanceof SalarieUnavailable
+  ) {
     return 'INVALID_TOKEN';
   }
   return null;

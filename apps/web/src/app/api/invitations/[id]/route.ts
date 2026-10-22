@@ -17,8 +17,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   // Hors perimetre = inexistante (404), jamais 403 : on ne revele pas qu'une
   // invitation d'un autre cabinet existe.
+  // D26 : l'invitation d'un salarie (COLLABORATEUR) se gere depuis son dossier, par le
+  // gestionnaire assigne ; le Cabinet RH ne la voit pas, meme avec son identifiant : 404.
   const invitation = await prisma.invitation.findFirst({
-    where: { id, cabinetId },
+    where: { id, cabinetId, role: { not: 'COLLABORATEUR' } },
     select: {
       id: true,
       email: true,

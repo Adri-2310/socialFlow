@@ -65,9 +65,17 @@ model User {
   // Cabinet.name.
   cabinetName String?
 
-  entreprisesAssignees GestionnaireEntreprise[]
+  entreprisesAssignees  GestionnaireEntreprise[]
   // Entreprise dont ce compte est l'administrateur (role ENTREPRISE_CLIENTE, D5).
-  entrepriseAdministree Entreprise? @relation("EntrepriseAdmin")
+  entrepriseAdministree Entreprise?              @relation("EntrepriseAdmin")
+
+  // Dossier salarie lie a ce compte (portail Collaborateur, roles/03 § 4.3) et
+  // conditions de travail saisies par ce compte.
+  salarie              Salarie?
+  conditionsCreees     ConditionTravail[]
+  // Periodes ouvertes et prestations encodees par ce compte (D90, D92).
+  periodesOuvertes     PeriodePaie[]
+  prestationsModifiees Prestation[]
 
   auditLogsAsActor  AuditLog[] @relation("AuditLogActor")
   auditLogsAsTarget AuditLog[] @relation("AuditLogTarget")
@@ -79,13 +87,13 @@ model User {
 }
 
 model Cabinet {
-  id                String          @id @default(cuid())
+  id                String             @id @default(cuid())
   name              String
   // Suspension par un SuperAdmin (voir apps/web/src/app/api/admin/cabinets/[id]
   // et le blocage de connexion associe dans hooks.after de auth.ts). Meme
   // convention que Invitation.status : string libre plutot qu'un enum
   // Prisma, coherent avec le reste du schema.
-  status            String          @default("actif") // actif | suspendu
+  status            String             @default("actif") // actif | suspendu
   // D71 : nature d'une suspension manuelle par le SuperAdmin. READ_ONLY (defaut
   // des nouvelles suspensions) = lecture seule, connexions possibles ; BLOCKED =
   // blocage total des connexions, choisi explicitement avec un motif. null avec
@@ -99,7 +107,7 @@ model Cabinet {
   // D76 : identifiant du portail de connexion du cabinet (/connexion/<slug>), par
   // lequel ses gestionnaires, entreprises et collaborateurs se connectent sans voir
   // SocialFlow. Genere a la demande puis modifiable par le Cabinet RH ; unique.
-  slug              String?         @unique
+  slug              String?            @unique
   suspensionType    String?
   // Motif saisi par le SuperAdmin ; jamais montre aux clients du cabinet (D29).
   suspensionReason  String?
@@ -109,12 +117,12 @@ model Cabinet {
   // immediatement (voir hooks.after de auth.ts), purge reelle et definitive
   // apres CABINET_DELETION_RETENTION_DAYS (voir api/cron/purge-deleted-cabinets).
   deletedAt         DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   // Identifiant du Customer Stripe correspondant (voir src/lib/stripe.ts et
   // /dashboard/admin/facturation) - null tant qu'aucun abonnement Stripe reel
   // n'a ete cree pour ce cabinet. Unique : un Customer Stripe par cabinet.
-  stripeCustomerId  String?         @unique
+  stripeCustomerId  String?            @unique
   // Abonnement (D55) : le plan appartient au cabinet. Les transitions de
   // billingStatus viendront du webhook Stripe (chantier C0) ; pour l'instant
   // elles sont posees a l'inscription (voir lib/stripe-trial.ts).
@@ -122,7 +130,7 @@ model Cabinet {
   // billingStatus : EN_ATTENTE_PAIEMENT | ESSAI | ACTIF | DELAI_GRACE | IMPAYE | RESILIE.
   planId            String?
   billingPeriod     String?
-  billingStatus     String          @default("EN_ATTENTE_PAIEMENT")
+  billingStatus     String             @default("EN_ATTENTE_PAIEMENT")
   trialEndsAt       DateTime?
   currentPeriodEnd  DateTime?
   // D57 : debut du delai de grace (paiement echoue), null hors impaye ; et
@@ -131,7 +139,7 @@ model Cabinet {
   pastDueSince      DateTime?
   // Resiliation programmee en fin de periode (D59) : le cabinet garde l'acces
   // jusqu'a currentPeriodEnd. Suit Stripe par webhook, jamais l'inverse.
-  cancelAtPeriodEnd Boolean         @default(false)
+  cancelAtPeriodEnd Boolean            @default(false)
   // Identite du cabinet (D30), affichee a ses clients. name = raison sociale.
   // Tous facultatifs sauf la raison sociale : le n° de TVA est stocke au
   // format canonique BE0XXX.XXX.XXX (voir lib/cabinet-identity.ts).
@@ -139,7 +147,7 @@ model Cabinet {
   addressLine       String?
   postalCode        String?
   city              String?
-  country           String          @default("BE")
+  country           String             @default("BE")
   contactEmail      String?
   contactPhone      String?
   // Branding (D33, D62) : nom affiche et couleurs #rrggbb. null = valeurs par
@@ -157,6 +165,10 @@ model Cabinet {
   auditLogs         AuditLog[]
   emailTemplates    EmailTemplate[]
   entreprises       Entreprise[]
+  salaries          Salarie[]
+  conditionsTravail ConditionTravail[]
+  periodesPaie      PeriodePaie[]
+  prestations       Prestation[]
 
   @@index([deletedAt])
   @@map("cabinet")
@@ -167,28 +179,33 @@ model Cabinet {
 // archivees comprises : on ne recree pas une entreprise archivee, on la
 // restaure. deletedAt = archivage (soft-delete, fiches conservees 5 ans).
 model Entreprise {
-  id            String                   @id @default(cuid())
-  cabinetId     String
-  cabinet       Cabinet                  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
-  name          String
-  vatNumber     String
-  addressLine   String?
-  postalCode    String?
-  city          String?
-  country       String                   @default("BE")
-  contactEmail  String?
-  contactPhone  String?
-  deletedAt     DateTime?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  gestionnaires GestionnaireEntreprise[]
+  id                    String                   @id @default(cuid())
+  cabinetId             String
+  cabinet               Cabinet                  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  name                  String
+  vatNumber             String
+  addressLine           String?
+  postalCode            String?
+  city                  String?
+  country               String                   @default("BE")
+  contactEmail          String?
+  contactPhone          String?
+  // D46, D91 : jour du mois (1 a 28) avant lequel l'entreprise donne ses prestations ; regle par
+  // le Cabinet RH, decalable par le gestionnaire pour une periode. 20 par defaut.
+  jourLimitePrestations Int                      @default(20)
+  deletedAt             DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  gestionnaires         GestionnaireEntreprise[]
+  salaries              Salarie[]
+  periodesPaie          PeriodePaie[]
 
   // D5 : un seul compte administrateur par entreprise. Renseigne a l'acceptation
   // de l'invitation ; @unique garantit qu'un compte n'administre qu'une
   // entreprise (D7). SetNull : si le compte est purge, l'entreprise redevient
   // sans administrateur et peut en inviter un nouveau.
-  adminUserId String? @unique
-  adminUser   User?   @relation("EntrepriseAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
+  adminUserId String?      @unique
+  adminUser   User?        @relation("EntrepriseAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
   invitations Invitation[]
 
   @@unique([cabinetId, vatNumber])
@@ -208,6 +225,164 @@ model GestionnaireEntreprise {
   @@id([entrepriseId, userId])
   @@index([userId])
   @@map("gestionnaire_entreprise")
+}
+
+// Dossier salarie (D6, roles/03 § 4). NISS et IBAN sont chiffres (AES-256-GCM,
+// lib/crypto) ; nissHash est une empreinte liee a l'entreprise qui garantit
+// l'unicite du NISS par entreprise sans le stocker en clair. Archives comprises :
+// on restaure un dossier plutot que d'en recreer un (comme le n° d'entreprise,
+// D69). Pas de suppression physique : deletedAt = archivage, conservation 5 ans.
+// Statuts en chaines MAJUSCULES sans accent, valeurs validees par
+// lib/schemas/salarie.ts (pas d'enum Prisma, CONVENTIONS § 4).
+model Salarie {
+  id           String     @id @default(cuid())
+  cabinetId    String
+  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  // Identite
+  nom           String
+  prenom        String
+  dateNaissance DateTime @db.Date
+  adresse       String?
+  codePostal    String?
+  ville         String?
+  pays          String   @default("BE")
+  email         String?
+  nissEncrypted String
+  nissHash      String
+  ibanEncrypted String
+
+  // Contrat (le statut, la CP, la fonction et la remuneration sont dates :
+  // voir ConditionTravail)
+  typeContrat    String // CDI | CDD
+  dateEntree     DateTime  @db.Date
+  dateFinContrat DateTime? @db.Date
+  dateSortie     DateTime? @db.Date
+
+  // Fiscal (precompte professionnel)
+  situationFamiliale  String // ISOLE | MARIE_OU_COHABITANT_LEGAL
+  conjointAvecRevenus Boolean?
+  personnesCharge     Int      @default(0)
+
+  // Compte du portail Collaborateur (facultatif, D12). SetNull : si le compte est
+  // purge, le dossier reste (obligation de conservation).
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  deletedAt   DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  conditions  ConditionTravail[]
+  prestations Prestation[]
+  // Invitations au portail Collaborateur envoyees pour ce dossier (une seule en attente a la fois).
+  invitations Invitation[]
+
+  @@unique([entrepriseId, nissHash])
+  @@index([cabinetId])
+  @@index([entrepriseId, deletedAt])
+  @@index([deletedAt])
+  @@map("salarie")
+}
+
+// Historique date des conditions de travail d'un salarie (roles/03 § 4.2) : une
+// ligne par changement de statut, regime, fonction ou remuneration. Une fiche
+// utilise la condition en vigueur a sa periode : la plus recente dont dateEffet
+// ne depasse pas la periode. On n'edite jamais une ligne deja utilisee : on en
+// ajoute une nouvelle. Montants en centimes.
+model ConditionTravail {
+  id        String   @id @default(cuid())
+  cabinetId String
+  cabinet   Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  salarieId String
+  salarie   Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  dateEffet DateTime @db.Date
+
+  statut                  String // EMPLOYE | OUVRIER (D39)
+  commissionParitaire     String // 200 | 100 (D44)
+  fonction                String
+  regime                  String // TEMPS_PLEIN | TEMPS_PARTIEL
+  // Fraction d'occupation = heuresSemaine / heuresReference (non stockee).
+  heuresSemaine           Float?
+  heuresReference         Float?
+  // Employe : salaire mensuel ; ouvrier : salaire horaire.
+  salaireMensuelBrutCents Int?
+  salaireHoraireBrutCents Int?
+
+  // SetNull : le compte de l'auteur peut etre purge, la condition reste.
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@unique([salarieId, dateEffet])
+  @@index([cabinetId])
+  @@map("condition_travail")
+}
+
+// Periode de paie d'une entreprise (D90, roles/03 § 5) : un mois, unique par entreprise. Le
+// gestionnaire assigne l'ouvre ; les prestations s'encodent tant qu'elle est OUVERTE et se
+// figent a la VERROUILLEE (statuts en chaines, valeurs validees par lib/schemas/periode.ts).
+// dateLimite (D91) est calculee a l'ouverture depuis Entreprise.jourLimitePrestations et
+// peut etre decalee pour cette seule periode. Pas de suppression : une periode ouverte par
+// erreur reste, vide, et se verrouille.
+model PeriodePaie {
+  id           String     @id @default(cuid())
+  cabinetId    String
+  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  annee      Int
+  mois       Int // 1 a 12
+  statut     String // OUVERTE | VERROUILLEE
+  dateLimite DateTime @db.Date
+
+  // SetNull : le compte peut etre purge, la periode reste.
+  ouverteParId  String?
+  ouvertePar    User?        @relation(fields: [ouverteParId], references: [id], onDelete: SetNull)
+  verrouilleeLe DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  prestations   Prestation[]
+
+  @@unique([entrepriseId, annee, mois])
+  @@index([cabinetId])
+  @@map("periode_paie")
+}
+
+// Ecarts de prestations d'un salarie pour une periode (D92, roles/03 § 5) : un salarie sans
+// ligne vaut « mois complet selon son regime ». Aucun flottant : les jours se comptent en
+// demi-journees (2 = un jour), les heures en minutes, la prime en centimes. Les limites
+// (jours d'un mois, heures d'un mois) sont verifiees par lib/schemas/prestation.ts.
+model Prestation {
+  id        String      @id @default(cuid())
+  cabinetId String
+  cabinet   Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  periodeId String
+  periode   PeriodePaie @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  salarieId String
+  salarie   Salarie     @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+
+  heuresPresteesMinutes  Int? // facultatif, utile surtout aux ouvriers
+  congeDemiJours         Int     @default(0)
+  maladieDemiJours       Int     @default(0)
+  ferieDemiJours         Int     @default(0)
+  absenceNonRemDemiJours Int     @default(0)
+  heuresSupMinutes       Int     @default(0)
+  primeCents             Int?
+  primeLibelle           String?
+
+  // Qui a encode en dernier (le gestionnaire voit qui a encode quoi). SetNull : compte purge.
+  modifieParId String?
+  modifiePar   User?    @relation(fields: [modifieParId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([periodeId, salarieId])
+  @@index([cabinetId])
+  @@index([salarieId])
+  @@map("prestation")
 }
 
 // Modele d'email personnalise d'un cabinet (D30, D68). Absent = modele par
@@ -258,32 +433,38 @@ model AuditLog {
 // le modele reste generique pour les invitations Entreprise/Collaborateur a
 // venir.
 model Invitation {
-  id          String    @id @default(cuid())
-  email       String
-  role        String
+  id              String      @id @default(cuid())
+  email           String
+  role            String
   // sha256 (hex) du jeton envoye par email ; le jeton en clair n'est jamais
   // stocke (voir lib/invitations.ts, C3).
-  tokenHash   String    @unique
-  status      String    @default("pending") // pending | accepted | expired | revoked
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  cabinetId   String
-  cabinet     Cabinet   @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
-  invitedById String
-  invitedBy   User      @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  tokenHash       String      @unique
+  status          String      @default("pending") // pending | accepted | expired | revoked
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  cabinetId       String
+  cabinet         Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  invitedById     String
+  invitedBy       User        @relation(fields: [invitedById], references: [id], onDelete: Cascade)
   // Invitation ENTREPRISE_CLIENTE (D4, D5) : l'entreprise dont la personne
   // deviendra l'administrateur. null pour une invitation de gestionnaire.
-  entrepriseId String?
-  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  entrepriseId    String?
+  entreprise      Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   // D78 : invitation de REMPLACEMENT - l'administrateur en place au moment de l'envoi. Il
   // reste actif jusqu'a l'acceptation, qui l'archive dans la meme transaction. null pour
   // une premiere invitation. Pas de cle etrangere : l'id sert de preuve que l'admin n'a
   // pas change entre-temps.
   replacesAdminId String?
+  // Invitation COLLABORATEUR (roles/03 § 4.3) : le dossier salarie que le compte rejoindra, lie a
+  // l'acceptation (Salarie.userId). null pour une invitation de gestionnaire ou d'administrateur
+  // d'entreprise. Cascade : si le dossier disparait, l'invitation n'a plus d'objet.
+  salarieId       String?
+  salarie         Salarie?    @relation(fields: [salarieId], references: [id], onDelete: Cascade)
 
   @@index([email])
   @@index([entrepriseId])
+  @@index([salarieId])
   @@map("invitation")
 }
 

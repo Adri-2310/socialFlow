@@ -15,6 +15,8 @@ export type EntrepriseFormValues = {
   country: string;
   contactEmail: string;
   contactPhone: string;
+  // Saisi comme du texte, envoye comme un nombre (D91).
+  jourLimitePrestations: string;
   gestionnaireIds: string[];
 };
 
@@ -29,6 +31,7 @@ export const EMPTY_ENTREPRISE: EntrepriseFormValues = {
   country: 'BE',
   contactEmail: '',
   contactPhone: '',
+  jourLimitePrestations: '20',
   gestionnaireIds: [],
 };
 
@@ -41,6 +44,7 @@ const FIELD_ERRORS: Record<string, string> = {
     'Une entreprise de votre cabinet porte déjà ce n° (peut-être archivée : restaurez-la plutôt).',
   INVALID_EMAIL: 'Adresse email invalide.',
   INVALID_PHONE: 'Numéro de téléphone invalide.',
+  INVALID_JOUR_LIMITE: 'Le jour limite doit être un entier de 1 à 28.',
   INVALID_COUNTRY: 'Pays invalide : choisissez un pays dans la liste.',
   GESTIONNAIRE_REQUIRED: 'Assignez au moins un gestionnaire.',
   GESTIONNAIRE_INVALID: 'Un des gestionnaires choisis est introuvable.',
@@ -66,11 +70,13 @@ function Field({
   id,
   label,
   error,
+  hint,
   children,
 }: {
   id: string;
   label: string;
   error?: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -79,6 +85,7 @@ function Field({
         {label}
       </label>
       {children}
+      {hint && !error && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       {error && (
         <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-destructive-text">
           {error}
@@ -136,7 +143,9 @@ export function EntrepriseFormDialog({
         {
           method: entrepriseId ? 'PATCH' : 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(form),
+          // Le jour limite part en nombre ; un champ vide ou illisible devient NaN (null en JSON)
+          // et le serveur le refuse avec son code.
+          body: JSON.stringify({ ...form, jourLimitePrestations: Number(form.jourLimitePrestations) }),
         },
       );
       const body = await res.json().catch(() => null);
@@ -235,6 +244,24 @@ export function EntrepriseFormDialog({
               autoComplete="off"
               value={form.contactEmail}
               onChange={set('contactEmail')}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field
+            id="ent-jour-limite"
+            label="Jour limite des prestations"
+            error={err('jourLimitePrestations')}
+            hint="Chaque mois, l’entreprise donne ses prestations avant ce jour (1 à 28). Le gestionnaire peut le décaler pour un mois précis."
+          >
+            <input
+              id="ent-jour-limite"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={28}
+              value={form.jourLimitePrestations}
+              onChange={set('jourLimitePrestations')}
               className={inputClass}
             />
           </Field>

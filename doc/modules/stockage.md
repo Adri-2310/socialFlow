@@ -23,7 +23,7 @@ lib/storage/
 |---|---|---|---|---|
 | **Public léger** | Avatars, logos de cabinet | Lisible par tous (URL non devinable) | **Non** | Vie du compte |
 | **Privé sensible** | PDF de fiches, contrats, C4, 281.10, certificats médicaux, pièces de messagerie | Uniquement via route serveur après `authorize()` + audit | **Oui** | 5 ans pour les documents légaux |
-| **Temporaire** | Imports CSV, exports RGPD | Propriétaire seul | Non | 1 jour (CSV), 7 jours (export RGPD) |
+| **Temporaire** | Exports RGPD (le CSV d'import n'est **jamais conservé** : il contient des NISS et des IBAN en clair, D87) | Propriétaire seul | Non | 7 jours (export RGPD) |
 
 ## 3. Interface (indicatif)
 
@@ -102,7 +102,7 @@ L'offre gratuite affiche **1 Go** de Blob (1,41 Mo utilisés au 13/10/2026). Le 
 | Tâche | Fréquence |
 |---|---|
 | Suppression des documents `EN_ATTENTE` > 24 h | Quotidienne |
-| Suppression des fichiers temporaires (CSV 1 j, export RGPD 7 j) | Quotidienne |
+| Suppression des fichiers temporaires (export RGPD 7 j) | Quotidienne |
 | Purge des préfixes des cabinets archivés depuis 90 jours (hors documents légaux) | Quotidienne, avec la purge existante |
 
 Toutes idempotentes et protégées par `CRON_SECRET`.

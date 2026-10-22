@@ -114,3 +114,81 @@
 - Un script lancé sous Windows plantait à la sortie (`process.exit` pendant que les sockets se ferment) : corrigé.
 
 **Reste à faire** : lancer la suite complète une dernière fois, vérifier à la main les redirections des trois espaces et de `/profil`, pousser `dev` (premier lancement de la CI), vider le schéma de la branche `test`, puis ouvrir Gestionnaire RH (1). Dettes et idées : voir `AMELIORATIONS.md`.
+
+---
+
+## 2026-10-23 — Gestionnaire RH (1) : les dossiers salariés
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
+
+**Objectif** : donner au gestionnaire RH tout ce qui touche au dossier d'un salarié, sans encore calculer de paie : l'espace de travail, la création, la modification, les conditions de travail datées, la sortie et l'archivage, l'import CSV, et l'invitation au portail du salarié. Les données sensibles (NISS, IBAN) devaient être protégées dès la première ligne de code, et le Cabinet RH ne devait jamais voir un dossier (D26).
+
+**Décisions prises** : D81 à D89 (voir `DECISIONS.md`), rédigées à la fin du chantier à partir de ce que j'avais validé étape par étape.
+- D81, D82 : NISS et IBAN chiffrés, unicité par empreinte, IBAN belge seulement ; dévoilement journalisé dans la même transaction.
+- D83, D84 : conditions de travail datées (une ligne par changement, jamais réécrite sauf correction de saisie) ; modification qui n'écrit que ce qui change.
+- D85 : sortie et archivage sont deux choses distinctes.
+- D86 : l'audit des dossiers ne contient ni valeur ni nom, et n'apparaît ni dans le journal du cabinet ni dans son export.
+- D87 : import CSV en deux temps, fichier jamais conservé (écart assumé avec `stockage.md`).
+- D88 : invitation d'un salarié, modèle d'email modifiable, un dossier = un compte.
+- D89 : DIMONA et dernière fiche reportées en G2 ; file des demandes reportée au chantier Entreprise.
+
+**Réalisé** : branche `feature/gestionnaire-rh`, 13 commits en français, un par étape présentée et validée avant d'être codée : chiffrement et masquage (`lib/crypto`), validation du NISS et de l'IBAN, modèles `Salarie` et `ConditionTravail`, espace `/dashboard/gestionnaire`, création, fiche détaillée, modification, historique daté, dévoilement, sortie et archivage, import CSV, correctif de la situation « pas encore entré », invitation au portail. Deux migrations additives (`add_salarie`, `add_invitation_salarie`), appliquées sur `dev` seulement.
+
+**Contrôlé / corrigé par moi**
+- J'ai validé chaque plan avant qu'il soit codé, puis testé chaque écran dans le navigateur avant de donner mon accord pour le commit. ?
+- J'ai choisi de garder des chaînes plutôt que des enums Prisma après avoir demandé pourquoi, et de limiter l'IBAN au belge. J'ai posé la question du cohabitant légal ou de fait pour la situation familiale, qui manquait au plan. ?
+- J'ai demandé de lier la commission paritaire au statut (employé 200, ouvrier 100) et de dater aussi le statut et la commission, pas seulement le salaire. ?
+- J'ai remarqué qu'on ne voyait pas que le nom d'un salarié était cliquable, et demandé un bouton « Voir » en plus du lien. ?
+- J'ai fait vérifier l'usage de shadcn : aucun composant n'était installé. J'ai décidé de refaire tout le site sur shadcn moi-même depuis `dev`, plutôt que de mélanger ce chantier à une refonte de l'interface. ?
+- J'ai décidé que la file des demandes irait avec le portail Entreprise, et que la page d'accueil du salarié viendrait avec `feature/collaborateur`. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Écrit à la main** : ?
+
+**Tests** : 228 tests écrits dans 19 fichiers (chiffrement, validation, analyseur CSV, conversion des colonnes, routes avec de vraies sessions sur la base de dev, composant d'affichage), plus les tests générés par tableaux (matrice des routes et des pages). Chaque route est testée pour l'isolation : dossier d'une entreprise non assignée, d'un autre cabinet, archivé ou inconnu répond 404 ; le périmètre est vérifié avant le corps de la requête ; une assignation retirée coupe l'accès à la requête suivante ; 401, 403, 423 en lecture seule. Des mutations volontaires (un filtre de périmètre retiré, un audit supprimé) vérifient que ces tests échouent bien. **Suite complète finale (23/10/2026, un seul lancement, base `dev`) : 125 fichiers, 2 557 tests, aucun échec, en 39 min 41 s** (2 203 tests au chantier précédent).
+
+**Difficultés et apprentissages**
+- Le premier filtre de périmètre fusionnait `entrepriseWhere(scope)` avec l'identifiant de l'URL : l'identifiant **écrasait** le filtre « entreprises assignées », et un gestionnaire pouvait lire n'importe quelle entreprise de son cabinet. Ce sont les tests d'isolation qui l'ont trouvé, avant tout commit. La règle est désormais d'utiliser `AND`.
+- Une mutation volontaire n'a d'abord rien fait échouer : mon test « 404 avant 400 » utilisait un identifiant inexistant, donc il ne prouvait rien. Un test d'isolation doit utiliser une ressource qui **existe** mais hors périmètre, sinon un 400 révélerait son existence.
+- L'export des données du cabinet reprenait son journal d'audit brut : l'acteur d'une acceptation d'invitation étant le compte du salarié, son nom et son email y figuraient. Découvert par un test de confidentialité à l'étape de l'invitation, corrigé par D86.
+- En SQL, `NOT (salarieId = x)` n'est pas vrai quand `salarieId` est nul : une invitation de gestionnaire en attente pour la même adresse n'était pas détectée.
+- `Response.text()` retire le BOM d'un fichier : un test qui le cherchait dans le texte ne le trouvait jamais.
+- Deux passes de tests lancées en même temps se sabotent (le nettoyage de fin de l'une efface les comptes de l'autre) : une seule passe à la fois, y compris pour des tests « sans base ».
+- Un `prettier --write` sur un dossier entier reformate des fichiers existants sans rapport avec le changement : à ne lancer que sur ses propres fichiers (`AMELIORATIONS.md` § 3).
+- Un sélecteur de CSV Excel peut produire de l'UTF-8 ou du Windows-1252 selon l'option choisie : l'import essaie l'UTF-8 strict puis se rabat sur Windows-1252, pour ne pas abîmer les accents.
+
+**Reste à faire** : prestations, moteur de paie et cycle des fiches (G2), DIMONA et dernière fiche d'un salarié sorti, file des demandes (avec le portail Entreprise). Pour cette branche : ajouter `ENCRYPTION_KEY` à la CI (fait, avec une clé factice), appliquer les migrations sur `production`, corriger le titre de la barre du haut du shell, lancer la suite complète, fusionner dans `dev`. Dettes et idées : voir `AMELIORATIONS.md`.
+
+---
+
+## 2026-10-23 — Gestionnaire RH (2) : les périodes de paie, les prestations et le tableau de bord
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
+
+**Objectif** : donner au gestionnaire RH l'étape qui précède le calcul de la paie : ouvrir la période d'un mois pour une entreprise, y encoder les prestations de chaque salarié (ce qui s'écarte d'un mois complet), les verrouiller, et voir d'un coup d'œil où en est chacune de ses entreprises. Rien n'est encore calculé : ces données alimenteront le moteur de paie.
+
+**Décisions prises** : D90 à D93 (voir `DECISIONS.md`), rédigées avant le code.
+- D90 : une période = une entreprise + un mois, ouvrable pour un mois passé, le mois courant ou le mois suivant, jamais au-delà ; elle est ouverte ou verrouillée, et le déverrouillage est audité.
+- D91 : la date limite des prestations vient d'un jour réglé dans la fiche de l'entreprise (de 1 à 28, 20 par défaut), placé dans le mois de la période et décalable période par période ; l'entreprise peut encoder jusqu'à cette date incluse, le gestionnaire à tout moment tant que la période est ouverte.
+- D92 : on encode des **écarts**, pas un mois entier : demi-journées pour les jours, minutes pour les heures, centimes pour une prime accompagnée de son libellé. Un salarié sans écart est payé pour un mois complet selon son régime. Seuls les salariés en poste dans le mois figurent dans la période.
+- D93 : le tableau de bord se limite à ce qui existe ; les blocs des modules à venir n'apparaissent pas comme des compteurs à zéro.
+
+**Réalisé** : toujours sur `feature/gestionnaire-rh`, 8 commits en français, un par étape présentée et validée avant d'être codée : les décisions, le jour limite dans la fiche d'entreprise (10a, formulaire du cabinet), le modèle `PeriodePaie` et `Prestation` avec la permission `periode.voir` (10b), les routes des périodes (10c), l'encodage des prestations (10d), les écrans (10e), le tableau de bord (11) et la mise à jour de la fiche `roles/03`. Deux migrations additives (`add_entreprise_jour_limite`, `add_periode_paie_prestation`), appliquées sur `dev` seulement. L'audit (ouverture, changement de date limite, verrouillage, déverrouillage, enregistrement et effacement d'une prestation) ne garde que des identifiants, l'année et le mois et les noms des champs, jamais une valeur, et n'apparaît ni dans le journal du cabinet ni dans son export.
+
+**Contrôlé / corrigé par moi**
+- J'ai validé chaque plan avant qu'il soit codé. ?
+- J'ai choisi d'ajouter les prestations et le tableau de bord à la même branche que les dossiers salariés, plutôt que d'ouvrir une nouvelle branche. ?
+- J'ai décidé de tester moi-même les écrans dans le navigateur avant tout commit, puis j'ai demandé un test dans mon propre Chrome. ?
+- J'ai demandé qu'on me rappelle de faire le moteur de paie (`feature/moteur-paie`) à la fin de ce chantier et au début de chaque nouvelle session tant qu'il n'est pas commencé. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Tests** : 192 tests de plus que le chantier précédent, dans 8 nouveaux fichiers (calendrier des périodes, schéma des prestations, formatage et formulaire, routes des périodes, routes des prestations, matrice des routes des périodes, écrans, tableau de bord), plus la matrice des pages et le test des titres étendus. Chaque route est testée pour l'isolation : période ou salarié d'une entreprise non assignée, d'un autre cabinet ou archivé répond 404, vérifié avant la validation du corps ; une assignation retirée coupe l'accès ; 401, 403, 423 en lecture seule. Des mutations volontaires (filtre de périmètre, filtre du mois, contrôle de la date limite, filtre de verrouillage, exclusion de l'audit de l'export) vérifient que ces tests échouent bien. **Suite complète finale (23/10/2026, un seul lancement, base `dev`) : 133 fichiers, 2 749 tests, aucun échec, en 45 min 15 s** (2 557 tests au chantier précédent).
+
+**Difficultés et apprentissages**
+- Deux personnes qui encodent ou verrouillent en même temps : verrouiller et déverrouiller passent par une mise à jour qui exige le bon statut dans sa condition, et l'encodage pose d'abord un verrou sur la ligne de la période. Sans cela, une prestation pouvait s'enregistrer dans une période verrouillée juste avant.
+- Une prime sans libellé et une autre erreur de champ ne s'affichent pas ensemble à l'écran : la règle qui lie le montant au libellé ne s'exécute qu'une fois les autres champs corrects. Limite connue et documentée dans le test, sans effet sur la sécurité (le serveur refuse de toute façon).
+- Un test d'isolation qui enchaîne beaucoup de requêtes réelles dépassait les 15 secondes par défaut : durée portée à 60 secondes pour ce seul bloc.
+- Un script d'édition de fichier lancé sous Windows a abîmé les accents de la page du tableau de bord (des caractères de remplacement à l'écran). C'est la vérification dans le navigateur qui l'a montré, pas les tests : un fichier modifié par script se relit à l'écran ou avec un outil d'édition.
+- Les dates et les mois des tests sont toujours calculés par rapport à aujourd'hui, ou passés en paramètre : sinon les tests cassent le jour où le mois change.
+
+**Reste à faire** : moteur de paie et cycle des fiches, DIMONA et dernière fiche d'un salarié sorti, file des demandes avec le portail Entreprise, qui apportera aussi l'écran d'encodage des prestations par l'entreprise et les rappels J-3 et J-1. Pour cette branche : appliquer les quatre migrations en attente (`add_salarie`, `add_invitation_salarie`, `add_entreprise_jour_limite`, `add_periode_paie_prestation`) sur `production` avant la mise en ligne, avec `ENCRYPTION_KEY` sur Vercel, puis fusionner dans `dev` (la CI applique les migrations sur la base `test`, que j'avais vidée au préalable). Dettes et idées : voir `AMELIORATIONS.md`.

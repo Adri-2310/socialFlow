@@ -1,6 +1,6 @@
 # Rôle : Collaborateur (salarié)
 
-> Statut : **à construire** (le rôle existe dans `User.role`, rien d'autre).
+> Statut : **à construire**, sauf l'invitation par le gestionnaire (D88) : le compte se crée, se lie au dossier, et le salarié arrive sur la page d'attente aux couleurs du cabinet jusqu'au chantier `feature/collaborateur`.
 > Décisions de référence : [DECISIONS.md](../DECISIONS.md) D6, D7, D12, D13, D29, D43, D49.
 
 ## 1. Mission

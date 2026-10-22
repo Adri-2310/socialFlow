@@ -7,7 +7,11 @@
 // [liens](https://...). Tout le reste est echappe : un cabinet ne peut ni
 // casser la mise en page ni injecter du HTML ou un script.
 
-export const TEMPLATE_TYPES = ['INVITATION_GESTIONNAIRE', 'INVITATION_ENTREPRISE'] as const;
+export const TEMPLATE_TYPES = [
+  'INVITATION_GESTIONNAIRE',
+  'INVITATION_ENTREPRISE',
+  'INVITATION_COLLABORATEUR',
+] as const;
 export type TemplateType = (typeof TEMPLATE_TYPES)[number];
 
 export function isTemplateType(value: string): value is TemplateType {
@@ -69,6 +73,32 @@ export const TEMPLATES: Record<TemplateType, TemplateDefinition> = {
       cabinet_nom: 'Cabinet Exemple',
       entreprise_nom: 'Boulangerie Dupont',
       invitant_nom: 'Alice Martin',
+      lien: 'https://exemple.invalid/invitations/accept?token=exemple',
+    },
+  },
+  // roles/03 § 4.3 : invitation d'un salarié à son espace (portail Collaborateur). Pas de nom
+  // d'invitant : le salarié est le client de l'entreprise, c'est le cabinet qui lui écrit.
+  INVITATION_COLLABORATEUR: {
+    label: 'Invitation d’un salarié à son espace',
+    description:
+      'Envoyé quand un gestionnaire invite un salarié à créer son compte pour consulter ses fiches de paie.',
+    variables: [
+      { name: 'cabinet_nom', label: 'Nom du cabinet' },
+      { name: 'entreprise_nom', label: 'Nom de l’entreprise du salarié' },
+      { name: 'prenom', label: 'Prénom du salarié' },
+      { name: 'lien', label: 'Lien pour créer le compte' },
+    ],
+    defaults: {
+      subject: '{{cabinet_nom}} vous invite à accéder à votre espace salarié',
+      body:
+        'Bonjour {{prenom}}, {{cabinet_nom}} gère la paie de {{entreprise_nom}} et vous invite à créer votre compte. ' +
+        'Vous y retrouverez vos fiches de paie et vos documents. ' +
+        'Cliquez ci-dessous pour créer votre compte. Ce lien est valable 7 jours et ne peut être utilisé qu’une seule fois.',
+    },
+    sample: {
+      cabinet_nom: 'Cabinet Exemple',
+      entreprise_nom: 'Boulangerie Dupont',
+      prenom: 'Camille',
       lien: 'https://exemple.invalid/invitations/accept?token=exemple',
     },
   },
