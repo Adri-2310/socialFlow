@@ -31,7 +31,7 @@
 |---|---|
 | Isolation stricte par cabinet, entreprise et salarié | `FONCTIONNEMENT.md` § 4, `PERMISSIONS.md` |
 | SuperAdmin sans accès aux données de paie (D8) | `roles/01-superadmin.md` |
-| Chiffrement du NISS, de l'IBAN et des secrets ; dévoilement journalisé | `CONVENTIONS.md` § 4 |
+| Chiffrement du NISS, de l'IBAN et des secrets ; dévoilement journalisé | `CONVENTIONS.md` § 4, D81, D82 |
 | Fiches transmises sans pièce jointe, lien de 7 jours avec code à usage unique (D12, D43) | `roles/03-gestionnaire-rh.md` § 6.4 |
 | 2FA obligatoire pour le SuperAdmin, conseillée pour les autres | D20 |
 | Audit des actions sensibles | `CONVENTIONS.md` § 3 |

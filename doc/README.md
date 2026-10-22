@@ -20,9 +20,9 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 |---|---|---|
 | 1 | [SuperAdmin](roles/01-superadmin.md) | Construit en grande partie |
 | 2 | [Cabinet RH](roles/02-cabinet-rh.md) | Construit (reste ce qui dépend d'autres modules) |
-| 3 | [Gestionnaire RH](roles/03-gestionnaire-rh.md) | Prochain chantier (invitation et acceptation faites) |
+| 3 | [Gestionnaire RH](roles/03-gestionnaire-rh.md) | Dossiers salariés construits (G1) ; paie, déclarations et demandes à venir |
 | 4 | [Entreprise cliente](roles/04-entreprise-cliente.md) | À construire |
-| 5 | [Collaborateur](roles/05-collaborateur.md) | À construire |
+| 5 | [Collaborateur](roles/05-collaborateur.md) | À construire (invitation par le gestionnaire faite) |
 
 ## Modules
 

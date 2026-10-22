@@ -114,3 +114,47 @@
 - Un script lancé sous Windows plantait à la sortie (`process.exit` pendant que les sockets se ferment) : corrigé.
 
 **Reste à faire** : lancer la suite complète une dernière fois, vérifier à la main les redirections des trois espaces et de `/profil`, pousser `dev` (premier lancement de la CI), vider le schéma de la branche `test`, puis ouvrir Gestionnaire RH (1). Dettes et idées : voir `AMELIORATIONS.md`.
+
+---
+
+## 2026-10-23 — Gestionnaire RH (1) : les dossiers salariés
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
+
+**Objectif** : donner au gestionnaire RH tout ce qui touche au dossier d'un salarié, sans encore calculer de paie : l'espace de travail, la création, la modification, les conditions de travail datées, la sortie et l'archivage, l'import CSV, et l'invitation au portail du salarié. Les données sensibles (NISS, IBAN) devaient être protégées dès la première ligne de code, et le Cabinet RH ne devait jamais voir un dossier (D26).
+
+**Décisions prises** : D81 à D89 (voir `DECISIONS.md`), rédigées à la fin du chantier à partir de ce que j'avais validé étape par étape.
+- D81, D82 : NISS et IBAN chiffrés, unicité par empreinte, IBAN belge seulement ; dévoilement journalisé dans la même transaction.
+- D83, D84 : conditions de travail datées (une ligne par changement, jamais réécrite sauf correction de saisie) ; modification qui n'écrit que ce qui change.
+- D85 : sortie et archivage sont deux choses distinctes.
+- D86 : l'audit des dossiers ne contient ni valeur ni nom, et n'apparaît ni dans le journal du cabinet ni dans son export.
+- D87 : import CSV en deux temps, fichier jamais conservé (écart assumé avec `stockage.md`).
+- D88 : invitation d'un salarié, modèle d'email modifiable, un dossier = un compte.
+- D89 : DIMONA et dernière fiche reportées en G2 ; file des demandes reportée au chantier Entreprise.
+
+**Réalisé** : branche `feature/gestionnaire-rh`, 13 commits en français, un par étape présentée et validée avant d'être codée : chiffrement et masquage (`lib/crypto`), validation du NISS et de l'IBAN, modèles `Salarie` et `ConditionTravail`, espace `/dashboard/gestionnaire`, création, fiche détaillée, modification, historique daté, dévoilement, sortie et archivage, import CSV, correctif de la situation « pas encore entré », invitation au portail. Deux migrations additives (`add_salarie`, `add_invitation_salarie`), appliquées sur `dev` seulement.
+
+**Contrôlé / corrigé par moi**
+- J'ai validé chaque plan avant qu'il soit codé, puis testé chaque écran dans le navigateur avant de donner mon accord pour le commit. ?
+- J'ai choisi de garder des chaînes plutôt que des enums Prisma après avoir demandé pourquoi, et de limiter l'IBAN au belge. J'ai posé la question du cohabitant légal ou de fait pour la situation familiale, qui manquait au plan. ?
+- J'ai demandé de lier la commission paritaire au statut (employé 200, ouvrier 100) et de dater aussi le statut et la commission, pas seulement le salaire. ?
+- J'ai remarqué qu'on ne voyait pas que le nom d'un salarié était cliquable, et demandé un bouton « Voir » en plus du lien. ?
+- J'ai fait vérifier l'usage de shadcn : aucun composant n'était installé. J'ai décidé de refaire tout le site sur shadcn moi-même depuis `dev`, plutôt que de mélanger ce chantier à une refonte de l'interface. ?
+- J'ai décidé que la file des demandes irait avec le portail Entreprise, et que la page d'accueil du salarié viendrait avec `feature/collaborateur`. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Écrit à la main** : ?
+
+**Tests** : 228 tests écrits dans 19 fichiers (chiffrement, validation, analyseur CSV, conversion des colonnes, routes avec de vraies sessions sur la base de dev, composant d'affichage), plus les tests générés par tableaux (matrice des routes et des pages). Chaque route est testée pour l'isolation : dossier d'une entreprise non assignée, d'un autre cabinet, archivé ou inconnu répond 404 ; le périmètre est vérifié avant le corps de la requête ; une assignation retirée coupe l'accès à la requête suivante ; 401, 403, 423 en lecture seule. Des mutations volontaires (un filtre de périmètre retiré, un audit supprimé) vérifient que ces tests échouent bien. **Suite complète finale (23/10/2026, un seul lancement, base `dev`) : 125 fichiers, 2 557 tests, aucun échec, en 39 min 41 s** (2 203 tests au chantier précédent).
+
+**Difficultés et apprentissages**
+- Le premier filtre de périmètre fusionnait `entrepriseWhere(scope)` avec l'identifiant de l'URL : l'identifiant **écrasait** le filtre « entreprises assignées », et un gestionnaire pouvait lire n'importe quelle entreprise de son cabinet. Ce sont les tests d'isolation qui l'ont trouvé, avant tout commit. La règle est désormais d'utiliser `AND`.
+- Une mutation volontaire n'a d'abord rien fait échouer : mon test « 404 avant 400 » utilisait un identifiant inexistant, donc il ne prouvait rien. Un test d'isolation doit utiliser une ressource qui **existe** mais hors périmètre, sinon un 400 révélerait son existence.
+- L'export des données du cabinet reprenait son journal d'audit brut : l'acteur d'une acceptation d'invitation étant le compte du salarié, son nom et son email y figuraient. Découvert par un test de confidentialité à l'étape de l'invitation, corrigé par D86.
+- En SQL, `NOT (salarieId = x)` n'est pas vrai quand `salarieId` est nul : une invitation de gestionnaire en attente pour la même adresse n'était pas détectée.
+- `Response.text()` retire le BOM d'un fichier : un test qui le cherchait dans le texte ne le trouvait jamais.
+- Deux passes de tests lancées en même temps se sabotent (le nettoyage de fin de l'une efface les comptes de l'autre) : une seule passe à la fois, y compris pour des tests « sans base ».
+- Un `prettier --write` sur un dossier entier reformate des fichiers existants sans rapport avec le changement : à ne lancer que sur ses propres fichiers (`AMELIORATIONS.md` § 3).
+- Un sélecteur de CSV Excel peut produire de l'UTF-8 ou du Windows-1252 selon l'option choisie : l'import essaie l'UTF-8 strict puis se rabat sur Windows-1252, pour ne pas abîmer les accents.
+
+**Reste à faire** : prestations, moteur de paie et cycle des fiches (G2), DIMONA et dernière fiche d'un salarié sorti, file des demandes (avec le portail Entreprise). Pour cette branche : ajouter `ENCRYPTION_KEY` à la CI (fait, avec une clé factice), appliquer les migrations sur `production`, corriger le titre de la barre du haut du shell, lancer la suite complète, fusionner dans `dev`. Dettes et idées : voir `AMELIORATIONS.md`.

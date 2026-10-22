@@ -1,9 +1,22 @@
 # Rôle : Gestionnaire RH
 
-> Statut : **invitation et acceptation construites** ; tout le métier (salariés, prestations, fiches, DIMONA) reste à construire.
-> **Acquis du chantier Cabinet RH, à réutiliser** : portail de connexion du cabinet et refus de `/login` (D76) ; marque du cabinet sur les pages communes via `lib/branding/cabinet-client-brand.ts` et `AppHeader` (D77) ; périmètre par `GestionnaireEntreprise`, avec une entreprise non assignée ou d'un autre cabinet **introuvable (404)** (voir `inviteEntrepriseAdmin`, option `onlyAssignedTo`) ; le gestionnaire peut **remplacer l'administrateur** d'une entreprise assignée, jamais inviter un premier administrateur (D78) ; écriture refusée en lecture seule du cabinet (`authorize`, actions `write: true`, D29, D71) ; périmètre : `scope` de `lib/authz/authz.ts` (entreprises assignées et non archivées). Aujourd'hui son `/dashboard` est une page d'attente à la marque du cabinet ; l'espace `/dashboard/gestionnaire` reste à créer.
+> Statut : **dossiers salariés construits** (chantier G1, 23/10/2026) ; reste à construire : prestations, cycle des fiches, déclarations, calendrier, messagerie, et la file des demandes avec le portail Entreprise (D89).
+> **Acquis du chantier Cabinet RH, à réutiliser** : portail de connexion du cabinet et refus de `/login` (D76) ; marque du cabinet sur les pages communes via `lib/branding/cabinet-client-brand.ts` et `AppHeader` (D77) ; périmètre par `GestionnaireEntreprise`, avec une entreprise non assignée ou d'un autre cabinet **introuvable (404)** (voir `inviteEntrepriseAdmin`, option `onlyAssignedTo`) ; le gestionnaire peut **remplacer l'administrateur** d'une entreprise assignée, jamais inviter un premier administrateur (D78) ; écriture refusée en lecture seule du cabinet (`authorize`, actions `write: true`, D29, D71) ; périmètre : `scope` de `lib/authz/authz.ts` (entreprises assignées et non archivées). Son `/dashboard` redirige vers `/dashboard/gestionnaire`.
 > Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D6, D9–D14, D27, D37–D42.
 > ⚠️ Les éléments de législation belge marqués **[à vérifier]** doivent être confirmés sur les sources officielles (SPF Finances, ONSS) avant implémentation.
+
+## Existant et à construire (23/10/2026)
+
+**Existant** (branche `feature/gestionnaire-rh`, décisions D81 à D89)
+- Espace `/dashboard/gestionnaire` aux couleurs du cabinet : mes entreprises, liste des salariés (actifs et archivés), fiche détaillée.
+- Création, modification, sortie, archivage et restauration d'un dossier ; NISS et IBAN chiffrés, masqués, dévoilement journalisé (§ 4, D81, D82, D84, D85).
+- Historique daté des conditions de travail : ajout, correction, annulation d'un changement à venir (§ 4.2, D83).
+- Import CSV avec vérification préalable et rapport ligne par ligne (§ 4.1, D87).
+- Invitation d'un salarié au portail Collaborateur, avec un modèle d'email modifiable (§ 4.3, D88).
+- Audit de toutes ces actions, sans donnée personnelle (D86).
+
+**À construire**
+- Tableau de bord du gestionnaire (§ 3), prestations (§ 5), moteur de paie et cycle des fiches (§ 6), déclarations dont la DIMONA IN et OUT, la dernière fiche d'un salarié sorti et le badge « DIMONA à envoyer » (§ 7, D89), messagerie (§ 8), file des demandes (§ 11, avec le portail Entreprise, D89).
 
 ## 1. Mission
 
@@ -45,15 +58,15 @@ Manuelle ou par **import CSV** (modèle téléchargeable, rapport ligne par lign
 
 - Unicité du NISS **par entreprise**.
 - NISS et IBAN **chiffrés en base** et masqués à l'affichage par défaut (`85.07.**-***.**`).
-- **Création → DIMONA IN générée** (D40), à envoyer avant le premier jour de travail ; le dossier affiche un badge « DIMONA à envoyer » tant qu'elle n'est pas acceptée.
+- **Création → DIMONA IN générée** (D40), à envoyer avant le premier jour de travail ; le dossier affiche un badge « DIMONA à envoyer » tant qu'elle n'est pas acceptée. **Reporté en G2 (D89)** : sans table des déclarations, aucune DIMONA n'est générée et le dossier n'affiche aucun badge.
 
 ### 4.2 Modifications
 - Toute modification de rémunération ou de régime est **datée** (historique avec date d'effet) : une fiche utilise les valeurs valables pour sa période.
-- Sortie : saisir la date de sortie génère la **DIMONA OUT** et la dernière fiche (avec prorata). Le dossier passe en « sorti », conservé 5 ans.
+- Sortie : saisir la date de sortie génère la **DIMONA OUT** et la dernière fiche (avec prorata). Le dossier passe en « sorti », conservé 5 ans. **Aujourd'hui** (D85, D89) : la date de sortie s'enregistre, se corrige et s'efface ; le dossier affiche « Sort le … » puis « Sorti le … » ; la DIMONA OUT et la dernière fiche viennent en G2.
 - Pas de suppression physique : archivage (soft-delete) uniquement.
 
 ### 4.3 Invitation au portail Collaborateur
-Facultative : le gestionnaire invite le salarié (email du dossier) ; l'invitation lie le compte au dossier. Sans compte, le salarié reçoit quand même ses fiches par lien sécurisé (D12).
+Facultative : le gestionnaire invite le salarié (email du dossier) ; l'invitation lie le compte au dossier. Sans compte, le salarié reçoit quand même ses fiches par lien sécurisé (D12). **Construit** (D88) : le bloc « Accès au portail salarié » de la fiche invite, renvoie (l'invitation en attente est remplacée, à l'adresse actuelle du dossier) et révoque ; le lien est valable 7 jours.
 
 ## 5. Prestations mensuelles (D37)
 
@@ -162,4 +175,6 @@ Un fil par entreprise, partagé par le(s) gestionnaire(s) assigné(s) et l'admin
 - Aucune fiche `ENVOYEE` n'est jamais modifiée en base (test qui le vérifie).
 
 ## 11. Demandes de l'entreprise (D47)
+
+> **À construire avec le portail Entreprise** (D89) : c'est là que les demandes sont créées, la file du gestionnaire s'y construit en même temps.
 L'admin entreprise signale des changements (nouvel engagement, sortie, modification de salaire ou de régime, correction de données) via des **demandes** que le gestionnaire traite : accepter (il applique la modification au dossier, ce qui peut générer une DIMONA) ou refuser avec un motif. Les demandes de correction des collaborateurs (D49) arrivent dans la même file.
