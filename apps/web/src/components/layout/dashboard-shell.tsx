@@ -15,6 +15,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { isNavActive, pageTitle } from '@/components/layout/page-titles';
 import { UserMenu } from '@/components/layout/user-menu';
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; href?: string };
@@ -92,7 +93,9 @@ export function DashboardShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { consoleLabel, roleLabel, nav }: ShellConfig = SHELL_CONFIG[role];
-  const activeItem = nav.find((item) => item.href === pathname) ?? nav[0];
+  const activeItem = nav.find((item) => isNavActive(role, item.href, pathname)) ?? nav[0];
+  // Une page absente du menu (liste des salariés, fiche) donne son propre titre.
+  const title = pageTitle(role, pathname) ?? activeItem.label;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -146,7 +149,7 @@ export function DashboardShell({
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 font-semibold transition ${
-                  item.href === pathname
+                  isNavActive(role, item.href, pathname)
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/60'
                 }`}
@@ -190,7 +193,7 @@ export function DashboardShell({
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="truncate text-base font-bold text-foreground">{activeItem.label}</h1>
+          <h1 className="truncate text-base font-bold text-foreground">{title}</h1>
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
             <UserMenu userName={userName} roleLabel={roleLabel} logoutHref={logoutHref} />

@@ -61,6 +61,10 @@ jobs:
       STRIPE_WEBHOOK_SECRET: whsec_ci_factice
       RESEND_API_KEY: re_ci_factice
       RESEND_FROM_EMAIL: ci@example.invalid
+      # Clé de chiffrement des NISS et des IBAN (D81) : factice, jamais celle d'un vrai
+      # environnement. Les tests ne chiffrent que des données de test, sur la base de test ;
+      # elle doit seulement décoder à 32 octets (base64).
+      ENCRYPTION_KEY: Y2ktY2xlLWZhY3RpY2UtMDEyMzQ1Njc4OWFiY2RlZiE=
       # Les fournisseurs Google et Microsoft ne sont actifs que si ces variables existent
       # (tests de construction de l'adresse d'autorisation) : valeurs factices, aucun appel réel.
       GOOGLE_CLIENT_ID: ci-google-client-id-factice
