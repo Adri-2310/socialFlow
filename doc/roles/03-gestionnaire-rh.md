@@ -1,6 +1,6 @@
 # Rôle : Gestionnaire RH
 
-> Statut : **dossiers salariés construits** (chantier G1, 23/10/2026) ; reste à construire : prestations, cycle des fiches, déclarations, calendrier, messagerie, et la file des demandes avec le portail Entreprise (D89).
+> Statut : **dossiers salariés, périodes de paie, prestations et tableau de bord construits** (chantier G1 et suite, 23/10/2026) ; reste à construire : cycle des fiches, déclarations, calendrier, messagerie, et la file des demandes avec le portail Entreprise (D89).
 > **Acquis du chantier Cabinet RH, à réutiliser** : portail de connexion du cabinet et refus de `/login` (D76) ; marque du cabinet sur les pages communes via `lib/branding/cabinet-client-brand.ts` et `AppHeader` (D77) ; périmètre par `GestionnaireEntreprise`, avec une entreprise non assignée ou d'un autre cabinet **introuvable (404)** (voir `inviteEntrepriseAdmin`, option `onlyAssignedTo`) ; le gestionnaire peut **remplacer l'administrateur** d'une entreprise assignée, jamais inviter un premier administrateur (D78) ; écriture refusée en lecture seule du cabinet (`authorize`, actions `write: true`, D29, D71) ; périmètre : `scope` de `lib/authz/authz.ts` (entreprises assignées et non archivées). Son `/dashboard` redirige vers `/dashboard/gestionnaire`.
 > Décisions de référence : [DECISIONS.md](../DECISIONS.md) D3, D6, D9–D14, D27, D37–D42.
 > ⚠️ Les éléments de législation belge marqués **[à vérifier]** doivent être confirmés sur les sources officielles (SPF Finances, ONSS) avant implémentation.
@@ -14,9 +14,13 @@
 - Import CSV avec vérification préalable et rapport ligne par ligne (§ 4.1, D87).
 - Invitation d'un salarié au portail Collaborateur, avec un modèle d'email modifiable (§ 4.3, D88).
 - Audit de toutes ces actions, sans donnée personnelle (D86).
+- Périodes de paie : ouverture d'une période (entreprise + mois), date limite décalable, verrouillage et déverrouillage audité des prestations (§ 5, D90, D91).
+- Prestations : écarts du mois par salarié (congé, maladie, férié, absence non rémunérée, heures supplémentaires, une prime, heures prestées), encodage, effacement, résumé et dernière saisie (§ 5, D92). L'API accepte déjà l'entreprise jusqu'à la date limite incluse.
+- Tableau de bord : par entreprise assignée, l'état de la période du mois courant et le nombre de salariés en poste (§ 3, D93).
 
 **À construire**
-- Tableau de bord du gestionnaire (§ 3), prestations (§ 5), moteur de paie et cycle des fiches (§ 6), déclarations dont la DIMONA IN et OUT, la dernière fiche d'un salarié sorti et le badge « DIMONA à envoyer » (§ 7, D89), messagerie (§ 8), file des demandes (§ 11, avec le portail Entreprise, D89).
+- Moteur de paie et cycle des fiches (§ 6), déclarations dont la DIMONA IN et OUT, la dernière fiche d'un salarié sorti et le badge « DIMONA à envoyer » (§ 7, D89), messagerie (§ 8), file des demandes (§ 11, avec le portail Entreprise, D89).
+- Avec le portail Entreprise : l'écran d'encodage des prestations par l'entreprise (§ 5) et les rappels J-3 / J-1.
 
 ## 1. Mission
 
@@ -39,7 +43,9 @@ Le Gestionnaire RH est le **producteur** de la plateforme : un membre de l'équi
 
 ## 3. Tableau de bord
 
-- Période en cours par entreprise : état de la clôture (non ouverte, prestations en attente, en préparation, à valider, validée, envoyée).
+**Construit** (D93) : une carte par entreprise assignée, avec le nombre de salariés en poste dans le mois courant et l'état de la période de ce mois : non ouverte, prestations en attente (avec leur date limite), date limite dépassée (période encore ouverte), prestations verrouillées. Un lien mène à l'ouverture de la période ou à ses prestations. Les blocs ci-dessous viennent avec leurs modules, jamais comme des compteurs à zéro.
+
+- Période en cours par entreprise : états suivants de la clôture (en préparation, à valider, validée, envoyée), avec le cycle des fiches.
 - À traiter : fiches rejetées (avec motif), validations en retard (D41), DIMONA à envoyer ou en erreur, messages non lus.
 - Échéances (module calendrier) : déclarations ONSS trimestrielles, paiements, rappels J-7 / J-3 / J-1.
 
@@ -70,10 +76,12 @@ Facultative : le gestionnaire invite le salarié (email du dossier) ; l'invitati
 
 ## 5. Prestations mensuelles (D37)
 
-- Pour une entreprise et un mois : une ligne par salarié actif, avec jours/heures prestés, congés, maladie (salaire garanti), jours fériés, heures supplémentaires, primes ponctuelles, absences non rémunérées.
-- L'entreprise **peut pré-encoder** ces données dans son portail jusqu'à la **date limite** (D46) : un jour par défaut réglé dans la fiche de l'entreprise (par exemple le 20 du mois), que le gestionnaire peut décaler pour une période donnée. Rappels automatiques à l'entreprise à J-3 et J-1. Après la date, l'entreprise ne peut plus modifier.
-- Le gestionnaire voit qui a encodé quoi, **complète, corrige** (même après la date), puis **verrouille** les prestations.
-- Valeurs par défaut : un salarié sans encodage = mois complet selon son régime.
+> **Construit côté gestionnaire** (D90 à D92) ; l'écran de l'entreprise et les rappels viennent avec le portail Entreprise.
+
+- Pour une entreprise et un mois (une **période**, D90, ouvrable pour un mois passé, le mois courant ou le mois suivant) : une ligne par salarié en poste ce mois-là (entré au plus tard le dernier jour, non sorti avant le premier, non archivé). On encode les **écarts** par rapport au mois complet (D92) : congés, maladie (salaire garanti), jours fériés et absences non rémunérées en demi-journées, heures prestées et heures supplémentaires en minutes, une prime ponctuelle en centimes avec son libellé (60 caractères au plus).
+- L'entreprise **peut pré-encoder** ces données dans son portail jusqu'à la **date limite** incluse (D46, D91) : un jour de 1 à 28 par défaut réglé dans la fiche de l'entreprise (20 si rien n'est réglé), placé dans le mois de la période, que le gestionnaire peut décaler pour une période donnée. Rappels automatiques à l'entreprise à J-3 et J-1. Après la date, l'entreprise ne peut plus modifier.
+- Le gestionnaire voit qui a encodé quoi, **complète, corrige** (même après la date, tant que la période est ouverte), puis **verrouille** les prestations. Verrouillées, plus personne ne les modifie ; le gestionnaire peut les déverrouiller, l'action est auditée.
+- Valeurs par défaut : un salarié sans écart (aucune ligne enregistrée) = mois complet selon son régime. Saisir des valeurs neutres efface la ligne.
 
 ## 6. Cycle des fiches de paie
 
