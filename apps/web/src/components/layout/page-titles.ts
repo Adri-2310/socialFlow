@@ -11,6 +11,11 @@ type TitreDePage = { motif: RegExp; titre: string };
 const TITRES_GESTIONNAIRE: TitreDePage[] = [
   { motif: /^\/dashboard\/gestionnaire\/entreprises\/[^/]+\/salaries\/?$/, titre: 'Salariés' },
   { motif: /^\/dashboard\/gestionnaire\/salaries\/[^/]+\/?$/, titre: 'Dossier salarié' },
+  {
+    motif: /^\/dashboard\/gestionnaire\/entreprises\/[^/]+\/periodes\/?$/,
+    titre: 'Périodes de paie',
+  },
+  { motif: /^\/dashboard\/gestionnaire\/periodes\/[^/]+\/?$/, titre: 'Prestations' },
 ];
 
 const RACINE_GESTIONNAIRE = '/dashboard/gestionnaire';

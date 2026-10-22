@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft, Eye, Users } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Eye, Users } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
 import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
@@ -72,6 +72,13 @@ export default async function SalariesEntreprisePage({
         </div>
         {!archives && (
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/dashboard/gestionnaire/entreprises/${data.entreprise.id}/periodes`}
+              className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Périodes de paie
+            </Link>
             <SalarieImport entrepriseId={data.entreprise.id} readOnly={readOnly} />
             <SalarieCreate
               entrepriseId={data.entreprise.id}

@@ -15,6 +15,16 @@ describe('titre de la barre du haut', () => {
     );
   });
 
+  it('donne un titre aux périodes de paie et aux prestations', () => {
+    expect(pageTitle('GESTIONNAIRE_RH', '/dashboard/gestionnaire/entreprises/abc/periodes')).toBe(
+      'Périodes de paie',
+    );
+    expect(pageTitle('GESTIONNAIRE_RH', '/dashboard/gestionnaire/periodes/xyz')).toBe(
+      'Prestations',
+    );
+    expect(pageTitle('GESTIONNAIRE_RH', '/dashboard/gestionnaire/periodes')).toBeNull();
+  });
+
   it('laisse le menu décider pour les pages qui y figurent et pour les autres espaces', () => {
     expect(pageTitle('GESTIONNAIRE_RH', '/dashboard/gestionnaire')).toBeNull();
     expect(pageTitle('CABINET_RH', '/dashboard/cabinet/entreprises')).toBeNull();
@@ -42,6 +52,8 @@ describe('entrée active du menu', () => {
       '/dashboard/gestionnaire',
       '/dashboard/gestionnaire/entreprises/abc/salaries',
       '/dashboard/gestionnaire/salaries/xyz',
+      '/dashboard/gestionnaire/entreprises/abc/periodes',
+      '/dashboard/gestionnaire/periodes/xyz',
     ]) {
       expect(isNavActive('GESTIONNAIRE_RH', '/dashboard/gestionnaire', chemin), chemin).toBe(true);
     }
