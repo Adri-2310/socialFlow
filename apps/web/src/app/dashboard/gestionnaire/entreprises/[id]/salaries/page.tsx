@@ -6,6 +6,7 @@ import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
 import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
 import { SalarieCreate } from '@/components/gestionnaire/salarie-create';
+import { SalarieImport } from '@/components/gestionnaire/salarie-import';
 import { SortieBadge } from '@/components/gestionnaire/sortie-badge';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
@@ -70,12 +71,15 @@ export default async function SalariesEntreprisePage({
           </h2>
         </div>
         {!archives && (
-          <SalarieCreate
-            entrepriseId={data.entreprise.id}
-            // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
-            countries={countryOptions()}
-            readOnly={readOnly}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <SalarieImport entrepriseId={data.entreprise.id} readOnly={readOnly} />
+            <SalarieCreate
+              entrepriseId={data.entreprise.id}
+              // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
+              countries={countryOptions()}
+              readOnly={readOnly}
+            />
+          </div>
         )}
       </div>
 

@@ -23,7 +23,7 @@ export const FIELD_ERRORS: Record<string, string> = {
   INVALID_IBAN: 'IBAN belge invalide (BE suivi de 14 chiffres, clé de contrôle comprise).',
   INVALID_EMAIL: 'Adresse email invalide.',
   INVALID_PAYS: 'Pays invalide.',
-  INVALID_DATE_ENTREE: 'Date d’entrée obligatoire.',
+  INVALID_DATE_ENTREE: 'Date d’entrée manquante ou invalide (JJ/MM/AAAA).',
   INVALID_DATE_FIN_CONTRAT:
     'Un CDD exige une date de fin postérieure à l’entrée ; un CDI n’en a pas.',
   INVALID_DATE_SORTIE: 'La date de sortie se saisit à la sortie du salarié.',

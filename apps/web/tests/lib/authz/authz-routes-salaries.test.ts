@@ -30,6 +30,8 @@ const salarieById = await import('@/app/api/salaries/[id]/route');
 const conditions = await import('@/app/api/salaries/[id]/conditions/route');
 const reveal = await import('@/app/api/salaries/[id]/reveal/route');
 const sortie = await import('@/app/api/salaries/[id]/sortie/route');
+const importCsv = await import('@/app/api/entreprises/[id]/salaries/import/route');
+const importModele = await import('@/app/api/entreprises/[id]/salaries/import/modele/route');
 const conditionById = await import('@/app/api/salaries/[id]/conditions/[conditionId]/route');
 
 type Handler = (
@@ -37,12 +39,16 @@ type Handler = (
   context: { params: Promise<{ id: string; conditionId: string }> },
 ) => Promise<Response>;
 
-const ROUTES: [string, Handler, ActionId][] = [
+// Quatrième valeur : la route lit seulement, même si son action est une écriture dans le
+// catalogue (elle passe `{ write: false }` à authorize).
+const ROUTES: [string, Handler, ActionId, boolean?][] = [
   ['POST entreprises/[id]/salaries', salaries.POST, 'salarie.gerer'],
   ['PATCH salaries/[id]', salarieById.PATCH, 'salarie.gerer'],
   ['DELETE salaries/[id]', salarieById.DELETE, 'salarie.gerer'],
   ['PUT salaries/[id]', salarieById.PUT, 'salarie.gerer'],
   ['PUT salaries/[id]/sortie', sortie.PUT, 'salarie.gerer'],
+  ['POST entreprises/[id]/salaries/import', importCsv.POST, 'salarie.gerer'],
+  ['GET entreprises/[id]/salaries/import/modele', importModele.GET, 'salarie.gerer', false],
   ['POST salaries/[id]/conditions', conditions.POST, 'salarie.gerer'],
   ['PUT salaries/[id]/conditions/[conditionId]', conditionById.PUT, 'salarie.gerer'],
   ['DELETE salaries/[id]/conditions/[conditionId]', conditionById.DELETE, 'salarie.gerer'],
@@ -78,7 +84,7 @@ beforeEach(() => {
 });
 
 describe('routes des salariés : autorisation par la matrice', () => {
-  describe.each(ROUTES)('%s', (_name, handler, action) => {
+  describe.each(ROUTES)('%s', (_name, handler, action, ecriture) => {
     it(`appelle authorize avec l'action ${action}`, async () => {
       getSession.mockResolvedValue(null);
       await call(handler);
@@ -113,7 +119,7 @@ describe('routes des salariés : autorisation par la matrice', () => {
 
     // Une action d'écriture est refusée en lecture seule (423) ; consulter, y compris
     // dévoiler un NISS (journalisé), reste possible (D29).
-    const isWrite = 'write' in ACTIONS[action];
+    const isWrite = ecriture ?? 'write' in ACTIONS[action];
     it(
       isWrite
         ? '423 CABINET_READ_ONLY quand le cabinet est en lecture seule'
