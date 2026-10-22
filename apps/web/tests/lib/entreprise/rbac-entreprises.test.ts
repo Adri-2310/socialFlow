@@ -188,6 +188,36 @@ describe('creation d une entreprise (D4)', () => {
     expect((await aucun.json()).fields.gestionnaireIds).toBe('GESTIONNAIRE_REQUIRED');
   });
 
+  it('pose 20 comme jour limite des prestations par defaut et accepte de 1 a 28 (D91)', async () => {
+    const { cj, user: titulaire } = await creerCabinetRH('ent-jour');
+    const { user: g } = await creerGestionnaire(titulaire.cabinetId!, 'ent-jour-g');
+    const jourDe = async (id: string) =>
+      (await prisma.entreprise.findUniqueOrThrow({ where: { id } })).jourLimitePrestations;
+
+    const parDefaut = await (await creer(donnees([g.id]), cj)).json();
+    expect(await jourDe(parDefaut.id)).toBe(20);
+
+    for (const jour of [1, 15, 28]) {
+      const res = await creer(donnees([g.id], { jourLimitePrestations: jour }), cj);
+      expect(res.status).toBe(201);
+      expect(await jourDe((await res.json()).id)).toBe(jour);
+    }
+  });
+
+  it('refuse un jour limite hors de 1 a 28, decimal ou qui n est pas un nombre (D91)', async () => {
+    const { cj, user: titulaire } = await creerCabinetRH('ent-jour-invalide');
+    const { user: g } = await creerGestionnaire(titulaire.cabinetId!, 'ent-jour-invalide-g');
+
+    for (const jour of [0, 29, 31, -3, 20.5, '20', null]) {
+      const res = await creer(donnees([g.id], { jourLimitePrestations: jour }), cj);
+      expect(res.status, JSON.stringify(jour)).toBe(400);
+      expect((await res.json()).fields.jourLimitePrestations).toBe('INVALID_JOUR_LIMITE');
+    }
+    expect(
+      await prisma.entreprise.count({ where: { cabinetId: titulaire.cabinetId!, deletedAt: null } }),
+    ).toBe(0);
+  });
+
   it('refuse un gestionnaire d un autre cabinet ou archive (isolation)', async () => {
     const { cj, user: titulaire } = await creerCabinetRH('ent-iso-a');
     const { user: autreTitulaire } = await creerCabinetRH('ent-iso-b');
@@ -316,6 +346,53 @@ describe('modification, archivage et restauration', () => {
       unassigned: [g1.id],
     });
     expect(JSON.stringify(audit.metadata)).not.toContain('Liège');
+  });
+
+  it('modifie le jour limite et journalise le nom du champ, pas sa valeur (D91)', async () => {
+    const { cj, cabinetId, g1, id } = await entrepriseExistante('ent-jour-patch');
+    const actuelle = await prisma.entreprise.findUniqueOrThrow({ where: { id } });
+    expect(actuelle.jourLimitePrestations).toBe(20);
+
+    const res = await modifier(
+      id,
+      {
+        name: actuelle.name,
+        vatNumber: actuelle.vatNumber,
+        gestionnaireIds: [g1.id],
+        jourLimitePrestations: 17,
+      },
+      cj,
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).changed).toEqual(['jourLimitePrestations']);
+    expect(
+      (await prisma.entreprise.findUniqueOrThrow({ where: { id } })).jourLimitePrestations,
+    ).toBe(17);
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { cabinetId, action: 'ENTREPRISE_UPDATED' },
+    });
+    expect((audit.metadata as { fields: string[] }).fields).toEqual(['jourLimitePrestations']);
+    expect(JSON.stringify(audit.metadata)).not.toContain('17');
+  });
+
+  it('un jour limite absent de la demande conserve la valeur actuelle (D91)', async () => {
+    const { cj, cabinetId, g1, id } = await entrepriseExistante('ent-jour-absent');
+    await prisma.entreprise.update({ where: { id }, data: { jourLimitePrestations: 12 } });
+    const actuelle = await prisma.entreprise.findUniqueOrThrow({ where: { id } });
+
+    // Un ancien client qui ne connait pas le champ : il ne doit pas remettre 20.
+    const res = await modifier(
+      id,
+      { name: actuelle.name, vatNumber: actuelle.vatNumber, city: 'Liège', gestionnaireIds: [g1.id] },
+      cj,
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).changed).toEqual(['city']);
+    expect(
+      (await prisma.entreprise.findUniqueOrThrow({ where: { id } })).jourLimitePrestations,
+    ).toBe(12);
+    expect(await prisma.auditLog.count({ where: { cabinetId, action: 'ENTREPRISE_UPDATED' } })).toBe(1);
   });
 
   it('n ecrit rien quand rien ne change', async () => {

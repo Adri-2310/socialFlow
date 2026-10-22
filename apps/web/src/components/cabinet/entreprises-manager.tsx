@@ -162,6 +162,7 @@ export function EntreprisesManager({
                     country: e.country,
                     contactEmail: e.contactEmail ?? '',
                     contactPhone: e.contactPhone ?? '',
+                    jourLimitePrestations: String(e.jourLimitePrestations),
                     gestionnaireIds: e.gestionnaires.map((g) => g.id),
                   }}
                   countries={countries}

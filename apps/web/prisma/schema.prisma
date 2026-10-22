@@ -185,6 +185,9 @@ model Entreprise {
   country       String                   @default("BE")
   contactEmail  String?
   contactPhone  String?
+  // D46, D91 : jour du mois (1 a 28) avant lequel l'entreprise donne ses prestations ; regle par
+  // le Cabinet RH, decalable par le gestionnaire pour une periode. 20 par defaut.
+  jourLimitePrestations Int @default(20)
   deletedAt     DateTime?
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt

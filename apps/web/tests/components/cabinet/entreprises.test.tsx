@@ -36,6 +36,7 @@ const entreprise = (overrides: Partial<EntrepriseRow> = {}): EntrepriseRow => ({
   country: 'BE',
   contactEmail: null,
   contactPhone: null,
+  jourLimitePrestations: 20,
   createdAt: new Date('2026-10-01'),
   gestionnaires: [{ id: 'g1', name: 'Alice Martin', status: 'actif' }],
   covered: true,
@@ -168,6 +169,45 @@ describe('EntrepriseFormDialog', () => {
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it('propose 20 comme jour limite et l envoie comme un nombre (D91)', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ success: true, id: 'e9' }) });
+    renderForm();
+
+    const champ = screen.getByLabelText('Jour limite des prestations');
+    expect(champ).toHaveValue(20);
+    await userEvent.clear(champ);
+    await userEvent.type(champ, '15');
+    await userEvent.type(screen.getByLabelText('Raison sociale'), 'Boucherie Martin');
+    await userEvent.type(screen.getByLabelText('N° d’entreprise / TVA'), 'BE0123.456.749');
+    await userEvent.click(screen.getByRole('checkbox', { name: /Alice Martin/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Créer l’entreprise' }));
+
+    const corps = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(corps.jourLimitePrestations).toBe(15);
+    expect(typeof corps.jourLimitePrestations).toBe('number');
+  });
+
+  it('affiche le jour limite actuel d une entreprise a modifier', () => {
+    renderForm({
+      entrepriseId: 'e1',
+      initial: { ...EMPTY_ENTREPRISE, name: 'Boulangerie Dupont', jourLimitePrestations: '12' },
+    });
+    expect(screen.getByLabelText('Jour limite des prestations')).toHaveValue(12);
+  });
+
+  it('explique un jour limite refuse par le serveur', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'INVALID_REQUEST', fields: { jourLimitePrestations: 'INVALID_JOUR_LIMITE' } }),
+    });
+    renderForm();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Créer l’entreprise' }));
+
+    expect(await screen.findByText(/entier de 1 à 28/)).toBeInTheDocument();
   });
 
   it('modifie une entreprise existante avec PATCH', async () => {

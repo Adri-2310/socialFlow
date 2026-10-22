@@ -38,6 +38,15 @@ export const entrepriseSchema = identitySchema
         }
         return normalized;
       }),
+    // D46, D91 : jour limite d'encodage des prestations, de 1 a 28 (valable tous les mois).
+    // Facultatif : absent a la creation, la base pose 20 ; absent a la modification, la valeur
+    // actuelle est conservee (un ancien client ne la remet pas a 20 sans le savoir).
+    jourLimitePrestations: z
+      .number({ error: 'INVALID_JOUR_LIMITE' })
+      .int('INVALID_JOUR_LIMITE')
+      .min(1, 'INVALID_JOUR_LIMITE')
+      .max(28, 'INVALID_JOUR_LIMITE')
+      .optional(),
     // D4 : au moins un gestionnaire assigne.
     gestionnaireIds: z
       .array(z.string().min(1).max(64))
@@ -68,6 +77,7 @@ const FIELDS = [
   'country',
   'contactEmail',
   'contactPhone',
+  'jourLimitePrestations',
 ] as const;
 
 type EntrepriseField = (typeof FIELDS)[number];
@@ -84,6 +94,7 @@ export type EntrepriseRow = {
   country: string;
   contactEmail: string | null;
   contactPhone: string | null;
+  jourLimitePrestations: number;
   createdAt: Date;
   gestionnaires: { id: string; name: string; status: 'actif' | 'suspendu' }[];
   // D27 : couverte = au moins un gestionnaire ACTIF assigne.
@@ -108,6 +119,7 @@ const ENTREPRISE_SELECT = {
   country: true,
   contactEmail: true,
   contactPhone: true,
+  jourLimitePrestations: true,
   createdAt: true,
   gestionnaires: {
     where: { user: { deletedAt: null } },
@@ -301,6 +313,7 @@ export async function updateEntreprise(
           country: true,
           contactEmail: true,
           contactPhone: true,
+          jourLimitePrestations: true,
           gestionnaires: { select: { userId: true } },
         },
       });
@@ -314,8 +327,9 @@ export async function updateEntreprise(
       const added = [...after].filter((userId) => !before.has(userId));
       const removed = [...before].filter((userId) => !after.has(userId));
 
+      // Un champ absent de la demande (jourLimitePrestations) n'est pas un champ modifie.
       const changed: (EntrepriseField | 'gestionnaires')[] = FIELDS.filter(
-        (field) => current[field] !== input[field],
+        (field) => input[field] !== undefined && current[field] !== input[field],
       );
       if (added.length > 0 || removed.length > 0) changed.push('gestionnaires');
       if (changed.length === 0) return { ok: true as const, changed };
