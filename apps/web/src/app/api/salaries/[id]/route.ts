@@ -6,6 +6,8 @@ import {
   invalidFields,
   salarieModificationSchema,
 } from '@/lib/schemas/salarie';
+import { lifecycleErrorResponse } from '@/lib/salarie/lifecycle-http';
+import { archiveSalarie, restoreSalarie } from '@/lib/salarie/lifecycle-write';
 import { findSalarieInScope } from '@/lib/salarie/salarie-data';
 import { updateSalarie } from '@/lib/salarie/salarie-write';
 
@@ -58,4 +60,39 @@ export async function PATCH(request: Request, { params }: Context) {
   }
 
   return NextResponse.json({ success: true, changed: result.changed });
+}
+
+// Archive le dossier (soft-delete, roles/03 § 4.2) : il disparaît des listes mais n'est jamais
+// supprimé, et son NISS reste réservé. DELETE = archiver, PUT = restaurer, comme pour les
+// entreprises du cabinet.
+export async function DELETE(request: Request, { params }: Context) {
+  const authz = await authorize(request, 'salarie.gerer');
+  if (authz.response) return authz.response;
+  const { session, scope } = authz;
+  const { id } = await params;
+
+  if (!(await findSalarieInScope(scope, id, { includeArchived: true }))) {
+    return NextResponse.json({ error: 'SALARIE_NOT_FOUND' }, { status: 404 });
+  }
+
+  const result = await archiveSalarie(scope, session.user.id, id);
+  if (!result.ok) return lifecycleErrorResponse(result);
+
+  return NextResponse.json({ success: true });
+}
+
+export async function PUT(request: Request, { params }: Context) {
+  const authz = await authorize(request, 'salarie.gerer');
+  if (authz.response) return authz.response;
+  const { session, scope } = authz;
+  const { id } = await params;
+
+  if (!(await findSalarieInScope(scope, id, { includeArchived: true }))) {
+    return NextResponse.json({ error: 'SALARIE_NOT_FOUND' }, { status: 404 });
+  }
+
+  const result = await restoreSalarie(scope, session.user.id, id);
+  if (!result.ok) return lifecycleErrorResponse(result);
+
+  return NextResponse.json({ success: true });
 }

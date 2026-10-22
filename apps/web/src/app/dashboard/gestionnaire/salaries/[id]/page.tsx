@@ -5,8 +5,11 @@ import type { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { ConditionAdd } from '@/components/gestionnaire/condition-add';
 import { ConditionRowActions } from '@/components/gestionnaire/condition-row-actions';
+import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
 import { SalarieEdit } from '@/components/gestionnaire/salarie-edit';
+import { SalarieSortie } from '@/components/gestionnaire/salarie-sortie';
 import { SensitiveValue } from '@/components/gestionnaire/sensitive-value';
+import { SortieBadge } from '@/components/gestionnaire/sortie-badge';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
@@ -87,7 +90,9 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
 
   // Dossier hors périmètre (entreprise non assignée, autre cabinet, archivé) : 404, on ne
   // révèle pas son existence.
-  const salarie = await getSalarieDetail(scope, id);
+  // La fiche d'un dossier archivé reste consultable (en lecture seule) pour pouvoir le restaurer.
+  const maintenant = new Date();
+  const salarie = await getSalarieDetail(scope, id, maintenant, { includeArchived: true });
   if (!salarie) notFound();
 
   // D29, D71 : cabinet en lecture seule, la modification est désactivée (le serveur refuse aussi).
@@ -122,16 +127,46 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
             {salarie.prenom} {salarie.nom}
           </h2>
         </div>
-        <SalarieEdit
-          salarieId={salarie.id}
-          initial={toFormValues(salarie)}
-          nissMasque={salarie.nissMasque}
-          ibanMasque={salarie.ibanMasque}
-          // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
-          countries={countryOptions()}
-          readOnly={readOnly}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {!salarie.archive && (
+            <>
+              <SalarieEdit
+                salarieId={salarie.id}
+                initial={toFormValues(salarie)}
+                nissMasque={salarie.nissMasque}
+                ibanMasque={salarie.ibanMasque}
+                // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
+                countries={countryOptions()}
+                readOnly={readOnly}
+              />
+              <SalarieSortie
+                salarieId={salarie.id}
+                dateSortie={salarie.dateSortie ? salarie.dateSortie.toISOString().slice(0, 10) : ''}
+                readOnly={readOnly}
+              />
+            </>
+          )}
+          <SalarieArchiveActions
+            salarieId={salarie.id}
+            nom={`${salarie.prenom} ${salarie.nom}`}
+            archive={salarie.archive}
+            readOnly={readOnly}
+          />
+        </div>
       </div>
+
+      {salarie.archive && (
+        <div
+          role="status"
+          className="rounded-2xl border border-border bg-muted/50 p-4 text-sm text-foreground"
+        >
+          <p className="font-semibold">Dossier archivé</p>
+          <p className="text-muted-foreground">
+            Il n’apparaît plus dans les listes et ne peut plus être modifié. Il reste conservé :
+            restaurez-le pour le modifier de nouveau.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Identité">
@@ -139,23 +174,31 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
           <Row
             label="NISS"
             value={
-              <SensitiveValue
-                salarieId={salarie.id}
-                field="niss"
-                label="NISS"
-                masked={salarie.nissMasque}
-              />
+              salarie.archive ? (
+                <span className="font-mono">{salarie.nissMasque}</span>
+              ) : (
+                <SensitiveValue
+                  salarieId={salarie.id}
+                  field="niss"
+                  label="NISS"
+                  masked={salarie.nissMasque}
+                />
+              )
             }
           />
           <Row
             label="IBAN"
             value={
-              <SensitiveValue
-                salarieId={salarie.id}
-                field="iban"
-                label="IBAN"
-                masked={salarie.ibanMasque}
-              />
+              salarie.archive ? (
+                <span className="font-mono">{salarie.ibanMasque}</span>
+              ) : (
+                <SensitiveValue
+                  salarieId={salarie.id}
+                  field="iban"
+                  label="IBAN"
+                  masked={salarie.ibanMasque}
+                />
+              )
             }
           />
           <Row label="Email" value={salarie.email} />
@@ -172,8 +215,8 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
             value={salarie.dateFinContrat ? formatDate(salarie.dateFinContrat) : null}
           />
           <Row
-            label="Date de sortie"
-            value={salarie.dateSortie ? formatDate(salarie.dateSortie) : null}
+            label="Sortie"
+            value={<SortieBadge dateSortie={salarie.dateSortie} at={maintenant} />}
           />
         </Section>
 
@@ -223,7 +266,7 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
           <h3 className="text-sm font-semibold text-foreground">
             Historique des conditions de travail
           </h3>
-          {courante && (
+          {courante && !salarie.archive && (
             <ConditionAdd
               salarieId={salarie.id}
               initial={toConditionFormValues(courante, { avecDate: false })}
@@ -264,14 +307,16 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <ConditionRowActions
-                      salarieId={salarie.id}
-                      conditionId={c.id}
-                      initial={toConditionFormValues(c, { avecDate: true })}
-                      // Seul un changement à venir s'annule, jamais la première ligne (l'entrée).
-                      removable={c.etat === 'A_VENIR' && !estPremiere(c)}
-                      readOnly={readOnly}
-                    />
+                    {!salarie.archive && (
+                      <ConditionRowActions
+                        salarieId={salarie.id}
+                        conditionId={c.id}
+                        initial={toConditionFormValues(c, { avecDate: true })}
+                        // Seul un changement à venir s'annule, jamais la première ligne (l'entrée).
+                        removable={c.etat === 'A_VENIR' && !estPremiere(c)}
+                        readOnly={readOnly}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}

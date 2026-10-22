@@ -12,6 +12,9 @@ export const FIELD_ERRORS: Record<string, string> = {
     'La date doit se situer entre la date d’entrée et la date de sortie du salarié.',
   CONDITION_DATE_ALREADY_USED:
     'Une condition existe déjà à cette date : corrigez-la plutôt que d’en ajouter une.',
+  DATE_SORTIE_OUT_OF_RANGE: 'La date de sortie ne peut pas précéder la date d’entrée.',
+  CONDITION_AFTER_SORTIE:
+    'Une condition de travail est datée après cette sortie : annulez-la d’abord.',
   INVALID_NISS: 'NISS invalide : 11 chiffres avec une clé de contrôle correcte.',
   DATE_ENTREE_CONFLICT:
     'Une condition de travail est datée avant cette entrée (ou le même jour), ou l’entrée suit la date de sortie.',
@@ -41,6 +44,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "Vous n'êtes pas autorisé à effectuer cette action.",
   ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable.',
   SALARIE_NOT_FOUND: 'Ce dossier est introuvable.',
+  SALARIE_ALREADY_ARCHIVED: 'Ce dossier est déjà archivé.',
+  SALARIE_NOT_ARCHIVED: 'Ce dossier n’est pas archivé.',
   CONDITION_NOT_FOUND: 'Cette condition est introuvable.',
   CONDITION_NOT_REMOVABLE:
     'Seul un changement à venir peut être annulé (jamais la première ligne, ni une ligne déjà en vigueur).',

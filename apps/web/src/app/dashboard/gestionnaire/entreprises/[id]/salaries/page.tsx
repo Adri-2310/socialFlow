@@ -4,7 +4,9 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Eye, Users } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
+import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
 import { SalarieCreate } from '@/components/gestionnaire/salarie-create';
+import { SortieBadge } from '@/components/gestionnaire/sortie-badge';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
@@ -20,29 +22,38 @@ const STATUT_LABELS: Record<string, string> = { EMPLOYE: 'Employé', OUVRIER: 'O
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
 const formatDate = (date: Date) => date.toLocaleDateString('fr-BE', { timeZone: 'UTC' });
 
+const ONGLET_ACTIF = 'rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary';
+const ONGLET =
+  'rounded-lg px-3 py-1.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground';
+
 export default async function SalariesEntreprisePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ archives?: string }>;
 }) {
   const { user } = await requireAuthorized('salarie.lister');
   const { id } = await params;
+  const archives = (await searchParams).archives === '1';
 
   const scope = await resolveScope(user);
   if (!scope) redirect('/dashboard');
 
   // Entreprise hors périmètre (non assignée, archivée, autre cabinet) : 404, on ne
   // révèle pas son existence.
-  const data = await getSalariesEntreprise(scope, id);
+  const maintenant = new Date();
+  const data = await getSalariesEntreprise(scope, id, maintenant, { archives });
   // scope.kind : toujours « entreprises » ici (sinon data serait null), mais TypeScript l'ignore.
   if (!data || scope.kind !== 'entreprises') notFound();
 
-  // D29, D71 : cabinet en lecture seule, la création est désactivée (le serveur refuse aussi).
+  // D29, D71 : cabinet en lecture seule, les actions sont désactivées (le serveur refuse aussi).
   const cabinet = await prisma.cabinet.findUnique({
     where: { id: scope.cabinetId },
     select: { billingStatus: true, status: true, suspensionType: true },
   });
   const readOnly = !cabinet || isCabinetReadOnly(cabinet);
+  const base = `/dashboard/gestionnaire/entreprises/${data.entreprise.id}/salaries`;
 
   return (
     <section className="space-y-4">
@@ -58,20 +69,43 @@ export default async function SalariesEntreprisePage({
             {data.entreprise.name}
           </h2>
         </div>
-        <SalarieCreate
-          entrepriseId={data.entreprise.id}
-          // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
-          countries={countryOptions()}
-          readOnly={readOnly}
-        />
+        {!archives && (
+          <SalarieCreate
+            entrepriseId={data.entreprise.id}
+            // Calculé côté serveur : les données Intl diffèrent entre Node et le navigateur.
+            countries={countryOptions()}
+            readOnly={readOnly}
+          />
+        )}
       </div>
+
+      <nav aria-label="Dossiers" className="flex gap-1">
+        <Link
+          href={base}
+          aria-current={archives ? undefined : 'page'}
+          className={archives ? ONGLET : ONGLET_ACTIF}
+        >
+          Actifs
+        </Link>
+        <Link
+          href={`${base}?archives=1`}
+          aria-current={archives ? 'page' : undefined}
+          className={archives ? ONGLET_ACTIF : ONGLET}
+        >
+          Archivés ({data.nbArchives})
+        </Link>
+      </nav>
 
       {data.salaries.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
           <Users className="mx-auto h-8 w-8 text-muted-foreground" />
-          <h3 className="mt-3 text-lg font-bold text-foreground">Aucun salarié</h3>
+          <h3 className="mt-3 text-lg font-bold text-foreground">
+            {archives ? 'Aucun dossier archivé' : 'Aucun salarié'}
+          </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Les dossiers des salariés de cette entreprise apparaîtront ici.
+            {archives
+              ? 'Les dossiers archivés ne sont jamais supprimés : ils apparaissent ici et peuvent être restaurés.'
+              : 'Les dossiers des salariés de cette entreprise apparaîtront ici.'}
           </p>
         </div>
       ) : (
@@ -84,7 +118,7 @@ export default async function SalariesEntreprisePage({
                 <th className="px-4 py-3 font-semibold">Fonction</th>
                 <th className="px-4 py-3 font-semibold">Statut</th>
                 <th className="px-4 py-3 font-semibold">Entrée</th>
-                <th className="px-4 py-3 font-semibold">Sortie</th>
+                <th className="px-4 py-3 font-semibold">Situation</th>
                 <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -107,17 +141,28 @@ export default async function SalariesEntreprisePage({
                     {s.statut ? (STATUT_LABELS[s.statut] ?? s.statut) : '—'}
                   </td>
                   <td className="px-4 py-3 text-foreground/80">{formatDate(s.dateEntree)}</td>
-                  <td className="px-4 py-3 text-foreground/80">
-                    {s.dateSortie ? formatDate(s.dateSortie) : '—'}
+                  <td className="px-4 py-3">
+                    <SortieBadge dateSortie={s.dateSortie} at={maintenant} />
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/dashboard/gestionnaire/salaries/${s.id}`}
-                      aria-label={`Voir le dossier de ${s.prenom} ${s.nom}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Voir
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <Link
+                        href={`/dashboard/gestionnaire/salaries/${s.id}`}
+                        aria-label={`Voir le dossier de ${s.prenom} ${s.nom}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Voir
+                      </Link>
+                      {archives && (
+                        <SalarieArchiveActions
+                          salarieId={s.id}
+                          nom={`${s.prenom} ${s.nom}`}
+                          archive
+                          readOnly={readOnly}
+                          compact
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

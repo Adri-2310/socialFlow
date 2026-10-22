@@ -29,6 +29,7 @@ const salaries = await import('@/app/api/entreprises/[id]/salaries/route');
 const salarieById = await import('@/app/api/salaries/[id]/route');
 const conditions = await import('@/app/api/salaries/[id]/conditions/route');
 const reveal = await import('@/app/api/salaries/[id]/reveal/route');
+const sortie = await import('@/app/api/salaries/[id]/sortie/route');
 const conditionById = await import('@/app/api/salaries/[id]/conditions/[conditionId]/route');
 
 type Handler = (
@@ -39,6 +40,9 @@ type Handler = (
 const ROUTES: [string, Handler, ActionId][] = [
   ['POST entreprises/[id]/salaries', salaries.POST, 'salarie.gerer'],
   ['PATCH salaries/[id]', salarieById.PATCH, 'salarie.gerer'],
+  ['DELETE salaries/[id]', salarieById.DELETE, 'salarie.gerer'],
+  ['PUT salaries/[id]', salarieById.PUT, 'salarie.gerer'],
+  ['PUT salaries/[id]/sortie', sortie.PUT, 'salarie.gerer'],
   ['POST salaries/[id]/conditions', conditions.POST, 'salarie.gerer'],
   ['PUT salaries/[id]/conditions/[conditionId]', conditionById.PUT, 'salarie.gerer'],
   ['DELETE salaries/[id]/conditions/[conditionId]', conditionById.DELETE, 'salarie.gerer'],

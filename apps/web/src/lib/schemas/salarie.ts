@@ -168,6 +168,10 @@ export const salarieModificationSchema = z
 
 export type SalarieModificationInput = z.infer<typeof salarieModificationSchema>;
 
+// Enregistrer (date) ou effacer (null) la sortie d'un salarié. Elle a sa propre action : elle
+// déclenchera la DIMONA OUT et la dernière fiche (D40, G2), à la différence d'une modification.
+export const sortieSchema = z.object({ dateSortie: isoDate.nullable() });
+
 export type SalarieInput = z.infer<typeof salarieSchema>;
 
 // 400 INVALID_<CHAMP> (CONVENTIONS § 3) : `dateFinContrat` → INVALID_DATE_FIN_CONTRAT.

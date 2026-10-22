@@ -80,13 +80,15 @@ export async function findEntrepriseInScope(
 export async function findSalarieInScope(
   scope: Scope,
   salarieId: string,
+  // Les actions d'archivage et de restauration visent aussi un dossier archivé.
+  options: { includeArchived?: boolean } = {},
 ): Promise<{ id: string; entrepriseId: string } | null> {
   if (scope.kind !== 'entreprises') return null;
   return prisma.salarie.findFirst({
     where: {
       id: salarieId,
       cabinetId: scope.cabinetId,
-      deletedAt: null,
+      ...(options.includeArchived ? {} : { deletedAt: null }),
       entreprise: { AND: [entrepriseWhere(scope), { deletedAt: null }] },
     },
     select: { id: true, entrepriseId: true },
@@ -99,7 +101,14 @@ export async function getSalariesEntreprise(
   scope: Scope,
   entrepriseId: string,
   at: Date = new Date(),
-): Promise<{ entreprise: { id: string; name: string }; salaries: SalarieRow[] } | null> {
+  // `archives` : liste les dossiers archivés au lieu des dossiers actifs (roles/03 § 4.2).
+  options: { archives?: boolean } = {},
+): Promise<{
+  entreprise: { id: string; name: string };
+  salaries: SalarieRow[];
+  // Toujours le nombre de dossiers archivés, pour l'onglet « Archivés ».
+  nbArchives: number;
+} | null> {
   if (scope.kind !== 'entreprises') return null;
 
   const entreprise = await findEntrepriseInScope(scope, entrepriseId);
@@ -107,7 +116,11 @@ export async function getSalariesEntreprise(
 
   const salaries = await prisma.salarie.findMany({
     // cabinetId redondant avec l'entreprise, mais toute table métier est filtrée par tenant.
-    where: { cabinetId: scope.cabinetId, entrepriseId: entreprise.id, deletedAt: null },
+    where: {
+      cabinetId: scope.cabinetId,
+      entrepriseId: entreprise.id,
+      deletedAt: options.archives ? { not: null } : null,
+    },
     orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     select: {
       id: true,
@@ -120,8 +133,13 @@ export async function getSalariesEntreprise(
     },
   });
 
+  const nbArchives = await prisma.salarie.count({
+    where: { cabinetId: scope.cabinetId, entrepriseId: entreprise.id, deletedAt: { not: null } },
+  });
+
   return {
     entreprise,
+    nbArchives,
     salaries: salaries.map((s) => {
       const condition = conditionEnVigueur(s.conditions, at);
       return {
@@ -175,6 +193,8 @@ export type SalarieDetail = {
   situationFamiliale: string;
   conjointAvecRevenus: boolean | null;
   personnesCharge: number;
+  // Dossier archivé : lisible, mais plus modifiable (roles/03 § 4.2).
+  archive: boolean;
   // Les plus récentes d'abord.
   conditions: ConditionRow[];
 };
@@ -194,6 +214,8 @@ export async function getSalarieDetail(
   scope: Scope,
   salarieId: string,
   at: Date = new Date(),
+  // La fiche d'un dossier archivé reste consultable, pour pouvoir le restaurer.
+  options: { includeArchived?: boolean } = {},
 ): Promise<SalarieDetail | null> {
   if (scope.kind !== 'entreprises') return null;
 
@@ -201,7 +223,7 @@ export async function getSalarieDetail(
     where: {
       id: salarieId,
       cabinetId: scope.cabinetId,
-      deletedAt: null,
+      ...(options.includeArchived ? {} : { deletedAt: null }),
       // Relation : le filtre d'entreprises du périmètre ne peut pas être écrasé par `id`.
       entreprise: { AND: [entrepriseWhere(scope), { deletedAt: null }] },
     },
@@ -224,6 +246,7 @@ export async function getSalarieDetail(
       situationFamiliale: true,
       conjointAvecRevenus: true,
       personnesCharge: true,
+      deletedAt: true,
       entreprise: { select: { id: true, name: true } },
       conditions: {
         orderBy: { dateEffet: 'desc' },
@@ -244,13 +267,14 @@ export async function getSalarieDetail(
   });
   if (!salarie) return null;
 
-  const { nissEncrypted, ibanEncrypted, conditions, ...dossier } = salarie;
+  const { nissEncrypted, ibanEncrypted, conditions, deletedAt, ...dossier } = salarie;
   // Triées de la plus récente à la plus ancienne : la première déjà entrée en vigueur
   // est la condition courante ; une condition postérieure à `at` est « à venir ».
   const courante = conditions.find((c) => c.dateEffet.getTime() <= at.getTime());
 
   return {
     ...dossier,
+    archive: deletedAt !== null,
     nissMasque: masquerNiss(nissEncrypted),
     ibanMasque: masquerIban(ibanEncrypted),
     conditions: conditions.map((c) => ({
