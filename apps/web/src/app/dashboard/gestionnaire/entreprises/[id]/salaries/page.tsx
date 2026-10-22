@@ -146,7 +146,11 @@ export default async function SalariesEntreprisePage({
                   </td>
                   <td className="px-4 py-3 text-foreground/80">{formatDate(s.dateEntree)}</td>
                   <td className="px-4 py-3">
-                    <SortieBadge dateSortie={s.dateSortie} at={maintenant} />
+                    <SortieBadge
+                      dateEntree={s.dateEntree}
+                      dateSortie={s.dateSortie}
+                      at={maintenant}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center justify-end gap-2">
