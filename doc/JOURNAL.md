@@ -182,8 +182,6 @@
 - J'ai demandé qu'on me rappelle de faire le moteur de paie (`feature/moteur-paie`) à la fin de ce chantier et au début de chaque nouvelle session tant qu'il n'est pas commencé. ?
 - Autres relectures, refus ou corrections de ma part : ?
 
-**Écrit à la main** : ?
-
 **Tests** : 192 tests de plus que le chantier précédent, dans 8 nouveaux fichiers (calendrier des périodes, schéma des prestations, formatage et formulaire, routes des périodes, routes des prestations, matrice des routes des périodes, écrans, tableau de bord), plus la matrice des pages et le test des titres étendus. Chaque route est testée pour l'isolation : période ou salarié d'une entreprise non assignée, d'un autre cabinet ou archivé répond 404, vérifié avant la validation du corps ; une assignation retirée coupe l'accès ; 401, 403, 423 en lecture seule. Des mutations volontaires (filtre de périmètre, filtre du mois, contrôle de la date limite, filtre de verrouillage, exclusion de l'audit de l'export) vérifient que ces tests échouent bien. **Suite complète finale (23/10/2026, un seul lancement, base `dev`) : 133 fichiers, 2 749 tests, aucun échec, en 45 min 15 s** (2 557 tests au chantier précédent).
 
 **Difficultés et apprentissages**
