@@ -29,10 +29,12 @@ type ActionId = keyof typeof ACTIONS;
 const periodes = await import('@/app/api/entreprises/[id]/periodes/route');
 const periodeById = await import('@/app/api/periodes/[id]/route');
 const verrouillage = await import('@/app/api/periodes/[id]/verrouillage/route');
+const prestations = await import('@/app/api/periodes/[id]/prestations/route');
+const prestationById = await import('@/app/api/periodes/[id]/prestations/[salarieId]/route');
 
 type Handler = (
   request: Request,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string; salarieId: string }> },
 ) => Promise<Response>;
 
 const ROUTES: [string, Handler, ActionId][] = [
@@ -41,6 +43,9 @@ const ROUTES: [string, Handler, ActionId][] = [
   ['PATCH periodes/[id]', periodeById.PATCH, 'periode.ouvrir'],
   ['PUT periodes/[id]/verrouillage', verrouillage.PUT, 'prestation.verrouiller'],
   ['DELETE periodes/[id]/verrouillage', verrouillage.DELETE, 'prestation.verrouiller'],
+  ['GET periodes/[id]/prestations', prestations.GET, 'periode.voir'],
+  ['PUT periodes/[id]/prestations/[salarieId]', prestationById.PUT, 'prestation.encoder'],
+  ['DELETE periodes/[id]/prestations/[salarieId]', prestationById.DELETE, 'prestation.encoder'],
 ];
 
 function sessionFor(role: string, cabinetId: string | null = role === 'SUPER_ADMIN' ? null : 'c1') {
@@ -53,7 +58,9 @@ async function call(handler: Handler) {
   const request = new Request('http://localhost/api/entreprises/cible/periodes', {
     method: 'POST',
   });
-  return handler(request, { params: Promise.resolve({ id: 'cible' }) }).catch(() => undefined);
+  return handler(request, { params: Promise.resolve({ id: 'cible', salarieId: 'salarie' }) }).catch(
+    () => undefined,
+  );
 }
 
 async function authorization() {
