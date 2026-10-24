@@ -60,7 +60,22 @@ Manuelle ou par **import CSV** (modèle téléchargeable, rapport ligne par lign
 | Contrat | Statut **employé / ouvrier** (D39), type (CDI, CDD avec date de fin), date d'entrée, date de sortie éventuelle, commission paritaire (**CP 200** employés, **CP 100** ouvriers, D44 ; champ prévu pour en ajouter), fonction |
 | Temps de travail | Régime : temps plein ou **temps partiel** (heures/semaine du travailleur et de la personne de référence → fraction d'occupation) |
 | Rémunération | Employé : salaire mensuel brut ; ouvrier : salaire horaire brut ; avantages récurrents éventuels |
-| Fiscal | Situation familiale, personnes à charge, conjoint avec ou sans revenus (nécessaires au précompte professionnel) |
+| Fiscal | **Situation fiscale** du précompte (D95, Annexe III 2026) : isolé ou marié / cohabitant légal ; revenus du conjoint en 5 cas ; salarié et conjoint handicapés ; enfants à charge dont handicapés ; autres personnes à charge (dépendantes de 66 ans ou plus, handicapées, autres) ; parent isolé ; attribution des charges de famille entre conjoints. Voir ci-dessous |
+
+**Situation fiscale (D95).** Le dossier enregistre des **critères**, jamais un montant ni un seuil (ils iront dans `BaremeVersion`). Le formulaire est **guidé** : une question n'apparaît que si elle est utile, les valeurs par défaut sont « non » et zéro, un célibataire sans charge ne remplit rien.
+
+| Critère | Quand il se pose | Annexe III |
+|---|---|---|
+| Isolé ou marié / cohabitant légal | Toujours (un cohabitant de fait se saisit comme isolé ; un marié compte comme isolé l'année du mariage ou de la séparation) | n° 2, 4 |
+| Revenus du conjoint : sans revenus propres, pension très limitée, pension limitée, revenu limité, revenus | Marié | n° 11, 32-34, 40 |
+| Salarié handicapé | Toujours | n° 3, 39.1 |
+| Conjoint handicapé | Marié dont le conjoint n'a pas de revenus propres (le cas « pension très limitée » compris) ; sinon il le déclare dans son propre dossier | n° 7, 41 |
+| Enfants à charge, dont handicapés (comptés double) | Toujours | n° 8, 38 |
+| Autres personnes à charge : dépendantes de 66 ans ou plus, handicapées, autres | Case « autres personnes à charge » | n° 8, 9, 39 |
+| Parent isolé (veuf, père ou mère célibataire, divorcé ou séparé) | Isolé avec enfants à charge | n° 40.1 |
+| Qui reçoit les réductions pour charges de famille | Marié dont le conjoint a des revenus propres, et seulement s'il y a des charges. **Sans réponse, la paie ne se calcule pas** | n° 6 |
+
+La notion d'**« à charge »** relève de l'article 136 CIR 92, que l'Annexe III ne reproduit pas : elle reste **déclarée** par le gestionnaire. Les seuils (revenus limités du conjoint, etc.) viendront s'afficher depuis le barème quand `BaremeVersion` existera (G2a) : le formulaire nomme pour l'instant chaque cas par son numéro de l'Annexe. Non-résidents (partie 6) et dirigeants d'entreprise (n° 29) : **hors du premier lot**, le calcul sera bloqué avec un message. L'import CSV a une colonne facultative par critère ; l'ancienne colonne `personnes_charge` est lue comme `enfants_charge`, et « oui » / « non » dans `revenus_conjoint` restent compris. Plus tard, le salarié pourra déclarer lui-même cette situation depuis son portail (`05-collaborateur.md` § 4.2), le gestionnaire se contentant de valider.
 
 - Unicité du NISS **par entreprise**.
 - NISS et IBAN **chiffrés en base** et masqués à l'affichage par défaut (`85.07.**-***.**`).

@@ -40,6 +40,7 @@ Un salarié sans compte reçoit tout de même toutes ses fiches. Le compte appor
 - Lecture : identité, adresse, IBAN (masqué), situation familiale, contrat, régime.
 - **Demande de correction** (adresse, IBAN, situation familiale, personnes à charge) → arrive dans la file des demandes du gestionnaire (même mécanisme que pour l'entreprise) ; le salarié voit le statut.
 - Un changement de situation familiale influence le précompte : l'écran le précise.
+- **À prévoir (D95)** : le salarié **déclare lui-même** sa situation fiscale (conjoint et ses revenus, handicaps, enfants et autres personnes à charge, attribution des charges de famille), avec les mêmes questions guidées que le gestionnaire ; le gestionnaire **valide** au lieu de saisir. Pas construit avant ce chantier.
 
 ### 4.3 Mes documents
 Contrat de travail, attestations, certificat C4 en cas de sortie, **fiche fiscale annuelle** (281.10) **[à vérifier : génération et transmission à BelCotax en périmètre ou non]**. Téléchargement en PDF.
