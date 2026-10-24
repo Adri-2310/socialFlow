@@ -192,8 +192,17 @@ export type SalarieDetail = {
   dateFinContrat: Date | null;
   dateSortie: Date | null;
   situationFamiliale: string;
-  conjointAvecRevenus: boolean | null;
-  personnesCharge: number;
+  // Situation fiscale (D95).
+  conjointRevenus: string | null;
+  beneficiaireHandicape: boolean;
+  conjointHandicape: boolean;
+  enfantsCharge: number;
+  enfantsHandicapes: number;
+  autresChargeDependantes66: number;
+  autresChargeHandicapees: number;
+  autresCharge: number;
+  parentIsole: boolean;
+  chargesFamilleAttribuees: boolean | null;
   // Dossier archivé : lisible, mais plus modifiable (roles/03 § 4.2).
   archive: boolean;
   // Accès au portail Collaborateur (roles/03 § 4.3) : compte lié, invitation en attente ou rien.
@@ -247,8 +256,16 @@ export async function getSalarieDetail(
       dateFinContrat: true,
       dateSortie: true,
       situationFamiliale: true,
-      conjointAvecRevenus: true,
-      personnesCharge: true,
+      conjointRevenus: true,
+      beneficiaireHandicape: true,
+      conjointHandicape: true,
+      enfantsCharge: true,
+      enfantsHandicapes: true,
+      autresChargeDependantes66: true,
+      autresChargeHandicapees: true,
+      autresCharge: true,
+      parentIsole: true,
+      chargesFamilleAttribuees: true,
       deletedAt: true,
       userId: true,
       // Seulement la dernière invitation en attente : ni l'adresse ni le jeton ne sont lus.

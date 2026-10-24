@@ -27,8 +27,17 @@ export const COLONNES = [
   // Mensuel pour un employé, horaire pour un ouvrier (voir le statut).
   { nom: 'salaire', champ: 'salaire', obligatoire: true },
   { nom: 'situation_familiale', champ: 'situationFamiliale', obligatoire: true },
-  { nom: 'revenus_conjoint', champ: 'conjointAvecRevenus', obligatoire: false },
-  { nom: 'personnes_charge', champ: 'personnesCharge', obligatoire: false },
+  // Situation fiscale (D95) : tout est facultatif, une cellule vide vaut « non » ou zéro.
+  { nom: 'revenus_conjoint', champ: 'conjointRevenus', obligatoire: false },
+  { nom: 'salarie_handicape', champ: 'beneficiaireHandicape', obligatoire: false },
+  { nom: 'conjoint_handicape', champ: 'conjointHandicape', obligatoire: false },
+  { nom: 'enfants_charge', champ: 'enfantsCharge', obligatoire: false },
+  { nom: 'enfants_handicapes', champ: 'enfantsHandicapes', obligatoire: false },
+  { nom: 'autres_charge_dependantes', champ: 'autresChargeDependantes66', obligatoire: false },
+  { nom: 'autres_charge_handicapees', champ: 'autresChargeHandicapees', obligatoire: false },
+  { nom: 'autres_charge', champ: 'autresCharge', obligatoire: false },
+  { nom: 'parent_isole', champ: 'parentIsole', obligatoire: false },
+  { nom: 'charges_famille_attribuees', champ: 'chargesFamilleAttribuees', obligatoire: false },
 ] as const;
 
 export type NomColonne = (typeof COLONNES)[number]['nom'];
@@ -55,7 +64,12 @@ const ALIAS: Record<string, NomColonne> = {
   heures_par_semaine: 'heures_semaine',
   heures_de_reference: 'heures_reference',
   revenus_du_conjoint: 'revenus_conjoint',
-  personnes_a_charge: 'personnes_charge',
+  // Ancien nom de la colonne des enfants (avant D95) : les fichiers déjà préparés restent lisibles.
+  personnes_charge: 'enfants_charge',
+  personnes_a_charge: 'enfants_charge',
+  enfants_a_charge: 'enfants_charge',
+  handicape: 'salarie_handicape',
+  salarie_handicap: 'salarie_handicape',
   salaire_brut: 'salaire',
 };
 
@@ -128,6 +142,17 @@ const SITUATIONS: Record<string, string> = {
   cohabitant_legal: 'MARIE_OU_COHABITANT_LEGAL',
   marie_ou_cohabitant_legal: 'MARIE_OU_COHABITANT_LEGAL',
 };
+// Revenus du conjoint (D95). « oui » et « non » sont les valeurs de l'ancienne colonne.
+const REVENUS_CONJOINT_SAISIES: Record<string, string> = {
+  non: 'SANS_REVENUS',
+  sans_revenus: 'SANS_REVENUS',
+  oui: 'REVENUS',
+  avec_revenus: 'REVENUS',
+  revenus: 'REVENUS',
+  pension_tres_limitee: 'PENSION_TRES_LIMITEE',
+  pension_limitee: 'PENSION_LIMITEE',
+  revenu_limite: 'REVENU_LIMITE',
+};
 const BOOLEENS: Record<string, boolean> = {
   oui: true,
   non: false,
@@ -153,7 +178,14 @@ export function ligneVersCorps(ligne: Partial<Record<NomColonne, string>>) {
   const centimes = vide(ligne.salaire)
     ? undefined
     : (parseEurosToCents(ligne.salaire ?? '') ?? Number.NaN);
-  const revenus = texte(ligne.revenus_conjoint);
+  // Vide = absent (« non » pour une case, à préciser pour l'attribution des charges de famille) ;
+  // une saisie illisible est rendue telle quelle et le schéma la refuse avec le code du champ.
+  const booleen = (valeur: string | undefined) => {
+    const brut = texte(valeur);
+    return brut === undefined ? undefined : (BOOLEENS[cle(brut)] ?? (brut as unknown));
+  };
+  // Colonne facultative : une cellule vide vaut 0, comme le champ du formulaire.
+  const compteur = (valeur: string | undefined) => (vide(valeur) ? 0 : nombre(valeur));
 
   return {
     prenom: ligne.prenom ?? '',
@@ -179,10 +211,16 @@ export function ligneVersCorps(ligne: Partial<Record<NomColonne, string>>) {
     salaireMensuelBrutCents: statut === 'EMPLOYE' ? centimes : undefined,
     salaireHoraireBrutCents: statut === 'OUVRIER' ? centimes : undefined,
     situationFamiliale: traduire(SITUATIONS, ligne.situation_familiale),
-    conjointAvecRevenus:
-      revenus === undefined ? undefined : (BOOLEENS[cle(revenus)] ?? (revenus as unknown)),
-    // Colonne facultative : une cellule vide vaut 0, comme le champ du formulaire.
-    personnesCharge: vide(ligne.personnes_charge) ? 0 : nombre(ligne.personnes_charge),
+    conjointRevenus: traduire(REVENUS_CONJOINT_SAISIES, ligne.revenus_conjoint),
+    beneficiaireHandicape: booleen(ligne.salarie_handicape),
+    conjointHandicape: booleen(ligne.conjoint_handicape),
+    enfantsCharge: compteur(ligne.enfants_charge),
+    enfantsHandicapes: compteur(ligne.enfants_handicapes),
+    autresChargeDependantes66: compteur(ligne.autres_charge_dependantes),
+    autresChargeHandicapees: compteur(ligne.autres_charge_handicapees),
+    autresCharge: compteur(ligne.autres_charge),
+    parentIsole: booleen(ligne.parent_isole),
+    chargesFamilleAttribuees: booleen(ligne.charges_famille_attribuees),
   };
 }
 
@@ -211,7 +249,15 @@ export function modeleCsv(): string {
     salaire: '2850,00',
     situation_familiale: 'isolé',
     revenus_conjoint: '',
-    personnes_charge: '0',
+    salarie_handicape: 'non',
+    conjoint_handicape: '',
+    enfants_charge: '0',
+    enfants_handicapes: '',
+    autres_charge_dependantes: '',
+    autres_charge_handicapees: '',
+    autres_charge: '',
+    parent_isole: '',
+    charges_famille_attribuees: '',
   };
   const ligne = (valeurs: string[]) => valeurs.join(';');
   return `﻿${ligne(COLONNES.map((c) => c.nom))}\r\n${ligne(COLONNES.map((c) => exemple[c.nom]))}\r\n`;

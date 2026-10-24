@@ -3,11 +3,18 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Pencil, UserPlus } from 'lucide-react';
-import { Field, inputClass } from '@/components/gestionnaire/form-field';
+import { CheckField, Field, inputClass } from '@/components/gestionnaire/form-field';
 import type { CountryOption } from '@/lib/countries';
 import { parseEurosToCents } from '@/lib/salarie/montant';
 import { ERROR_MESSAGES, FALLBACK, FIELD_ERRORS, blank, number } from '@/lib/salarie/form-messages';
-import { INITIAL, type FormValues } from '@/lib/salarie/salarie-form';
+import { INITIAL, fiscalPayload, vueFiscale, type FormValues } from '@/lib/salarie/salarie-form';
+import {
+  REVENUS_CONJOINT,
+  REVENUS_CONJOINT_LIBELLES,
+  attributionDesCharges,
+  conjointSansRevenusPropres,
+  parentIsolePossible,
+} from '@/lib/salarie/situation-fiscale';
 import { invalidFields, salarieModificationSchema, salarieSchema } from '@/lib/schemas/salarie';
 
 // Le formulaire envoie le même corps que l'API attend (même schéma Zod, CONVENTIONS § 5).
@@ -38,12 +45,7 @@ function toPayload(f: FormValues) {
     heuresReference: f.regime === 'TEMPS_PARTIEL' ? number(f.heuresReference) : undefined,
     salaireMensuelBrutCents: f.statut === 'EMPLOYE' ? cents : undefined,
     salaireHoraireBrutCents: f.statut === 'OUVRIER' ? cents : undefined,
-    situationFamiliale: f.situationFamiliale,
-    conjointAvecRevenus:
-      f.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL' && f.conjointAvecRevenus
-        ? f.conjointAvecRevenus === 'oui'
-        : undefined,
-    personnesCharge: f.personnesCharge.trim() ? Number(f.personnesCharge) : Number.NaN,
+    ...fiscalPayload(f),
   };
 }
 
@@ -148,6 +150,11 @@ export function SalarieFormDialog({
 
   const partiel = form.regime === 'TEMPS_PARTIEL';
   const marie = form.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL';
+  const vue = vueFiscale(form);
+  const toggle =
+    (field: 'beneficiaireHandicape' | 'conjointHandicape' | 'autresPersonnes' | 'parentIsole') =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((current) => ({ ...current, [field]: e.target.checked }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -464,32 +471,156 @@ export function SalarieFormDialog({
           {marie && (
             <Field
               id="sal-conjoint"
-              label="Revenus du conjoint ou cohabitant"
-              error={err('conjointAvecRevenus')}
+              label="Revenus professionnels du conjoint ou cohabitant"
+              error={err('conjointRevenus')}
             >
               <select
                 id="sal-conjoint"
-                value={form.conjointAvecRevenus}
-                onChange={set('conjointAvecRevenus')}
+                value={form.conjointRevenus}
+                onChange={set('conjointRevenus')}
                 className={inputClass}
               >
                 <option value="">Choisir…</option>
-                <option value="non">Sans revenus professionnels</option>
-                <option value="oui">Avec revenus professionnels</option>
+                {REVENUS_CONJOINT.map((valeur) => (
+                  <option key={valeur} value={valeur}>
+                    {REVENUS_CONJOINT_LIBELLES[valeur]}
+                  </option>
+                ))}
               </select>
             </Field>
           )}
-          <Field id="sal-charge" label="Personnes à charge" error={err('personnesCharge')}>
+          <CheckField
+            id="sal-handicape"
+            label="Le salarié est handicapé"
+            checked={form.beneficiaireHandicape}
+            onChange={toggle('beneficiaireHandicape')}
+            error={err('beneficiaireHandicape')}
+          />
+          {conjointSansRevenusPropres(vue) && (
+            <CheckField
+              id="sal-conjoint-handicape"
+              label="Le conjoint ou cohabitant est handicapé"
+              checked={form.conjointHandicape}
+              onChange={toggle('conjointHandicape')}
+              error={err('conjointHandicape')}
+            />
+          )}
+          <Field
+            id="sal-enfants"
+            label="Enfants à charge"
+            error={err('enfantsCharge')}
+            hint="Laissez 0 s’il n’y en a pas."
+          >
             <input
-              id="sal-charge"
+              id="sal-enfants"
               type="number"
               min={0}
               max={20}
-              value={form.personnesCharge}
-              onChange={set('personnesCharge')}
+              value={form.enfantsCharge}
+              onChange={set('enfantsCharge')}
               className={inputClass}
             />
           </Field>
+          {vue.enfantsCharge > 0 && (
+            <Field
+              id="sal-enfants-handicapes"
+              label="dont enfants handicapés"
+              error={err('enfantsHandicapes')}
+            >
+              <input
+                id="sal-enfants-handicapes"
+                type="number"
+                min={0}
+                max={20}
+                value={form.enfantsHandicapes}
+                onChange={set('enfantsHandicapes')}
+                className={inputClass}
+              />
+            </Field>
+          )}
+          {parentIsolePossible(vue) && (
+            <CheckField
+              id="sal-parent-isole"
+              label="Parent isolé : veuf, père ou mère célibataire, divorcé ou séparé"
+              checked={form.parentIsole}
+              onChange={toggle('parentIsole')}
+              error={err('parentIsole')}
+            />
+          )}
+          <CheckField
+            id="sal-autres-personnes"
+            label="Le salarié a d’autres personnes à charge (hors enfants)"
+            checked={form.autresPersonnes}
+            onChange={toggle('autresPersonnes')}
+          />
+          {form.autresPersonnes && (
+            <>
+              <Field
+                id="sal-autres-dependantes"
+                label="Personnes dépendantes de 66 ans ou plus"
+                error={err('autresChargeDependantes66')}
+              >
+                <input
+                  id="sal-autres-dependantes"
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={form.autresChargeDependantes66}
+                  onChange={set('autresChargeDependantes66')}
+                  className={inputClass}
+                />
+              </Field>
+              <Field
+                id="sal-autres-handicapees"
+                label="Autres personnes handicapées"
+                error={err('autresChargeHandicapees')}
+              >
+                <input
+                  id="sal-autres-handicapees"
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={form.autresChargeHandicapees}
+                  onChange={set('autresChargeHandicapees')}
+                  className={inputClass}
+                />
+              </Field>
+              <Field
+                id="sal-autres-charge"
+                label="Autres personnes à charge"
+                error={err('autresCharge')}
+              >
+                <input
+                  id="sal-autres-charge"
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={form.autresCharge}
+                  onChange={set('autresCharge')}
+                  className={inputClass}
+                />
+              </Field>
+            </>
+          )}
+          {attributionDesCharges(vue) && (
+            <Field
+              id="sal-attribution"
+              label="Qui reçoit les réductions pour charges de famille ?"
+              error={err('chargesFamilleAttribuees')}
+              hint="Quand les deux conjoints ont des revenus, le couple en choisit un seul (attestation du SPF Finances). Sans réponse, la paie ne pourra pas être calculée."
+            >
+              <select
+                id="sal-attribution"
+                value={form.chargesFamilleAttribuees}
+                onChange={set('chargesFamilleAttribuees')}
+                className={inputClass}
+              >
+                <option value="">À préciser</option>
+                <option value="oui">Ce salarié</option>
+                <option value="non">Son conjoint ou cohabitant</option>
+              </select>
+            </Field>
+          )}
         </fieldset>
 
         {error && (

@@ -20,6 +20,7 @@ import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
 import { getSalarieDetail, type ConditionRow } from '@/lib/salarie/salarie-data';
 import { formatCents } from '@/lib/salarie/montant';
+import { lignesSituationFiscale, type DossierFiscal } from '@/lib/salarie/situation-fiscale';
 
 export const metadata: Metadata = {
   title: 'Dossier salarié',
@@ -244,21 +245,12 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
         </Section>
 
         <Section title="Situation fiscale">
-          <Row
-            label="Situation familiale"
-            value={SITUATIONS[salarie.situationFamiliale] ?? salarie.situationFamiliale}
-          />
-          <Row
-            label="Revenus du conjoint ou cohabitant"
-            value={
-              salarie.conjointAvecRevenus === null
-                ? null
-                : salarie.conjointAvecRevenus
-                  ? 'Avec revenus professionnels'
-                  : 'Sans revenus professionnels'
-            }
-          />
-          <Row label="Personnes à charge" value={String(salarie.personnesCharge)} />
+          {lignesSituationFiscale(
+            salarie as DossierFiscal,
+            SITUATIONS[salarie.situationFamiliale] ?? salarie.situationFamiliale,
+          ).map((ligne) => (
+            <Row key={ligne.label} label={ligne.label} value={ligne.value} />
+          ))}
         </Section>
       </div>
 

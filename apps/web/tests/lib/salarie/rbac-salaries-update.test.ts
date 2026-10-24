@@ -99,7 +99,7 @@ const salarieValide = (niss = nissValide()) => ({
   regime: 'TEMPS_PLEIN',
   salaireMensuelBrutCents: 280000,
   situationFamiliale: 'ISOLE',
-  personnesCharge: 0,
+  enfantsCharge: 0,
 });
 
 // Le corps d'une modification : le dossier, sans les conditions de travail, ni NISS et IBAN
@@ -169,17 +169,17 @@ describe('PATCH /api/salaries/[id] : modification', () => {
 
     const res = await modifier(
       salarieId,
-      modification({ nom: 'Martin', ville: 'Liège', personnesCharge: 2 }),
+      modification({ nom: 'Martin', ville: 'Liège', enfantsCharge: 2 }),
       gestionnaire.cj,
     );
     expect(res.status).toBe(200);
-    expect((await res.json()).changed.sort()).toEqual(['nom', 'personnesCharge', 'ville']);
+    expect((await res.json()).changed.sort()).toEqual(['enfantsCharge', 'nom', 'ville']);
 
     expect(await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } })).toMatchObject({
       nom: 'Martin',
       prenom: 'Marie',
       ville: 'Liège',
-      personnesCharge: 2,
+      enfantsCharge: 2,
     });
 
     const [audit] = await auditsUpdated(cabinetId);
@@ -187,12 +187,73 @@ describe('PATCH /api/salaries/[id] : modification', () => {
     expect(audit.metadata).toEqual({
       salarieId,
       entrepriseId: entreprise.id,
-      fields: ['nom', 'ville', 'personnesCharge'],
+      fields: ['nom', 'ville', 'enfantsCharge'],
     });
     // D8, D26 : jamais les valeurs, seulement le nom des champs.
     for (const valeur of ['Martin', 'Liège', 'Dupont', 'Marie']) {
       expect(JSON.stringify(audit)).not.toContain(valeur);
     }
+  });
+
+  it('modifie la situation fiscale : seuls les champs changés sont écrits et audités (D95)', async () => {
+    const { cabinetId, gestionnaire, salarieId } = await mise('upd-fiscal');
+
+    const res = await modifier(
+      salarieId,
+      modification({
+        situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
+        conjointRevenus: 'REVENUS',
+        beneficiaireHandicape: true,
+        enfantsCharge: 2,
+        chargesFamilleAttribuees: true,
+      }),
+      gestionnaire.cj,
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).changed.sort()).toEqual([
+      'beneficiaireHandicape',
+      'chargesFamilleAttribuees',
+      'conjointRevenus',
+      'enfantsCharge',
+      'situationFamiliale',
+    ]);
+    expect(await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } })).toMatchObject({
+      situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
+      conjointRevenus: 'REVENUS',
+      beneficiaireHandicape: true,
+      enfantsCharge: 2,
+      enfantsHandicapes: 0,
+      chargesFamilleAttribuees: true,
+    });
+
+    // Repasser à isolé efface ce qui n'a plus d'objet, et l'audit n'en nomme que les champs.
+    const retour = await modifier(salarieId, modification({ beneficiaireHandicape: true, enfantsCharge: 2 }), gestionnaire.cj);
+    expect(retour.status).toBe(200);
+    expect(await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } })).toMatchObject({
+      situationFamiliale: 'ISOLE',
+      conjointRevenus: null,
+      chargesFamilleAttribuees: null,
+    });
+    for (const audit of await auditsUpdated(cabinetId)) {
+      expect(JSON.stringify(audit)).not.toMatch(/REVENUS|true|false/);
+    }
+  });
+
+  it('refuse une situation fiscale incohérente et ne modifie rien', async () => {
+    const { cabinetId, gestionnaire, salarieId } = await mise('upd-fiscal-refus');
+
+    const res = await modifier(
+      salarieId,
+      modification({ enfantsCharge: 1, enfantsHandicapes: 2 }),
+      gestionnaire.cj,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('INVALID_ENFANTS_HANDICAPES');
+    expect(await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } })).toMatchObject({
+      enfantsCharge: 0,
+      enfantsHandicapes: 0,
+    });
+    expect(await auditsUpdated(cabinetId)).toHaveLength(0);
   });
 
   it('n’écrit rien et ne laisse aucune trace quand rien ne change', async () => {

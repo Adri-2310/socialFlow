@@ -50,7 +50,9 @@ describe('résolution des colonnes', () => {
     expect(resoudreColonne('Date de naissance')).toBe('date_naissance');
     expect(resoudreColonne('Type de contrat')).toBe('type_contrat');
     expect(resoudreColonne('Date d’entrée')).toBe('date_entree');
-    expect(resoudreColonne('Personnes à charge')).toBe('personnes_charge');
+    expect(resoudreColonne('Personnes à charge')).toBe('enfants_charge');
+    expect(resoudreColonne('Enfants à charge')).toBe('enfants_charge');
+    expect(resoudreColonne('Revenus du conjoint')).toBe('revenus_conjoint');
     expect(resoudreColonne('Salaire brut')).toBe('salaire');
   });
 
@@ -97,7 +99,8 @@ describe('ligne du fichier → corps de création', () => {
       regime: 'TEMPS_PLEIN',
       salaireMensuelBrutCents: 285000,
       situationFamiliale: 'ISOLE',
-      personnesCharge: 0,
+      enfantsCharge: 0,
+      beneficiaireHandicape: false,
       pays: 'BE',
     });
   });
@@ -122,7 +125,7 @@ describe('ligne du fichier → corps de création', () => {
       heures_reference: '38',
       situation_familiale: 'Marié',
       revenus_conjoint: 'OUI',
-      personnes_charge: '2',
+      enfants_charge: '2',
     });
     const resultat = salarieSchema.safeParse(corps);
     expect(resultat.success).toBe(true);
@@ -131,9 +134,78 @@ describe('ligne du fichier → corps de création', () => {
       heuresSemaine: 30.4,
       heuresReference: 38,
       situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
-      conjointAvecRevenus: true,
-      personnesCharge: 2,
+      conjointRevenus: 'REVENUS',
+      enfantsCharge: 2,
     });
+  });
+
+  it('lit la situation fiscale complète (D95) : revenus du conjoint, handicaps, charges', () => {
+    const corps = ligneVersCorps({
+      ...base,
+      situation_familiale: 'marié',
+      revenus_conjoint: 'revenu limité',
+      salarie_handicape: 'oui',
+      enfants_charge: '3',
+      enfants_handicapes: '1',
+      autres_charge_dependantes: '1',
+      autres_charge_handicapees: '2',
+      autres_charge: '1',
+      charges_famille_attribuees: 'oui',
+    });
+    const resultat = salarieSchema.safeParse(corps);
+    expect(resultat.success).toBe(true);
+    expect(resultat.data).toMatchObject({
+      conjointRevenus: 'REVENU_LIMITE',
+      beneficiaireHandicape: true,
+      conjointHandicape: false,
+      enfantsCharge: 3,
+      enfantsHandicapes: 1,
+      autresChargeDependantes66: 1,
+      autresChargeHandicapees: 2,
+      autresCharge: 1,
+      parentIsole: false,
+      chargesFamilleAttribuees: true,
+    });
+  });
+
+  it('les anciennes valeurs « oui » et « non » de la colonne des revenus restent lisibles', () => {
+    const revenus = (valeur: string) =>
+      salarieSchema.parse(
+        ligneVersCorps({ ...base, situation_familiale: 'marié', revenus_conjoint: valeur }),
+      ).conjointRevenus;
+    expect(revenus('oui')).toBe('REVENUS');
+    expect(revenus('non')).toBe('SANS_REVENUS');
+    expect(revenus('pension très limitée')).toBe('PENSION_TRES_LIMITEE');
+    expect(revenus('pension limitée')).toBe('PENSION_LIMITEE');
+  });
+
+  it('un fichier sans aucune colonne fiscale facultative reste valide (rien à remplir)', () => {
+    const resultat = salarieSchema.safeParse(ligneVersCorps(base));
+    expect(resultat.success).toBe(true);
+    expect(resultat.data).toMatchObject({
+      enfantsCharge: 0,
+      enfantsHandicapes: 0,
+      parentIsole: false,
+      beneficiaireHandicape: false,
+    });
+    expect(resultat.data?.chargesFamilleAttribuees).toBeUndefined();
+  });
+
+  it('applique les règles de cohérence de la situation fiscale à l’import', () => {
+    const fautes = (ligne: Parameters<typeof ligneVersCorps>[0]) => {
+      const r = salarieSchema.safeParse(ligneVersCorps(ligne));
+      return r.success ? [] : Object.keys(invalidFields(r.error));
+    };
+    // Un isolé n'a pas de conjoint.
+    expect(fautes({ ...base, revenus_conjoint: 'oui' })).toEqual(['conjointRevenus']);
+    // Les handicapés sont des enfants à charge.
+    expect(fautes({ ...base, enfants_charge: '1', enfants_handicapes: '2' })).toEqual([
+      'enfantsHandicapes',
+    ]);
+    // L'attribution des charges ne se pose pas sans conjoint ayant des revenus.
+    expect(fautes({ ...base, enfants_charge: '1', charges_famille_attribuees: 'oui' })).toEqual([
+      'chargesFamilleAttribuees',
+    ]);
   });
 
   it('applique les règles de la création : CDD sans date de fin, NISS faux, IBAN étranger', () => {
@@ -160,10 +232,11 @@ describe('ligne du fichier → corps de création', () => {
     );
     expect(fautes({ ...base, regime: 'mi-temps' })).toContain('regime');
     expect(fautes({ ...base, situation_familiale: 'compliqué' })).toContain('situationFamiliale');
-    expect(fautes({ ...base, personnes_charge: 'deux' })).toContain('personnesCharge');
+    expect(fautes({ ...base, enfants_charge: 'deux' })).toContain('enfantsCharge');
+    expect(fautes({ ...base, parent_isole: 'peut-être' })).toContain('parentIsole');
     expect(
       fautes({ ...base, situation_familiale: 'marié', revenus_conjoint: 'peut-être' }),
-    ).toContain('conjointAvecRevenus');
+    ).toContain('conjointRevenus');
   });
 
   it('une cellule de salaire vide n’est pas un salaire à 0', () => {

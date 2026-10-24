@@ -18,6 +18,24 @@ function isUniqueViolation(error: unknown): boolean {
 // Dates ISO (AAAA-MM-JJ) → minuit UTC, lues telles quelles par les colonnes DATE.
 const toDate = (iso: string) => new Date(iso);
 
+// Situation fiscale (D95) telle qu'elle s'écrit en base : les champs facultatifs absents
+// deviennent null (« à préciser » pour l'attribution des charges de famille).
+function fiscalData(input: SalarieModificationInput) {
+  return {
+    situationFamiliale: input.situationFamiliale,
+    conjointRevenus: input.conjointRevenus ?? null,
+    beneficiaireHandicape: input.beneficiaireHandicape,
+    conjointHandicape: input.conjointHandicape,
+    enfantsCharge: input.enfantsCharge,
+    enfantsHandicapes: input.enfantsHandicapes,
+    autresChargeDependantes66: input.autresChargeDependantes66,
+    autresChargeHandicapees: input.autresChargeHandicapees,
+    autresCharge: input.autresCharge,
+    parentIsole: input.parentIsole,
+    chargesFamilleAttribuees: input.chargesFamilleAttribuees ?? null,
+  };
+}
+
 // Crée le dossier, sa première condition de travail (à la date d'entrée) et l'audit,
 // en une seule transaction. NISS et IBAN sont chiffrés ; `nissHash` ne sert qu'à
 // l'unicité du NISS par entreprise (archivés compris : on restaure, on ne recrée pas).
@@ -55,9 +73,7 @@ export async function createSalarie(
           typeContrat: input.typeContrat,
           dateEntree: toDate(input.dateEntree),
           dateFinContrat: input.dateFinContrat ? toDate(input.dateFinContrat) : null,
-          situationFamiliale: input.situationFamiliale,
-          conjointAvecRevenus: input.conjointAvecRevenus ?? null,
-          personnesCharge: input.personnesCharge,
+          ...fiscalData(input),
         },
         select: { id: true },
       });
@@ -166,21 +182,11 @@ export async function updateSalarie(
         input.dateFinContrat ? toDate(input.dateFinContrat) : null,
         isoDay(current.dateFinContrat) !== (input.dateFinContrat ?? null),
       );
-      set(
-        'situationFamiliale',
-        input.situationFamiliale,
-        input.situationFamiliale !== current.situationFamiliale,
-      );
-      set(
-        'conjointAvecRevenus',
-        input.conjointAvecRevenus ?? null,
-        (input.conjointAvecRevenus ?? null) !== current.conjointAvecRevenus,
-      );
-      set(
-        'personnesCharge',
-        input.personnesCharge,
-        input.personnesCharge !== current.personnesCharge,
-      );
+      // Un champ fiscal ne compte comme changé que si sa valeur diffère (audit : noms seulement).
+      const fiscal = fiscalData(input);
+      for (const champ of Object.keys(fiscal) as (keyof typeof fiscal)[]) {
+        set(champ, fiscal[champ], fiscal[champ] !== current[champ]);
+      }
 
       // NISS : comparé par son empreinte, sans déchiffrer. Un NISS retapé à l'identique ne
       // compte pas comme un changement (et ne se heurte pas à sa propre unicité).

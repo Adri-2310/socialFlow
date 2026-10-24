@@ -35,8 +35,17 @@ export const FIELD_ERRORS: Record<string, string> = {
   INVALID_SALAIRE_MENSUEL_BRUT_CENTS: 'Montant invalide (par exemple 2850,00).',
   INVALID_SALAIRE_HORAIRE_BRUT_CENTS: 'Montant invalide (par exemple 17,25).',
   INVALID_SITUATION_FAMILIALE: 'Situation familiale invalide.',
-  INVALID_CONJOINT_AVEC_REVENUS: 'Précisez si le conjoint ou cohabitant a des revenus.',
-  INVALID_PERSONNES_CHARGE: 'Nombre de personnes à charge invalide (0 à 20).',
+  INVALID_CONJOINT_REVENUS: 'Précisez les revenus du conjoint ou cohabitant.',
+  INVALID_CONJOINT_HANDICAPE:
+    'Le handicap du conjoint ne se saisit que s’il n’a pas de revenus propres : sinon il le déclare dans son propre dossier.',
+  INVALID_ENFANTS_CHARGE: 'Nombre d’enfants à charge invalide (0 à 20).',
+  INVALID_ENFANTS_HANDICAPES: 'Les enfants handicapés ne peuvent pas dépasser les enfants à charge.',
+  INVALID_AUTRES_CHARGE_DEPENDANTES66: 'Nombre invalide (0 à 20).',
+  INVALID_AUTRES_CHARGE_HANDICAPEES: 'Nombre invalide (0 à 20).',
+  INVALID_AUTRES_CHARGE: 'Nombre invalide (0 à 20).',
+  INVALID_PARENT_ISOLE: 'Réservé à un isolé qui a des enfants à charge.',
+  INVALID_CHARGES_FAMILLE_ATTRIBUEES:
+    'Cette question ne concerne qu’un marié dont le conjoint a des revenus, avec des charges de famille.',
 };
 
 export const ERROR_MESSAGES: Record<string, string> = {

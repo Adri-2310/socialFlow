@@ -93,7 +93,7 @@ const salarieValide = (niss = nissValide()) => ({
   regime: 'TEMPS_PLEIN',
   salaireMensuelBrutCents: 280000,
   situationFamiliale: 'ISOLE',
-  personnesCharge: 0,
+  enfantsCharge: 0,
 });
 
 function creer(entrepriseId: string, body: unknown, cj?: Jar) {
@@ -165,6 +165,83 @@ describe('POST /api/entreprises/[id]/salaries : création', () => {
     for (const secret of [body.niss, 'Dupont', 'Marie', '5390', '280000']) {
       expect(brut).not.toContain(secret);
     }
+  });
+
+  it('écrit la situation fiscale complète (D95) et, sans rien d’autre, les valeurs par défaut', async () => {
+    const { gestionnaire, entreprise } = await mise('sal-fiscal');
+
+    // Un célibataire sans charge ne remplit rien.
+    const simple = await (await creer(entreprise.id, salarieValide(), gestionnaire.cj)).json();
+    expect(await prisma.salarie.findUniqueOrThrow({ where: { id: simple.id } })).toMatchObject({
+      situationFamiliale: 'ISOLE',
+      conjointRevenus: null,
+      beneficiaireHandicape: false,
+      conjointHandicape: false,
+      enfantsCharge: 0,
+      enfantsHandicapes: 0,
+      autresChargeDependantes66: 0,
+      autresChargeHandicapees: 0,
+      autresCharge: 0,
+      parentIsole: false,
+      chargesFamilleAttribuees: null,
+    });
+
+    // Un couple qui travaille, avec charges et attribution choisie.
+    const res = await creer(
+      entreprise.id,
+      {
+        ...salarieValide(),
+        niss: nissValide(),
+        situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
+        conjointRevenus: 'PENSION_LIMITEE',
+        beneficiaireHandicape: true,
+        enfantsCharge: 3,
+        enfantsHandicapes: 1,
+        autresChargeDependantes66: 1,
+        autresChargeHandicapees: 2,
+        autresCharge: 1,
+        chargesFamilleAttribuees: false,
+      },
+      gestionnaire.cj,
+    );
+    expect(res.status).toBe(201);
+    const { id } = await res.json();
+    expect(await prisma.salarie.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
+      conjointRevenus: 'PENSION_LIMITEE',
+      beneficiaireHandicape: true,
+      enfantsCharge: 3,
+      enfantsHandicapes: 1,
+      autresChargeDependantes66: 1,
+      autresChargeHandicapees: 2,
+      autresCharge: 1,
+      chargesFamilleAttribuees: false,
+    });
+  });
+
+  it('refuse une situation fiscale incohérente par champ, sans rien écrire', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await mise('sal-fiscal-refus');
+
+    const res = await creer(
+      entreprise.id,
+      {
+        ...salarieValide(),
+        situationFamiliale: 'ISOLE',
+        conjointRevenus: 'REVENUS',
+        enfantsCharge: 1,
+        enfantsHandicapes: 2,
+        parentIsole: false,
+        chargesFamilleAttribuees: true,
+      },
+      gestionnaire.cj,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).fields).toEqual({
+      conjointRevenus: 'INVALID_CONJOINT_REVENUS',
+      enfantsHandicapes: 'INVALID_ENFANTS_HANDICAPES',
+      chargesFamilleAttribuees: 'INVALID_CHARGES_FAMILLE_ATTRIBUEES',
+    });
+    expect(await prisma.salarie.count({ where: { cabinetId } })).toBe(0);
   });
 
   it('refuse un corps invalide par champ, sans rien écrire', async () => {

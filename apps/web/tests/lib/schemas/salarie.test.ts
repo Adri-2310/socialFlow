@@ -21,8 +21,8 @@ const employe = {
   regime: 'TEMPS_PLEIN',
   salaireMensuelBrutCents: 280000,
   situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
-  conjointAvecRevenus: false,
-  personnesCharge: 0,
+  conjointRevenus: 'SANS_REVENUS',
+  enfantsCharge: 0,
 };
 
 const ouvrier = {
@@ -106,16 +106,143 @@ describe('schéma du dossier salarié', () => {
   });
 
   it('fiscal : le conjoint ne se précise que pour une personne mariée', () => {
-    expect(codeOf({ ...employe, conjointAvecRevenus: undefined })).toBe(
-      'INVALID_CONJOINT_AVEC_REVENUS',
+    expect(codeOf({ ...employe, conjointRevenus: undefined })).toBe('INVALID_CONJOINT_REVENUS');
+    expect(codeOf({ ...employe, situationFamiliale: 'ISOLE', conjointRevenus: 'REVENUS' })).toBe(
+      'INVALID_CONJOINT_REVENUS',
     );
-    expect(codeOf({ ...employe, situationFamiliale: 'ISOLE', conjointAvecRevenus: true })).toBe(
-      'INVALID_CONJOINT_AVEC_REVENUS',
+    expect(codeOf({ ...employe, conjointRevenus: 'peut-être' })).toBe('INVALID_CONJOINT_REVENUS');
+    expect(codeOf({ ...employe, situationFamiliale: 'ISOLE', conjointRevenus: undefined })).toBeNull();
+    for (const revenus of [
+      'SANS_REVENUS',
+      'PENSION_TRES_LIMITEE',
+      'PENSION_LIMITEE',
+      'REVENU_LIMITE',
+      'REVENUS',
+    ]) {
+      expect(codeOf({ ...employe, conjointRevenus: revenus })).toBeNull();
+    }
+  });
+
+  it('fiscal : un célibataire sans charge ne remplit rien (valeurs par défaut)', () => {
+    const { conjointRevenus: _revenus, enfantsCharge: _enfants, ...isole } = employe;
+    const parsed = salarieSchema.parse({ ...isole, situationFamiliale: 'ISOLE' });
+    expect(parsed).toMatchObject({
+      beneficiaireHandicape: false,
+      conjointHandicape: false,
+      enfantsCharge: 0,
+      enfantsHandicapes: 0,
+      autresChargeDependantes66: 0,
+      autresChargeHandicapees: 0,
+      autresCharge: 0,
+      parentIsole: false,
+    });
+    expect(parsed.conjointRevenus).toBeUndefined();
+    expect(parsed.chargesFamilleAttribuees).toBeUndefined();
+  });
+
+  it('fiscal : les compteurs de charges sont des entiers de 0 à 20', () => {
+    expect(codeOf({ ...employe, enfantsCharge: -1 })).toBe('INVALID_ENFANTS_CHARGE');
+    expect(codeOf({ ...employe, enfantsCharge: 21 })).toBe('INVALID_ENFANTS_CHARGE');
+    expect(codeOf({ ...employe, enfantsCharge: 1.5 })).toBe('INVALID_ENFANTS_CHARGE');
+    expect(codeOf({ ...employe, autresCharge: -1 })).toBe('INVALID_AUTRES_CHARGE');
+    expect(codeOf({ ...employe, autresChargeHandicapees: 2.5 })).toBe(
+      'INVALID_AUTRES_CHARGE_HANDICAPEES',
     );
+    expect(codeOf({ ...employe, autresChargeDependantes66: 21 })).toBe(
+      'INVALID_AUTRES_CHARGE_DEPENDANTES66',
+    );
+  });
+
+  it('fiscal : les enfants handicapés sont un sous-ensemble des enfants à charge (n° 8)', () => {
+    expect(codeOf({ ...employe, enfantsCharge: 1, enfantsHandicapes: 2 })).toBe(
+      'INVALID_ENFANTS_HANDICAPES',
+    );
+    expect(codeOf({ ...employe, enfantsCharge: 0, enfantsHandicapes: 1 })).toBe(
+      'INVALID_ENFANTS_HANDICAPES',
+    );
+    expect(codeOf({ ...employe, enfantsCharge: 2, enfantsHandicapes: 2 })).toBeNull();
+  });
+
+  it('fiscal : le handicap du conjoint ne se saisit que sans revenus propres (n° 41)', () => {
+    for (const revenus of ['SANS_REVENUS', 'PENSION_TRES_LIMITEE']) {
+      expect(codeOf({ ...employe, conjointRevenus: revenus, conjointHandicape: true })).toBeNull();
+    }
+    for (const revenus of ['PENSION_LIMITEE', 'REVENU_LIMITE', 'REVENUS']) {
+      expect(codeOf({ ...employe, conjointRevenus: revenus, conjointHandicape: true })).toBe(
+        'INVALID_CONJOINT_HANDICAPE',
+      );
+    }
     expect(
-      codeOf({ ...employe, situationFamiliale: 'ISOLE', conjointAvecRevenus: undefined }),
+      codeOf({
+        ...employe,
+        situationFamiliale: 'ISOLE',
+        conjointRevenus: undefined,
+        conjointHandicape: true,
+      }),
+    ).toBe('INVALID_CONJOINT_HANDICAPE');
+  });
+
+  it('fiscal : le salarié handicapé se saisit pour tout le monde (n° 39)', () => {
+    expect(codeOf({ ...employe, beneficiaireHandicape: true })).toBeNull();
+    expect(
+      codeOf({
+        ...employe,
+        situationFamiliale: 'ISOLE',
+        conjointRevenus: undefined,
+        beneficiaireHandicape: true,
+      }),
     ).toBeNull();
-    expect(codeOf({ ...employe, personnesCharge: -1 })).toBe('INVALID_PERSONNES_CHARGE');
+  });
+
+  it('fiscal : parent isolé réservé à un isolé qui a des enfants à charge (n° 40.1)', () => {
+    const isole = { ...employe, situationFamiliale: 'ISOLE', conjointRevenus: undefined };
+    expect(codeOf({ ...isole, enfantsCharge: 1, parentIsole: true })).toBeNull();
+    expect(codeOf({ ...isole, enfantsCharge: 0, parentIsole: true })).toBe('INVALID_PARENT_ISOLE');
+    expect(codeOf({ ...employe, enfantsCharge: 1, parentIsole: true })).toBe('INVALID_PARENT_ISOLE');
+  });
+
+  describe('attribution des charges de famille (n° 6)', () => {
+    const coupleQuiTravaille = { ...employe, conjointRevenus: 'REVENUS', enfantsCharge: 1 };
+
+    it('se précise, ou reste à préciser, quand le conjoint a des revenus et qu’il y a des charges', () => {
+      expect(codeOf({ ...coupleQuiTravaille, chargesFamilleAttribuees: true })).toBeNull();
+      expect(codeOf({ ...coupleQuiTravaille, chargesFamilleAttribuees: false })).toBeNull();
+      expect(codeOf(coupleQuiTravaille)).toBeNull();
+      for (const revenus of ['PENSION_LIMITEE', 'REVENU_LIMITE']) {
+        expect(
+          codeOf({ ...coupleQuiTravaille, conjointRevenus: revenus, chargesFamilleAttribuees: true }),
+        ).toBeNull();
+      }
+    });
+
+    it('compte aussi les autres personnes à charge', () => {
+      const autres = { ...employe, conjointRevenus: 'REVENUS', autresCharge: 1 };
+      expect(codeOf({ ...autres, chargesFamilleAttribuees: true })).toBeNull();
+    });
+
+    it('est refusée quand la question n’a pas d’objet', () => {
+      const refus = 'INVALID_CHARGES_FAMILLE_ATTRIBUEES';
+      // Conjoint sans revenus propres (n° 33 compris) : rien à attribuer.
+      for (const revenus of ['SANS_REVENUS', 'PENSION_TRES_LIMITEE']) {
+        expect(
+          codeOf({ ...coupleQuiTravaille, conjointRevenus: revenus, chargesFamilleAttribuees: true }),
+        ).toBe(refus);
+      }
+      // Pas de charge.
+      expect(
+        codeOf({ ...coupleQuiTravaille, enfantsCharge: 0, chargesFamilleAttribuees: true }),
+      ).toBe(refus);
+      // Isolé.
+      expect(
+        codeOf({
+          ...employe,
+          situationFamiliale: 'ISOLE',
+          conjointRevenus: undefined,
+          enfantsCharge: 1,
+          chargesFamilleAttribuees: true,
+        }),
+      ).toBe(refus);
+    });
   });
 
   it('la commission paritaire suit le statut : employé CP 200, ouvrier CP 100 (D44)', () => {
@@ -208,8 +335,11 @@ describe('schéma de modification d’un dossier', () => {
     expect(codeOfModification({ ...dossier, dateEntree: '1980-01-01' })).toBe(
       'INVALID_DATE_NAISSANCE',
     );
-    expect(codeOfModification({ ...dossier, conjointAvecRevenus: undefined })).toBe(
-      'INVALID_CONJOINT_AVEC_REVENUS',
+    expect(codeOfModification({ ...dossier, conjointRevenus: undefined })).toBe(
+      'INVALID_CONJOINT_REVENUS',
+    );
+    expect(codeOfModification({ ...dossier, enfantsCharge: 1, enfantsHandicapes: 2 })).toBe(
+      'INVALID_ENFANTS_HANDICAPES',
     );
   });
 });

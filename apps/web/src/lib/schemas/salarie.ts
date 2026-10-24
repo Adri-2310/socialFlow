@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import { isValidIban, normalizeIban } from '@/lib/salarie/iban';
 import { isValidNiss, normalizeNiss } from '@/lib/salarie/niss';
+import {
+  REVENUS_CONJOINT,
+  SITUATIONS_FAMILIALES,
+  attributionDesCharges,
+  conjointSansRevenusPropres,
+  parentIsolePossible,
+} from '@/lib/salarie/situation-fiscale';
+
+export { REVENUS_CONJOINT, SITUATIONS_FAMILIALES };
 
 // Schéma du dossier salarié (roles/03 § 4.1), partagé par l'API et le
 // formulaire (CONVENTIONS § 5). Montants en centimes entiers.
@@ -13,9 +22,8 @@ export const COMMISSIONS_PARITAIRES = ['200', '100'] as const;
 // assouplir ici le jour où une autre commission est ajoutée.
 const COMMISSION_DU_STATUT = { EMPLOYE: '200', OUVRIER: '100' } as const;
 export const REGIMES = ['TEMPS_PLEIN', 'TEMPS_PARTIEL'] as const;
-// Un cohabitant de fait se saisit comme ISOLE, un cohabitant légal comme marié
-// (précompte professionnel). [à vérifier sur l'Annexe III du SPF Finances]
-export const SITUATIONS_FAMILIALES = ['ISOLE', 'MARIE_OU_COHABITANT_LEGAL'] as const;
+// Un cohabitant de fait se saisit comme ISOLE, un cohabitant légal comme marié (Annexe III,
+// n° 2 et 4.2 a ; D95). Les listes de la situation fiscale vivent dans salarie/situation-fiscale.ts.
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) =>
@@ -103,11 +111,22 @@ const contratFields = {
   dateSortie: isoDate.optional(),
 };
 
-// Fiscal (précompte professionnel) : non daté, voir roles/03 § 4.2.
+// Fiscal (précompte professionnel, D95) : non daté, voir roles/03 § 4.2. Des critères, jamais
+// un montant. Les valeurs par défaut (« non », zéro) laissent un célibataire sans charge ne
+// rien remplir ; les règles de cohérence sont dans checkFiscal.
+const nombre = z.number().int().min(0).max(20).default(0);
 const fiscalFields = {
   situationFamiliale: z.enum(SITUATIONS_FAMILIALES),
-  conjointAvecRevenus: z.boolean().optional(),
-  personnesCharge: z.number().int().min(0).max(20),
+  conjointRevenus: z.enum(REVENUS_CONJOINT).optional(),
+  beneficiaireHandicape: z.boolean().default(false),
+  conjointHandicape: z.boolean().default(false),
+  enfantsCharge: nombre,
+  enfantsHandicapes: nombre,
+  autresChargeDependantes66: nombre,
+  autresChargeHandicapees: nombre,
+  autresCharge: nombre,
+  parentIsole: z.boolean().default(false),
+  chargesFamilleAttribuees: z.boolean().optional(),
 };
 
 type ContratFields = z.infer<z.ZodObject<typeof contratFields>> & { dateNaissance: string };
@@ -122,11 +141,24 @@ function checkContrat(s: ContratFields, fail: Fail) {
 }
 
 function checkFiscal(s: FiscalFields, fail: Fail) {
-  if (s.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL' && s.conjointAvecRevenus === undefined) {
-    fail('conjointAvecRevenus');
-  }
-  if (s.situationFamiliale === 'ISOLE' && s.conjointAvecRevenus !== undefined) {
-    fail('conjointAvecRevenus');
+  const marie = s.situationFamiliale === 'MARIE_OU_COHABITANT_LEGAL';
+  // Un marié précise les revenus de son conjoint ; un isolé n'a pas de conjoint (n° 4).
+  if (marie && s.conjointRevenus === undefined) fail('conjointRevenus');
+  if (!marie && s.conjointRevenus !== undefined) fail('conjointRevenus');
+
+  // n° 41 : le handicap du conjoint ne se saisit que s'il n'a pas de revenus propres.
+  if (s.conjointHandicape && !conjointSansRevenusPropres(s)) fail('conjointHandicape');
+
+  // Les handicapés sont un sous-ensemble des enfants à charge (n° 8).
+  if (s.enfantsHandicapes > s.enfantsCharge) fail('enfantsHandicapes');
+
+  // n° 40.1 : réservé à un isolé qui a des enfants à charge.
+  if (s.parentIsole && !parentIsolePossible(s)) fail('parentIsole');
+
+  // n° 6 : question sans objet hors du cas décidé dans D95 ; sans réponse, le moteur de
+  // paie refusera de calculer plutôt que de choisir.
+  if (s.chargesFamilleAttribuees !== undefined && !attributionDesCharges(s)) {
+    fail('chargesFamilleAttribuees');
   }
 }
 

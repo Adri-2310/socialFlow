@@ -100,7 +100,7 @@ const salarieValide = (dateEntree = ENTREE) => ({
   regime: 'TEMPS_PLEIN',
   salaireMensuelBrutCents: 280000,
   situationFamiliale: 'ISOLE',
-  personnesCharge: 0,
+  enfantsCharge: 0,
 });
 
 // Une ligne de l'historique : un changement de fonction et de salaire à la date voulue.

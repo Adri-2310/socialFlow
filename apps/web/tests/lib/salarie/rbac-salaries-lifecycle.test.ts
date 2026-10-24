@@ -107,7 +107,7 @@ const salarieValide = () => ({
   regime: 'TEMPS_PLEIN',
   salaireMensuelBrutCents: 280000,
   situationFamiliale: 'ISOLE',
-  personnesCharge: 0,
+  enfantsCharge: 0,
 });
 
 const entetes = (cj?: Jar) => {

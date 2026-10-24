@@ -267,10 +267,25 @@ model Salarie {
   dateFinContrat DateTime? @db.Date
   dateSortie     DateTime? @db.Date
 
-  // Fiscal (precompte professionnel)
-  situationFamiliale  String // ISOLE | MARIE_OU_COHABITANT_LEGAL
-  conjointAvecRevenus Boolean?
-  personnesCharge     Int      @default(0)
+  // Fiscal (precompte professionnel, D95, Annexe III 2026) : des criteres, jamais un montant.
+  // Non date (D83). Valeurs validees par lib/schemas/salarie.ts, coherence dans checkFiscal.
+  situationFamiliale        String // ISOLE | MARIE_OU_COHABITANT_LEGAL (situation fiscale, n° 4)
+  // Null pour un isole. SANS_REVENUS | PENSION_TRES_LIMITEE | PENSION_LIMITEE | REVENU_LIMITE | REVENUS
+  conjointRevenus           String?
+  beneficiaireHandicape     Boolean  @default(false)
+  conjointHandicape         Boolean  @default(false)
+  enfantsCharge             Int      @default(0)
+  enfantsHandicapes         Int      @default(0) // sous-ensemble de enfantsCharge
+  autresChargeDependantes66 Int      @default(0) // n° 9 et 39 : dependantes de 66 ans ou plus
+  autresChargeHandicapees   Int      @default(0)
+  autresCharge              Int      @default(0)
+  parentIsole               Boolean  @default(false) // n° 40.1
+  // n° 6 : qui des deux conjoints recoit les reductions. Null = a preciser (le moteur refuse de calculer).
+  chargesFamilleAttribuees  Boolean?
+  // Obsoletes depuis D95, conservees jusqu'au moteur de paie (G2a) : remplacees par
+  // conjointRevenus et enfantsCharge, dont la migration a repris les valeurs.
+  conjointAvecRevenus       Boolean?
+  personnesCharge           Int      @default(0)
 
   // Compte du portail Collaborateur (facultatif, D12). SetNull : si le compte est
   // purge, le dossier reste (obligation de conservation).
