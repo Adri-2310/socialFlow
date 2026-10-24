@@ -35,7 +35,7 @@
 | Fiches transmises sans pièce jointe, lien de 7 jours avec code à usage unique (D12, D43) | `roles/03-gestionnaire-rh.md` § 6.4 |
 | 2FA obligatoire pour le SuperAdmin, conseillée pour les autres | D20 |
 | Audit des actions sensibles | `CONVENTIONS.md` § 3 |
-| Soft-delete puis purge automatique | `FONCTIONNEMENT.md` § 12 |
+| Soft-delete puis purge automatique ; à la purge d'un cabinet, les comptes partent à 90 jours mais la paie reste 5 ans, protégée par des clés étrangères `Restrict` (D94) | `FONCTIONNEMENT.md` § 12 |
 | Minimisation : le Cabinet RH ne voit que des agrégats (D26) | `roles/02-cabinet-rh.md` |
 
 ## 4. Droits des personnes
@@ -44,7 +44,7 @@
 |---|---|
 | Accès et portabilité | Export JSON + PDF depuis le profil (tous les rôles ; collaborateur : `roles/05-collaborateur.md` § 4.4) |
 | Rectification | Demande de correction (collaborateur) ou demande de l'employeur, traitée par le gestionnaire |
-| Effacement | Suppression du compte possible ; les données de paie restent conservées 5 ans (obligation légale, art. 17.3 b), puis purgées |
+| Effacement | Suppression du compte possible ; les données de paie restent conservées 5 ans (obligation légale, art. 17.3 b), puis purgées. Si le cabinet disparaît (archivé puis purgé), ses comptes sont effacés après 90 jours et seules les données de paie sont gardées, sans aucun accès, jusqu'à la fin des 5 ans (D94) |
 | Information | Politique de confidentialité (`/confidentialite`) et page RGPD (`/rgpd`) déjà présentes, à mettre à jour avec ce registre |
 
 ## 5. Violation de données

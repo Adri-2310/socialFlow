@@ -85,7 +85,8 @@ stateDiagram-v2
     Suspendu --> Actif: paiement régularisé
     Actif --> LectureSeule: résiliation, fin de période
     LectureSeule --> Archive: 90 jours
-    Archive --> [*]: purge (fiches conservées 5 ans)
+    Archive --> PaieConservee: purge partielle à 90 jours (D94)
+    PaieConservee --> [*]: 5 ans après la dernière période
 ```
 
 Pendant `Suspendu` et `LectureSeule`, les portails Entreprise et Collaborateur restent consultables (D29). Une suspension manuelle par le SuperAdmin n'est jamais levée par un paiement.
@@ -238,7 +239,8 @@ Tout email part par Resend (pas de SMTP de cabinet, D30) ; pour les emails « au
 | Tâche | Fréquence | État |
 |---|---|---|
 | Purge des comptes archivés (> 90 j) | Quotidienne 03:00 | ✅ |
-| Purge des cabinets archivés (> 90 j) | Quotidienne 04:00 | ✅ |
+| Purge des cabinets archivés (> 90 j) : partielle s'ils ont de la paie, sinon complète (D94) | Quotidienne 04:00 | ✅ |
+| Fin de conservation : suppression des cabinets purgés dont les 5 ans sont échus (D94) | Quotidienne 04:30 | ✅ |
 | Purge des sessions expirées | Quotidienne 05:00 | ✅ |
 | Passage en `IMPAYE` des cabinets en délai de grâce dépassé (D57) | Quotidienne 06:00 | ✅ |
 | Rappels prestations (J-3, J-1) et validation (J+2, J+4) | Quotidienne | 🆕 |
@@ -254,7 +256,8 @@ Toutes **idempotentes** (rejouables sans effet double) et protégées par `CRON_
 |---|---|---|
 | Fiches de paie, dossiers salariés, déclarations | 5 ans après la période (légal) | Suppression |
 | Compte utilisateur archivé | 90 jours | Purge (✅) |
-| Cabinet archivé | 90 jours | Purge des données non légales (✅ partiel) |
+| Cabinet archivé | 90 jours | Purge partielle (✅ D94) : comptes, invitations, modèles, branding, logo et lien d'abonnement supprimés ; coquille du cabinet, entreprises et paie conservées. Un cabinet sans paie est supprimé entièrement |
+| Cabinet purgé partiellement | 5 ans après la fin de l'année civile de la dernière période (sans période : 5 ans après la dernière sortie, à défaut après l'archivage) | Suppression complète par la tâche de fin de conservation (✅ D94). Aucun accès à ces données dans l'intervalle ; un cabinet purgé n'est plus restaurable |
 | Journal d'audit | ⚠️ À fixer (les anciens documents divergent : 90 j / 3 ans / illimité) | Anonymisation |
 
 ## 13. Glossaire

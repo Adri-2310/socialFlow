@@ -12,6 +12,7 @@
 | Variables de l'intégration | `PG*` et `POSTGRES_*` (gérées par l'intégration Neon) restent sur tous les environnements, donc sur `dev`, alors que le code ne lit que `DATABASE_URL` et `DATABASE_URL_UNPOOLED` ; le badge « Needs Attention » n'a pas été expliqué | Les supprimer ou les séparer par environnement, comprendre le badge |
 | Branche `test` | Une branche Neon *schema only* n'a pas l'historique des migrations : la première exécution de `migrate deploy` échoue | Vider le schéma (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`) une fois, la CI applique ensuite les migrations |
 | Migrations des dossiers salariés | `add_salarie` et `add_invitation_salarie` sont appliquées sur `dev` seulement | Les appliquer sur `production` avant la mise en ligne ; ajouter la variable `ENCRYPTION_KEY` sur Vercel, une clé différente par environnement (la **sauvegarder** : une clé perdue rend NISS et IBAN illisibles). La CI utilise une clé factice dans `ci.yml`, sans secret GitHub |
+| Migration de conservation de la paie | `conservation_donnees_paie` (D94) passe dix clés étrangères en `Restrict` et ajoute `Cabinet.donneesPurgeesLe` : appliquée sur `dev` seulement | L'appliquer sur `production` avant la mise en ligne ; le premier passage du cron `purge-deleted-cabinets` purgera partiellement les cabinets déjà archivés depuis plus de 90 jours |
 
 ## 2. Tests et intégration continue
 
@@ -40,6 +41,7 @@
 | Garde-fous à durcir en G2 | Corriger ou annuler une condition de travail, archiver un dossier ou changer la date d'entrée ne regardent pas encore les fiches de paie (elles n'existent pas) ; la sortie n'est pas verrouillée après l'envoi d'une DIMONA OUT | Refuser ces actions dès qu'une fiche ou une déclaration envoyée les concerne (D83, D85) |
 | Dévoilement du NISS | Pas de limitation de débit : seul l'audit trace chaque appel | Limite par utilisateur si une alerte d'usage anormal est ajoutée |
 | Rotation de la clé | Les valeurs chiffrées portent un préfixe de version (`v1:`), mais aucune procédure de rotation de `ENCRYPTION_KEY` n'existe | Script de rechiffrement `v1` vers `v2` avant la mise en production |
+| Restitution avant purge | À la purge d'un cabinet, la paie est conservée 5 ans sans aucun accès (D94) et l'export du cabinet (D74) exclut volontairement la paie : l'employeur, responsable de traitement, ne récupère pas ses données | Prévoir une restitution à l'employeur (export de ses dossiers et fiches) avant la purge partielle, avec le chantier des fiches (G2b) |
 
 ## 4. Emails
 
