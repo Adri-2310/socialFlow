@@ -31,7 +31,7 @@ interface EntreeCalcul {
     fractionOccupation: number;                      // ex. 0.8 pour un 4/5, en millièmes si besoin
     remunerationMensuelle?: Centimes;                // employé
     tauxHoraire?: Centimes;                          // ouvrier
-    regimeHebdo: number;                             // heures/semaine du travailleur
+    regimeHebdoMinutes: number;                      // minutes/semaine du travailleur (entier, D96)
     situationFiscale: SituationFiscale;              // isolé, marié avec/sans revenus, enfants à charge…
   };
   prestations: Prestations;                          // jours/heures prestés, congés, maladie, fériés, heures sup, primes, absences

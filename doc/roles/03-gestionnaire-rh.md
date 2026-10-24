@@ -58,7 +58,7 @@ Manuelle ou par **import CSV** (modèle téléchargeable, rapport ligne par lign
 |---|---|
 | Identité | Nom, prénom, NISS (contrôle du format et de la clé de contrôle), date de naissance, adresse, email, IBAN |
 | Contrat | Statut **employé / ouvrier** (D39), type (CDI, CDD avec date de fin), date d'entrée, date de sortie éventuelle, commission paritaire (**CP 200** employés, **CP 100** ouvriers, D44 ; champ prévu pour en ajouter), fonction |
-| Temps de travail | Régime : temps plein ou **temps partiel** (heures/semaine du travailleur et de la personne de référence → fraction d'occupation) |
+| Temps de travail | Régime : temps plein ou **temps partiel** (heures/semaine du travailleur et de la personne de référence → fraction d'occupation). Saisies en heures (« 38 », « 30,4 » ou « 30:24 »), **stockées en minutes entières** (D96), affichées « 30 h 24 » |
 | Rémunération | Employé : salaire mensuel brut ; ouvrier : salaire horaire brut ; avantages récurrents éventuels |
 | Fiscal | **Situation fiscale** du précompte (D95, Annexe III 2026) : isolé ou marié / cohabitant légal ; revenus du conjoint en 5 cas ; salarié et conjoint handicapés ; enfants à charge dont handicapés ; autres personnes à charge (dépendantes de 66 ans ou plus, handicapées, autres) ; parent isolé ; attribution des charges de famille entre conjoints. Voir ci-dessous |
 
