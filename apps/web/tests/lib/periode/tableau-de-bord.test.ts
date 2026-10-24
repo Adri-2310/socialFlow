@@ -19,6 +19,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { etatPeriodeMois, getTableauDeBord } = await import('@/lib/periode/tableau-de-bord');
 
 afterAll(async () => {
@@ -28,7 +29,7 @@ afterAll(async () => {
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {

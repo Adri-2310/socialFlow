@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
+import { supprimerCabinetsEtDonnees } from '@/lib/cabinet/cabinet-purge';
 import { AUDIT_PAGE_SIZE, getCabinetAuditLog, getCabinetAuditUsers } from '@/lib/cabinet/cabinet-audit';
 import { TEST_EMAIL_PREFIX } from '../../helpers/auth-test-utils';
 
@@ -41,7 +42,7 @@ async function log(data: {
 afterAll(async () => {
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: `${TEST_EMAIL_PREFIX}cabinet-audit-${stamp}` } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
 });
 
 describe('getCabinetAuditLog', () => {

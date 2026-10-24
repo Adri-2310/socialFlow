@@ -19,6 +19,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/cron/purge-expired-retention",
+      "schedule": "30 4 * * *"
+    },
+    {
       "path": "/api/cron/purge-expired-sessions",
       "schedule": "0 5 * * *"
     },

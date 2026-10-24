@@ -9,6 +9,7 @@ vi.mock('resend', () => ({
 }));
 
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const email = await import('@/lib/email/email');
 
 const stamp = Date.now();
@@ -55,7 +56,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   await prisma.user.deleteMany({ where: { id: { startsWith: `acct-` }, email: { contains: String(stamp) } } });
-  await prisma.cabinet.deleteMany({ where: { id: cabinetId } });
+  await supprimerCabinetsEtDonnees([cabinetId]);
 });
 
 const sent = () => send.mock.calls[0][0] as { from: string; subject: string; html: string; to: string };

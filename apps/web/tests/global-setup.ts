@@ -40,7 +40,14 @@ export async function teardown() {
     await prisma.invitation.deleteMany({
       where: { OR: [{ email: { contains: TEST_EMAIL_MARK } }, { cabinetId: { in: cabinetIds } }] },
     });
-    // Supprimer le cabinet fait cascader ses comptes, entreprises et modeles.
+    // D94 : la paie et les entreprises sont en Restrict, on les retire dans l'ordre (meme
+    // sequence que supprimerCabinetsEtDonnees) ; le cabinet emporte ensuite comptes et modeles.
+    const parCabinet = { cabinetId: { in: cabinetIds } };
+    await prisma.prestation.deleteMany({ where: parCabinet });
+    await prisma.conditionTravail.deleteMany({ where: parCabinet });
+    await prisma.periodePaie.deleteMany({ where: parCabinet });
+    await prisma.salarie.deleteMany({ where: parCabinet });
+    await prisma.entreprise.deleteMany({ where: parCabinet });
     await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
     await prisma.user.deleteMany({ where: { email: { contains: TEST_EMAIL_MARK } } });
     await prisma.verification.deleteMany({

@@ -25,6 +25,7 @@ const AUDIT_ICONS: Record<string, { icon: typeof UserPlus; tone: string }> = {
   CABINET_REACTIVATED: { icon: PlayCircle, tone: 'bg-secondary/10 text-secondary' },
   CABINET_ARCHIVED: { icon: Archive, tone: 'bg-muted text-muted-foreground' },
   CABINET_RESTORED: { icon: ArchiveRestore, tone: 'bg-secondary/10 text-secondary' },
+  CABINET_DATA_PURGED: { icon: Archive, tone: 'bg-muted text-muted-foreground' },
   USER_ARCHIVED: { icon: Archive, tone: 'bg-muted text-muted-foreground' },
   USER_RESTORED: { icon: ArchiveRestore, tone: 'bg-secondary/10 text-secondary' },
   USER_SUSPENDED: { icon: PauseCircle, tone: 'bg-destructive/10 text-destructive' },
@@ -54,6 +55,8 @@ function auditMessage(log: AuditLogEntry): string {
       return `« ${cabinetName} » a été archivé par ${log.actorName ?? 'un administrateur'} (purge dans ${CABINET_DELETION_RETENTION_DAYS} jours).`;
     case 'CABINET_RESTORED':
       return `« ${cabinetName} » a été restauré par ${log.actorName ?? 'un administrateur'}.`;
+    case 'CABINET_DATA_PURGED':
+      return `« ${cabinetName} » : comptes et identité purgés après ${CABINET_DELETION_RETENTION_DAYS} jours ; les données de paie sont conservées 5 ans.`;
     case 'USER_ARCHIVED':
       return `« ${targetUserName} » a été archivé par ${log.actorName ?? 'un administrateur'} (purge dans ${ACCOUNT_DELETION_RETENTION_DAYS} jours).`;
     case 'USER_RESTORED':

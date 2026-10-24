@@ -21,6 +21,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { GET: exportRoute } = await import('@/app/api/cabinet/export/route');
 const { createInvitationToken } = await import('@/lib/invitations/invitations');
 const { exportFilename, EXPORT_FORMAT } = await import('@/lib/cabinet/cabinet-export');
@@ -36,7 +37,7 @@ afterAll(async () => {
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.invitation.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: { OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }] },
@@ -64,7 +65,7 @@ async function creerMembre(cabinetId: string, role: string, label: string) {
   cj.apply(await auth.api.signUpEmail({ body: { name: `Membre ${label}`, email: mail, password: PASSWORD }, asResponse: true }));
   const created = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
   await prisma.user.update({ where: { id: created.id }, data: { role, cabinetId } });
-  await prisma.cabinet.delete({ where: { id: created.cabinetId! } });
+  await supprimerCabinetsEtDonnees([created.cabinetId!]);
   return { cj, user: await prisma.user.findUniqueOrThrow({ where: { id: created.id } }) };
 }
 

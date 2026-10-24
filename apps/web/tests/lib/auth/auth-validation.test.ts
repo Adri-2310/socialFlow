@@ -40,6 +40,7 @@ vi.mock('@/lib/billing/stripe', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const email = await import('@/lib/email/email');
 const { POST: finalizeRoute } = await import('@/app/api/register/finalize/route');
 
@@ -59,7 +60,7 @@ afterAll(async () => {
     select: { cabinetId: true },
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   // La table Verification n'a aucune relation vers User (voir schema.prisma) :
   // ses lignes ne sont donc pas supprimees en cascade et doivent etre
@@ -302,7 +303,7 @@ describe('finalisation de l inscription du titulaire (D55, C2)', () => {
     // Compte tel que le laisse une inscription OAuth : aucun cabinet.
     const { cj, user } = await inscrire('finalise-oauth', 'Ignore');
     await prisma.user.update({ where: { id: user.id }, data: { cabinetId: null, cabinetName: null, name: 'Alice Martin' } });
-    await prisma.cabinet.delete({ where: { id: user.cabinetId! } });
+    await supprimerCabinetsEtDonnees([user.cabinetId!]);
 
     const premiere = await finaliser({ plan: 'pro', billingPeriod: 'yearly' }, cj);
     expect(premiere.status).toBe(201);
@@ -330,7 +331,7 @@ describe('finalisation de l inscription du titulaire (D55, C2)', () => {
   it('cree le cabinet sans plan quand le plan demande est invalide', async () => {
     const { cj, user } = await inscrire('finalise-oauth-invalide');
     await prisma.user.update({ where: { id: user.id }, data: { cabinetId: null } });
-    await prisma.cabinet.delete({ where: { id: user.cabinetId! } });
+    await supprimerCabinetsEtDonnees([user.cabinetId!]);
 
     expect((await finaliser({ plan: 'plan-inexistant' }, cj)).status).toBe(201);
 

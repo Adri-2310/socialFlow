@@ -19,6 +19,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { decryptField, encryptField, lookupHash } = await import('@/lib/crypto/field-encryption');
 
 afterAll(async () => {
@@ -27,9 +28,9 @@ afterAll(async () => {
     select: { cabinetId: true },
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
-  // Les salariés et leurs conditions partent en cascade avec le cabinet.
+  // Les salariés et leurs conditions sont supprimés avec le cabinet par supprimerCabinetsEtDonnees (D94 : Restrict).
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {
@@ -156,8 +157,10 @@ describe('modèle ConditionTravail', () => {
     expect(await enVigueur('2026-10-31')).toBeNull();
   });
 
-  it('disparaît avec l’entreprise (cascade) sans toucher à une autre', async () => {
-    const cabinetId = await creerCabinet('condition-cascade');
+  // D94 : la paie se conserve 5 ans, donc supprimer une entreprise ou un dossier qui en porte
+  // échoue au lieu de tout effacer en cascade (Restrict).
+  it('ne disparaît pas avec l’entreprise ni avec le dossier (Restrict)', async () => {
+    const cabinetId = await creerCabinet('condition-restrict');
     const a = await creerEntreprise(cabinetId);
     const b = await creerEntreprise(cabinetId);
     const dansA = await prisma.salarie.create({ data: donneesSalarie(cabinetId, a.id) });
@@ -165,10 +168,11 @@ describe('modèle ConditionTravail', () => {
     await prisma.conditionTravail.create({ data: condition(cabinetId, dansA.id, '2026-11-01') });
     await prisma.conditionTravail.create({ data: condition(cabinetId, dansB.id, '2026-11-01') });
 
-    await prisma.entreprise.delete({ where: { id: a.id } });
+    await expect(prisma.entreprise.delete({ where: { id: a.id } })).rejects.toThrow();
+    await expect(prisma.salarie.delete({ where: { id: dansA.id } })).rejects.toThrow();
 
-    expect(await prisma.salarie.count({ where: { id: dansA.id } })).toBe(0);
-    expect(await prisma.conditionTravail.count({ where: { salarieId: dansA.id } })).toBe(0);
+    expect(await prisma.salarie.count({ where: { id: dansA.id } })).toBe(1);
+    expect(await prisma.conditionTravail.count({ where: { salarieId: dansA.id } })).toBe(1);
     expect(await prisma.conditionTravail.count({ where: { salarieId: dansB.id } })).toBe(1);
   });
 });

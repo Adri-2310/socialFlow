@@ -46,6 +46,7 @@ vi.mock('@/lib/billing/stripe', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const {
   quotaBlockers,
   getPlanChangeOptions,
@@ -193,7 +194,7 @@ afterAll(async () => {
   ];
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: ids } } });
   await prisma.user.deleteMany({ where: { cabinetId: { in: ids } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: ids } } });
+  await supprimerCabinetsEtDonnees(ids);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.pricingPlan.deleteMany({ where: { planId: { in: [BIG, SMALL] } } });
   await prisma.verification.deleteMany({

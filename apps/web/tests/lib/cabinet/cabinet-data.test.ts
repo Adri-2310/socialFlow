@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/prisma';
+import { supprimerCabinetsEtDonnees } from '@/lib/cabinet/cabinet-purge';
 import {
   getArchivedGestionnaires,
   getCabinetOverview,
@@ -54,7 +55,7 @@ async function createUser(data: {
 afterAll(async () => {
   await prisma.invitation.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
 });
 
 describe('getCabinetOverview', () => {

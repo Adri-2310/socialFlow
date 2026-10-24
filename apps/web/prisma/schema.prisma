@@ -114,9 +114,13 @@ model Cabinet {
   // Archivage par un SuperAdmin (pas de vraie suppression : User.cabinetId a
   // onDelete: Cascade, supprimer reellement un Cabinet supprimerait tous ses
   // utilisateurs). Meme convention que User.deletedAt : bloque l'acces
-  // immediatement (voir hooks.after de auth.ts), purge reelle et definitive
-  // apres CABINET_DELETION_RETENTION_DAYS (voir api/cron/purge-deleted-cabinets).
+  // immediatement (voir hooks.after de auth.ts), purge apres
+  // CABINET_DELETION_RETENTION_DAYS (voir api/cron/purge-deleted-cabinets).
   deletedAt         DateTime?
+  // D94 : purge partielle faite (comptes, invitations, branding supprimes). Reste la
+  // coquille du cabinet, ses entreprises et ses donnees de paie, conservees 5 ans puis
+  // supprimees par api/cron/purge-expired-retention. null = pas encore purge.
+  donneesPurgeesLe  DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   // Identifiant du Customer Stripe correspondant (voir src/lib/stripe.ts et
@@ -181,7 +185,8 @@ model Cabinet {
 model Entreprise {
   id                    String                   @id @default(cuid())
   cabinetId             String
-  cabinet               Cabinet                  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  // D94 : Restrict, l'entreprise porte les donnees de paie a conserver 5 ans.
+  cabinet               Cabinet                  @relation(fields: [cabinetId], references: [id], onDelete: Restrict)
   name                  String
   vatNumber             String
   addressLine           String?
@@ -236,10 +241,11 @@ model GestionnaireEntreprise {
 // lib/schemas/salarie.ts (pas d'enum Prisma, CONVENTIONS § 4).
 model Salarie {
   id           String     @id @default(cuid())
+  // D94 : Restrict sur le cabinet et l'entreprise, le dossier est conserve 5 ans.
   cabinetId    String
-  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Restrict)
   entrepriseId String
-  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Restrict)
 
   // Identite
   nom           String
@@ -293,10 +299,11 @@ model Salarie {
 // ajoute une nouvelle. Montants en centimes.
 model ConditionTravail {
   id        String   @id @default(cuid())
+  // D94 : Restrict, voir Salarie.
   cabinetId String
-  cabinet   Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  cabinet   Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Restrict)
   salarieId String
-  salarie   Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  salarie   Salarie  @relation(fields: [salarieId], references: [id], onDelete: Restrict)
   dateEffet DateTime @db.Date
 
   statut                  String // EMPLOYE | OUVRIER (D39)
@@ -328,10 +335,11 @@ model ConditionTravail {
 // erreur reste, vide, et se verrouille.
 model PeriodePaie {
   id           String     @id @default(cuid())
+  // D94 : Restrict, voir Salarie.
   cabinetId    String
-  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  cabinet      Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Restrict)
   entrepriseId String
-  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Restrict)
 
   annee      Int
   mois       Int // 1 a 12
@@ -357,12 +365,13 @@ model PeriodePaie {
 // (jours d'un mois, heures d'un mois) sont verifiees par lib/schemas/prestation.ts.
 model Prestation {
   id        String      @id @default(cuid())
+  // D94 : Restrict, voir Salarie.
   cabinetId String
-  cabinet   Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  cabinet   Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Restrict)
   periodeId String
-  periode   PeriodePaie @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  periode   PeriodePaie @relation(fields: [periodeId], references: [id], onDelete: Restrict)
   salarieId String
-  salarie   Salarie     @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  salarie   Salarie     @relation(fields: [salarieId], references: [id], onDelete: Restrict)
 
   heuresPresteesMinutes  Int? // facultatif, utile surtout aux ouvriers
   congeDemiJours         Int     @default(0)

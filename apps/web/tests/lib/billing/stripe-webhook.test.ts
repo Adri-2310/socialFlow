@@ -10,6 +10,7 @@ vi.mock('@/lib/email/email', () => ({
 }));
 
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { stripe } = await import('@/lib/billing/stripe');
 const email = await import('@/lib/email/email');
 const { POST } = await import('@/app/api/webhooks/stripe/route');
@@ -133,7 +134,7 @@ afterAll(async () => {
   await prisma.webhookEvent.deleteMany({ where: { eventId: { startsWith: `evt_wh_${stamp}` } } });
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
   await prisma.user.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
 });
 
 describe('securite du webhook', () => {

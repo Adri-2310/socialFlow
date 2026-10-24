@@ -19,6 +19,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { POST: creerSalarie } = await import('@/app/api/entreprises/[id]/salaries/route');
 const { POST: devoiler } = await import('@/app/api/salaries/[id]/reveal/route');
 
@@ -28,9 +29,9 @@ afterAll(async () => {
     select: { cabinetId: true },
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
-  // Les salariés et leurs conditions partent en cascade avec le cabinet.
+  // Les salariés et leurs conditions sont supprimés avec le cabinet par supprimerCabinetsEtDonnees (D94 : Restrict).
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {
@@ -61,7 +62,7 @@ async function creerCompte(label: string) {
 async function creerAvecRole(label: string, role: string, cabinetId: string) {
   const { cj, user } = await creerCompte(label);
   await prisma.user.update({ where: { id: user.id }, data: { role, cabinetId } });
-  await prisma.cabinet.delete({ where: { id: user.cabinetId! } });
+  await supprimerCabinetsEtDonnees([user.cabinetId!]);
   return { cj, user: await prisma.user.findUniqueOrThrow({ where: { id: user.id } }) };
 }
 

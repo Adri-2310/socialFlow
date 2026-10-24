@@ -65,6 +65,7 @@ describe('regles de l application installable (D77)', () => {
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { ensureCabinetSlug } = await import('@/lib/portal/cabinet-portal');
 const { GET: getManifest } = await import('@/app/(auth)/connexion/[slug]/manifest.webmanifest/route');
 const { GET: getIcon } = await import('@/app/(auth)/connexion/[slug]/icone/[taille]/route');
@@ -76,7 +77,7 @@ afterAll(async () => {
   });
   const cabinetIds = users.map((u) => u.cabinetId).filter((id): id is string => !!id);
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: { OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }] },

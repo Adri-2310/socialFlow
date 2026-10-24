@@ -21,6 +21,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { ensureCabinetSlug } = await import('@/lib/portal/cabinet-portal');
 
 const PASSWORD = 'InitialPass123!';
@@ -32,7 +33,7 @@ afterAll(async () => {
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: { OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }] },
@@ -52,7 +53,7 @@ async function creerMembre(cabinetId: string, role: string, label: string) {
   await auth.api.signUpEmail({ body: { name: `Membre ${label}`, email: mail, password: PASSWORD } });
   const created = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
   await prisma.user.update({ where: { id: created.id }, data: { role, cabinetId, emailVerified: true } });
-  await prisma.cabinet.delete({ where: { id: created.cabinetId! } });
+  await supprimerCabinetsEtDonnees([created.cabinetId!]);
   await prisma.session.deleteMany({ where: { userId: created.id } });
   return { mail, id: created.id };
 }
@@ -62,7 +63,7 @@ async function creerSuperAdmin(label: string) {
   await auth.api.signUpEmail({ body: { name: 'Super Portail', email: mail, password: PASSWORD } });
   const created = await prisma.user.findUniqueOrThrow({ where: { email: mail } });
   await prisma.user.update({ where: { id: created.id }, data: { role: 'SUPER_ADMIN', cabinetId: null } });
-  await prisma.cabinet.delete({ where: { id: created.cabinetId! } });
+  await supprimerCabinetsEtDonnees([created.cabinetId!]);
   await prisma.session.deleteMany({ where: { userId: created.id } });
   return { mail, id: created.id };
 }

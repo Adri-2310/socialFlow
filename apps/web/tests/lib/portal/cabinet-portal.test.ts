@@ -21,6 +21,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { PATCH: patchPortal } = await import('@/app/api/cabinet/settings/portal/route');
 const { ensureCabinetSlug, getPortalCabinet, cabinetIdForSlug, updateCabinetSlug } = await import(
   '@/lib/portal/cabinet-portal'
@@ -38,7 +39,7 @@ afterAll(async () => {
   });
   const ids = [...cabinetIds, ...testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id)];
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: ids } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: ids } } });
+  await supprimerCabinetsEtDonnees(ids);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: { OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }] },
@@ -232,7 +233,7 @@ describe('PATCH /api/cabinet/settings/portal', () => {
     cj.apply(await auth.api.signUpEmail({ body: { name: 'G', email: gestionnaireMail, password: PASSWORD }, asResponse: true }));
     const created = await prisma.user.findUniqueOrThrow({ where: { email: gestionnaireMail } });
     await prisma.user.update({ where: { id: created.id }, data: { role: 'GESTIONNAIRE_RH', cabinetId: user.cabinetId } });
-    await prisma.cabinet.delete({ where: { id: created.cabinetId! } });
+    await supprimerCabinetsEtDonnees([created.cabinetId!]);
 
     expect((await modifier({ slug: `portail-api-${stamp}` })).status).toBe(401);
     expect((await modifier({ slug: `portail-api-${stamp}` }, cj)).status).toBe(403);

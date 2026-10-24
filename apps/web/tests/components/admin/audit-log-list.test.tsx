@@ -60,6 +60,12 @@ describe('AuditLogList - formatage des messages', () => {
     ['CABINET_SUSPENDED', 'Alpha', null, '« Alpha » a été suspendu par un administrateur.'],
     ['CABINET_REACTIVATED', 'Alpha', 'Adrien', '« Alpha » a été réactivé par Adrien.'],
     ['CABINET_REACTIVATED', null, 'Adrien', '« un cabinet supprimé » a été réactivé par Adrien.'],
+    [
+      'CABINET_DATA_PURGED',
+      'Alpha',
+      null,
+      '« Alpha » : comptes et identité purgés après 90 jours ; les données de paie sont conservées 5 ans.',
+    ],
   ])('formate %s (cabinet=%s, acteur=%s)', (action, cabinetName, actorName, expected) => {
     const log: AuditLogEntry = {
       id: '1',

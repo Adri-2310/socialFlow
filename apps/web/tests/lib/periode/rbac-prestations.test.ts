@@ -19,6 +19,7 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { GET: lister } = await import('@/app/api/periodes/[id]/prestations/route');
 const { PUT: encoder, DELETE: effacer } =
   await import('@/app/api/periodes/[id]/prestations/[salarieId]/route');
@@ -33,9 +34,9 @@ afterAll(async () => {
     select: { cabinetId: true },
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
-  // Les périodes, prestations et salariés partent en cascade avec le cabinet.
+  // Les périodes, prestations et salariés sont supprimés avec le cabinet par supprimerCabinetsEtDonnees (D94 : Restrict).
   await prisma.auditLog.deleteMany({ where: { cabinetId: { in: cabinetIds } } });
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: {
@@ -66,7 +67,7 @@ async function creerCompte(label: string) {
 async function creerAvecRole(label: string, role: string, cabinetId: string) {
   const { cj, user } = await creerCompte(label);
   await prisma.user.update({ where: { id: user.id }, data: { role, cabinetId } });
-  await prisma.cabinet.delete({ where: { id: user.cabinetId! } });
+  await supprimerCabinetsEtDonnees([user.cabinetId!]);
   return { cj, user: await prisma.user.findUniqueOrThrow({ where: { id: user.id } }) };
 }
 
@@ -541,7 +542,8 @@ describe('l’entreprise encode jusqu’à la date limite (D91)', () => {
       depasse.gestionnaire.cj,
     );
     expect(gestionnaire.status).toBe(200);
-  });
+    // Deux mises en place complètes (comptes, entreprise, salarié, période) : plus de 15 s sur Neon.
+  }, 40_000);
 
   it('le gestionnaire peut décaler la date limite pour rouvrir l’encodage à l’entreprise', async () => {
     const { gestionnaire, salarie, periode, admin } = await miseEntreprise(

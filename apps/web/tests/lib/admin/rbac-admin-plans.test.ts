@@ -32,6 +32,7 @@ vi.mock('@/lib/billing/stripe', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
+const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { PATCH: patchPlan, DELETE: archivePlan, PUT: restorePlan } = await import('@/app/api/admin/plans/[id]/route');
 const { POST: createPlan } = await import('@/app/api/admin/plans/route');
 
@@ -45,7 +46,7 @@ afterAll(async () => {
     select: { cabinetId: true },
   });
   const cabinetIds = testUsers.map((u) => u.cabinetId).filter((id): id is string => !!id);
-  await prisma.cabinet.deleteMany({ where: { id: { in: cabinetIds } } });
+  await supprimerCabinetsEtDonnees(cabinetIds);
   await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.verification.deleteMany({
     where: { OR: [{ identifier: { contains: TEST_EMAIL_PREFIX } }, { value: { contains: TEST_EMAIL_PREFIX } }] },
@@ -70,7 +71,7 @@ async function creerSuperAdmin(label: string) {
   const { mail, cj, user } = await creerCabinetRH(label);
   const cabinetId = user.cabinetId!;
   await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN', cabinetId: null, twoFactorEnabled: true } });
-  await prisma.cabinet.delete({ where: { id: cabinetId } });
+  await supprimerCabinetsEtDonnees([cabinetId]);
   return { mail, cj, user };
 }
 
