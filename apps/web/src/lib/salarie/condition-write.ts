@@ -115,8 +115,8 @@ const CHAMPS = [
   'commissionParitaire',
   'fonction',
   'regime',
-  'heuresSemaine',
-  'heuresReference',
+  'heuresSemaineMinutes',
+  'heuresReferenceMinutes',
   'salaireMensuelBrutCents',
   'salaireHoraireBrutCents',
 ] as const;

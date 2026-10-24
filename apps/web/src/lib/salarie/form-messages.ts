@@ -29,9 +29,10 @@ export const FIELD_ERRORS: Record<string, string> = {
   INVALID_DATE_SORTIE: 'La date de sortie se saisit à la sortie du salarié.',
   INVALID_FONCTION: 'La fonction est obligatoire.',
   INVALID_COMMISSION_PARITAIRE: 'Commission paritaire incohérente avec le statut.',
-  INVALID_HEURES_SEMAINE:
-    'Heures par semaine obligatoires à temps partiel, sans dépasser celles de la référence.',
-  INVALID_HEURES_REFERENCE: 'Heures de la personne de référence obligatoires à temps partiel.',
+  INVALID_HEURES_SEMAINE_MINUTES:
+    'Heures par semaine obligatoires à temps partiel (par exemple 30,4 ou 30:24), sans dépasser celles de la référence.',
+  INVALID_HEURES_REFERENCE_MINUTES:
+    'Heures de la personne de référence obligatoires à temps partiel (60 h au plus).',
   INVALID_SALAIRE_MENSUEL_BRUT_CENTS: 'Montant invalide (par exemple 2850,00).',
   INVALID_SALAIRE_HORAIRE_BRUT_CENTS: 'Montant invalide (par exemple 17,25).',
   INVALID_SITUATION_FAMILIALE: 'Situation familiale invalide.',

@@ -175,7 +175,8 @@ export function ConditionFormDialog({
               <Field
                 id="cond-heures"
                 label="Heures par semaine du salarié"
-                error={err('heuresSemaine')}
+                error={err('heuresSemaineMinutes')}
+                hint="Par exemple 30,4 ou 30:24."
               >
                 <input
                   id="cond-heures"
@@ -189,7 +190,8 @@ export function ConditionFormDialog({
               <Field
                 id="cond-heures-ref"
                 label="Heures par semaine de la personne de référence"
-                error={err('heuresReference')}
+                error={err('heuresReferenceMinutes')}
+                hint="Par exemple 38."
               >
                 <input
                   id="cond-heures-ref"

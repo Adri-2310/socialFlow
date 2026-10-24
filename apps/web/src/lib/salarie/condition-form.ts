@@ -1,6 +1,6 @@
 import type { ConditionRow } from '@/lib/salarie/salarie-data';
 import { centsToInput, parseEurosToCents } from '@/lib/salarie/montant';
-import { number } from '@/lib/salarie/form-messages';
+import { minutesEnTexte, texteEnMinutes } from '@/lib/periode/periode-format';
 
 // Valeurs du formulaire d'une condition de travail datée : tout en chaînes, comme les champs
 // de saisie. Partagé entre le formulaire (composant client) et la fiche qui le préremplit.
@@ -15,7 +15,8 @@ export type ConditionFormValues = {
 };
 
 const iso = (date: Date) => date.toISOString().slice(0, 10);
-const heures = (valeur: number | null) => (valeur === null ? '' : String(valeur).replace('.', ','));
+// D96 : 1824 minutes s'affichent « 30:24 », comme les heures des prestations.
+const heures = (minutes: number | null) => (minutes === null ? '' : minutesEnTexte(minutes));
 
 // Préremplit depuis une ligne existante (correction) ou depuis la condition en vigueur
 // (ajout : même valeurs, la date reste à saisir).
@@ -32,8 +33,8 @@ export function toConditionFormValues(
     statut: condition.statut as ConditionFormValues['statut'],
     fonction: condition.fonction,
     regime: condition.regime as ConditionFormValues['regime'],
-    heuresSemaine: heures(condition.heuresSemaine),
-    heuresReference: heures(condition.heuresReference),
+    heuresSemaine: heures(condition.heuresSemaineMinutes),
+    heuresReference: heures(condition.heuresReferenceMinutes),
     salaire: cents === null ? '' : centsToInput(cents),
   };
 }
@@ -49,8 +50,11 @@ export function toConditionPayload(f: ConditionFormValues) {
     commissionParitaire: f.statut === 'EMPLOYE' ? '200' : '100',
     fonction: f.fonction,
     regime: f.regime,
-    heuresSemaine: f.regime === 'TEMPS_PARTIEL' ? number(f.heuresSemaine) : undefined,
-    heuresReference: f.regime === 'TEMPS_PARTIEL' ? number(f.heuresReference) : undefined,
+    // Saisie en heures (« 38 », « 30,4 » ou « 30:24 »), envoyée en minutes ; illisible : NaN, refusé par le schéma.
+    heuresSemaineMinutes:
+      f.regime === 'TEMPS_PARTIEL' ? (texteEnMinutes(f.heuresSemaine) ?? undefined) : undefined,
+    heuresReferenceMinutes:
+      f.regime === 'TEMPS_PARTIEL' ? (texteEnMinutes(f.heuresReference) ?? undefined) : undefined,
     salaireMensuelBrutCents: f.statut === 'EMPLOYE' ? cents : undefined,
     salaireHoraireBrutCents: f.statut === 'OUVRIER' ? cents : undefined,
   };

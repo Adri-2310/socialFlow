@@ -45,6 +45,13 @@ export function minutesEnTexte(minutes: number): string {
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
+// 1824 minutes → « 30 h 24 », 2280 → « 38 h » (durée hebdomadaire d'un temps partiel, D96).
+export function minutesEnLibelle(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, '0')}`;
+}
+
 // « 7:30 » ou « 7,5 » → 450 minutes. Vide = null (l'appelant décide de la valeur par défaut).
 // Illisible : NaN.
 export function texteEnMinutes(texte: string): number | null {

@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Pencil, UserPlus } from 'lucide-react';
 import { CheckField, Field, inputClass } from '@/components/gestionnaire/form-field';
 import type { CountryOption } from '@/lib/countries';
+import { texteEnMinutes } from '@/lib/periode/periode-format';
 import { parseEurosToCents } from '@/lib/salarie/montant';
-import { ERROR_MESSAGES, FALLBACK, FIELD_ERRORS, blank, number } from '@/lib/salarie/form-messages';
+import { ERROR_MESSAGES, FALLBACK, FIELD_ERRORS, blank } from '@/lib/salarie/form-messages';
 import { INITIAL, fiscalPayload, vueFiscale, type FormValues } from '@/lib/salarie/salarie-form';
 import {
   REVENUS_CONJOINT,
@@ -41,8 +42,11 @@ function toPayload(f: FormValues) {
     commissionParitaire: f.statut === 'EMPLOYE' ? '200' : '100',
     fonction: f.fonction,
     regime: f.regime,
-    heuresSemaine: f.regime === 'TEMPS_PARTIEL' ? number(f.heuresSemaine) : undefined,
-    heuresReference: f.regime === 'TEMPS_PARTIEL' ? number(f.heuresReference) : undefined,
+    // Saisie en heures (« 38 », « 30,4 » ou « 30:24 »), envoyée en minutes (D96).
+    heuresSemaineMinutes:
+      f.regime === 'TEMPS_PARTIEL' ? (texteEnMinutes(f.heuresSemaine) ?? undefined) : undefined,
+    heuresReferenceMinutes:
+      f.regime === 'TEMPS_PARTIEL' ? (texteEnMinutes(f.heuresReference) ?? undefined) : undefined,
     salaireMensuelBrutCents: f.statut === 'EMPLOYE' ? cents : undefined,
     salaireHoraireBrutCents: f.statut === 'OUVRIER' ? cents : undefined,
     ...fiscalPayload(f),
@@ -57,8 +61,8 @@ function toModificationPayload(f: FormValues) {
     commissionParitaire: _cp,
     fonction: _fonction,
     regime: _regime,
-    heuresSemaine: _heuresSemaine,
-    heuresReference: _heuresReference,
+    heuresSemaineMinutes: _heuresSemaine,
+    heuresReferenceMinutes: _heuresReference,
     salaireMensuelBrutCents: _mensuel,
     salaireHoraireBrutCents: _horaire,
     ...dossier
@@ -420,7 +424,8 @@ export function SalarieFormDialog({
                 <Field
                   id="sal-heures"
                   label="Heures par semaine du salarié"
-                  error={err('heuresSemaine')}
+                  error={err('heuresSemaineMinutes')}
+                  hint="Par exemple 30,4 ou 30:24."
                 >
                   <input
                     id="sal-heures"
@@ -434,7 +439,8 @@ export function SalarieFormDialog({
                 <Field
                   id="sal-heures-ref"
                   label="Heures par semaine de la personne de référence"
-                  error={err('heuresReference')}
+                  error={err('heuresReferenceMinutes')}
+                  hint="Par exemple 38."
                 >
                   <input
                     id="sal-heures-ref"

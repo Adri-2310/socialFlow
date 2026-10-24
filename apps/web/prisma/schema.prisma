@@ -325,9 +325,10 @@ model ConditionTravail {
   commissionParitaire     String // 200 | 100 (D44)
   fonction                String
   regime                  String // TEMPS_PLEIN | TEMPS_PARTIEL
-  // Fraction d'occupation = heuresSemaine / heuresReference (non stockee).
-  heuresSemaine           Float?
-  heuresReference         Float?
+  // Fraction d'occupation = heuresSemaineMinutes / heuresReferenceMinutes (non stockee). D96 :
+  // minutes entieres par semaine, jamais de flottant pour une duree.
+  heuresSemaineMinutes    Int?
+  heuresReferenceMinutes  Int?
   // Employe : salaire mensuel ; ouvrier : salaire horaire.
   salaireMensuelBrutCents Int?
   salaireHoraireBrutCents Int?

@@ -73,12 +73,35 @@ describe('schéma du dossier salarié', () => {
 
   it('temps partiel : heures obligatoires, sans dépasser la référence', () => {
     const partiel = { ...employe, regime: 'TEMPS_PARTIEL' };
-    expect(codeOf(partiel)).toBe('INVALID_HEURES_SEMAINE');
-    expect(codeOf({ ...partiel, heuresSemaine: 19 })).toBe('INVALID_HEURES_REFERENCE');
-    expect(codeOf({ ...partiel, heuresSemaine: 40, heuresReference: 38 })).toBe(
-      'INVALID_HEURES_SEMAINE',
+    expect(codeOf(partiel)).toBe('INVALID_HEURES_SEMAINE_MINUTES');
+    expect(codeOf({ ...partiel, heuresSemaineMinutes: 1140 })).toBe(
+      'INVALID_HEURES_REFERENCE_MINUTES',
     );
-    expect(codeOf({ ...partiel, heuresSemaine: 19, heuresReference: 38 })).toBeNull();
+    expect(codeOf({ ...partiel, heuresSemaineMinutes: 2400, heuresReferenceMinutes: 2280 })).toBe(
+      'INVALID_HEURES_SEMAINE_MINUTES',
+    );
+    expect(
+      codeOf({ ...partiel, heuresSemaineMinutes: 1140, heuresReferenceMinutes: 2280 }),
+    ).toBeNull();
+  });
+
+  it('temps partiel (D96) : des minutes entières, jamais un flottant, 60 heures au plus', () => {
+    const partiel = { ...employe, regime: 'TEMPS_PARTIEL', heuresReferenceMinutes: 2280 };
+    expect(codeOf({ ...partiel, heuresSemaineMinutes: 1824 })).toBeNull();
+    // 30,4 heures saisies telles quelles ne sont pas des minutes entières.
+    expect(codeOf({ ...partiel, heuresSemaineMinutes: 1823.5 })).toBe(
+      'INVALID_HEURES_SEMAINE_MINUTES',
+    );
+    expect(codeOf({ ...partiel, heuresSemaineMinutes: 0 })).toBe('INVALID_HEURES_SEMAINE_MINUTES');
+    expect(codeOf({ ...partiel, heuresSemaineMinutes: Number.NaN })).toBe(
+      'INVALID_HEURES_SEMAINE_MINUTES',
+    );
+    expect(
+      codeOf({ ...partiel, heuresSemaineMinutes: 1000, heuresReferenceMinutes: 3601 }),
+    ).toBe('INVALID_HEURES_REFERENCE_MINUTES');
+    expect(
+      codeOf({ ...partiel, heuresSemaineMinutes: 3600, heuresReferenceMinutes: 3600 }),
+    ).toBeNull();
   });
 
   it('rémunération : mensuelle pour l’employé, horaire pour l’ouvrier, jamais les deux', () => {
@@ -292,7 +315,7 @@ describe('schéma d’une condition de travail datée', () => {
       'INVALID_SALAIRE_MENSUEL_BRUT_CENTS',
     );
     expect(codeOfCondition({ ...condition, regime: 'TEMPS_PARTIEL' })).toBe(
-      'INVALID_HEURES_SEMAINE',
+      'INVALID_HEURES_SEMAINE_MINUTES',
     );
   });
 });

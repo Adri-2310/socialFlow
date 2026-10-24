@@ -131,8 +131,8 @@ describe('ligne du fichier → corps de création', () => {
     expect(resultat.success).toBe(true);
     expect(resultat.data).toMatchObject({
       regime: 'TEMPS_PARTIEL',
-      heuresSemaine: 30.4,
-      heuresReference: 38,
+      heuresSemaineMinutes: 1824,
+      heuresReferenceMinutes: 2280,
       situationFamiliale: 'MARIE_OU_COHABITANT_LEGAL',
       conjointRevenus: 'REVENUS',
       enfantsCharge: 2,
@@ -237,6 +237,39 @@ describe('ligne du fichier → corps de création', () => {
     expect(
       fautes({ ...base, situation_familiale: 'marié', revenus_conjoint: 'peut-être' }),
     ).toContain('conjointRevenus');
+  });
+
+  it('les colonnes d’heures se lisent en heures et partent en minutes (D96)', () => {
+    const minutes = (semaine: string, reference = '38') =>
+      salarieSchema.safeParse(
+        ligneVersCorps({
+          ...base,
+          regime: 'partiel',
+          heures_semaine: semaine,
+          heures_reference: reference,
+        }),
+      ).data;
+    expect(minutes('19')).toMatchObject({ heuresSemaineMinutes: 1140, heuresReferenceMinutes: 2280 });
+    expect(minutes('30,4')?.heuresSemaineMinutes).toBe(1824);
+    expect(minutes('30:24')?.heuresSemaineMinutes).toBe(1824);
+    // Arrondi à la minute la plus proche : 38,333 h = 2299,98 minutes.
+    expect(minutes('38,333', '40')?.heuresSemaineMinutes).toBe(2300);
+    // Des colonnes vides à temps plein ne produisent rien.
+    const plein = salarieSchema.safeParse(ligneVersCorps(base)).data;
+    expect(plein?.heuresSemaineMinutes).toBeUndefined();
+    expect(plein?.heuresReferenceMinutes).toBeUndefined();
+  });
+
+  it('signale par la colonne d’origine une durée illisible ou excessive', () => {
+    const fautes = (ligne: Parameters<typeof ligneVersCorps>[0]) => {
+      const r = salarieSchema.safeParse(ligneVersCorps(ligne));
+      return r.success ? [] : Object.keys(invalidFields(r.error));
+    };
+    const partiel = { ...base, regime: 'partiel', heures_reference: '38' };
+    expect(fautes({ ...partiel, heures_semaine: 'beaucoup' })).toContain('heuresSemaineMinutes');
+    expect(fautes({ ...partiel, heures_semaine: '40' })).toContain('heuresSemaineMinutes');
+    expect(colonneDuChamp('heuresSemaineMinutes')).toBe('heures_semaine');
+    expect(colonneDuChamp('heuresReferenceMinutes')).toBe('heures_reference');
   });
 
   it('une cellule de salaire vide n’est pas un salaire à 0', () => {

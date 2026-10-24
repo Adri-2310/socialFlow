@@ -164,8 +164,9 @@ export type ConditionRow = {
   commissionParitaire: string;
   fonction: string;
   regime: string;
-  heuresSemaine: number | null;
-  heuresReference: number | null;
+  // Minutes par semaine (D96).
+  heuresSemaineMinutes: number | null;
+  heuresReferenceMinutes: number | null;
   salaireMensuelBrutCents: number | null;
   salaireHoraireBrutCents: number | null;
   etat: 'EN_VIGUEUR' | 'A_VENIR' | 'PASSEE';
@@ -285,8 +286,8 @@ export async function getSalarieDetail(
           commissionParitaire: true,
           fonction: true,
           regime: true,
-          heuresSemaine: true,
-          heuresReference: true,
+          heuresSemaineMinutes: true,
+          heuresReferenceMinutes: true,
           salaireMensuelBrutCents: true,
           salaireHoraireBrutCents: true,
         },

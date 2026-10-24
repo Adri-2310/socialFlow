@@ -43,10 +43,11 @@ const conditionFields = {
   commissionParitaire: z.enum(COMMISSIONS_PARITAIRES),
   fonction: text(100),
 
-  // Temps de travail : fraction d'occupation = heuresSemaine / heuresReference
+  // Temps de travail : fraction d'occupation = heuresSemaineMinutes / heuresReferenceMinutes.
+  // D96 : minutes entières par semaine (60 heures au plus), jamais de flottant pour une durée.
   regime: z.enum(REGIMES),
-  heuresSemaine: z.number().positive().max(60).optional(),
-  heuresReference: z.number().positive().max(60).optional(),
+  heuresSemaineMinutes: z.number().int().positive().max(3600).optional(),
+  heuresReferenceMinutes: z.number().int().positive().max(3600).optional(),
 
   // Rémunération : mensuelle pour l'employé, horaire pour l'ouvrier
   salaireMensuelBrutCents: cents.optional(),
@@ -58,10 +59,14 @@ type Fail = (path: string) => void;
 
 function checkCondition(c: ConditionFields, fail: Fail) {
   if (c.regime === 'TEMPS_PARTIEL') {
-    if (!c.heuresSemaine) fail('heuresSemaine');
-    if (!c.heuresReference) fail('heuresReference');
-    if (c.heuresSemaine && c.heuresReference && c.heuresSemaine > c.heuresReference) {
-      fail('heuresSemaine');
+    if (!c.heuresSemaineMinutes) fail('heuresSemaineMinutes');
+    if (!c.heuresReferenceMinutes) fail('heuresReferenceMinutes');
+    if (
+      c.heuresSemaineMinutes &&
+      c.heuresReferenceMinutes &&
+      c.heuresSemaineMinutes > c.heuresReferenceMinutes
+    ) {
+      fail('heuresSemaineMinutes');
     }
   }
 

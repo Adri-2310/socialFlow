@@ -14,6 +14,7 @@ import { SortieBadge } from '@/components/gestionnaire/sortie-badge';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
+import { minutesEnLibelle } from '@/lib/periode/periode-format';
 import { toConditionFormValues } from '@/lib/salarie/condition-form';
 import { toFormValues } from '@/lib/salarie/salarie-form';
 import { requireAuthorized } from '@/lib/authz/authz-page';
@@ -44,14 +45,13 @@ const ETATS: Record<ConditionRow['etat'], string> = {
 
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
 const formatDate = (date: Date) => date.toLocaleDateString('fr-BE', { timeZone: 'UTC' });
-const formatHeures = (heures: number) => heures.toLocaleString('fr-BE');
 
 function regimeLabel(c: ConditionRow): string {
   const label = REGIMES[c.regime] ?? c.regime;
   // Heures du salarié sur celles de la personne de référence ; la fraction exacte est
   // l'affaire du moteur de paie.
-  return c.regime === 'TEMPS_PARTIEL' && c.heuresSemaine && c.heuresReference
-    ? `${label} (${formatHeures(c.heuresSemaine)} h sur ${formatHeures(c.heuresReference)} h)`
+  return c.regime === 'TEMPS_PARTIEL' && c.heuresSemaineMinutes && c.heuresReferenceMinutes
+    ? `${label} (${minutesEnLibelle(c.heuresSemaineMinutes)} sur ${minutesEnLibelle(c.heuresReferenceMinutes)})`
     : label;
 }
 

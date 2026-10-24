@@ -1,3 +1,4 @@
+import { texteEnMinutes } from '@/lib/periode/periode-format';
 import { parseEurosToCents } from '@/lib/salarie/montant';
 
 // Colonnes du CSV d'import et conversion d'une ligne en corps de création (roles/03 § 4.1).
@@ -22,8 +23,9 @@ export const COLONNES = [
   { nom: 'date_fin_contrat', champ: 'dateFinContrat', obligatoire: false },
   { nom: 'fonction', champ: 'fonction', obligatoire: true },
   { nom: 'regime', champ: 'regime', obligatoire: true },
-  { nom: 'heures_semaine', champ: 'heuresSemaine', obligatoire: false },
-  { nom: 'heures_reference', champ: 'heuresReference', obligatoire: false },
+  // En heures dans le fichier (« 38 », « 30,4 » ou « 30:24 »), converties en minutes (D96).
+  { nom: 'heures_semaine', champ: 'heuresSemaineMinutes', obligatoire: false },
+  { nom: 'heures_reference', champ: 'heuresReferenceMinutes', obligatoire: false },
   // Mensuel pour un employé, horaire pour un ouvrier (voir le statut).
   { nom: 'salaire', champ: 'salaire', obligatoire: true },
   { nom: 'situation_familiale', champ: 'situationFamiliale', obligatoire: true },
@@ -206,8 +208,8 @@ export function ligneVersCorps(ligne: Partial<Record<NomColonne, string>>) {
     commissionParitaire: statut === 'EMPLOYE' ? '200' : statut === 'OUVRIER' ? '100' : undefined,
     fonction: ligne.fonction ?? '',
     regime: traduire(REGIMES, ligne.regime),
-    heuresSemaine: nombre(ligne.heures_semaine),
-    heuresReference: nombre(ligne.heures_reference),
+    heuresSemaineMinutes: texteEnMinutes(ligne.heures_semaine ?? '') ?? undefined,
+    heuresReferenceMinutes: texteEnMinutes(ligne.heures_reference ?? '') ?? undefined,
     salaireMensuelBrutCents: statut === 'EMPLOYE' ? centimes : undefined,
     salaireHoraireBrutCents: statut === 'OUVRIER' ? centimes : undefined,
     situationFamiliale: traduire(SITUATIONS, ligne.situation_familiale),

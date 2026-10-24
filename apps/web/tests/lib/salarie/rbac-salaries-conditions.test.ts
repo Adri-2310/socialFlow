@@ -216,6 +216,76 @@ describe('POST /api/salaries/[id]/conditions : ajout', () => {
     }
   });
 
+  it('un temps partiel s’écrit en minutes entières (D96), se corrige et se rend à temps plein', async () => {
+    const { cabinetId, gestionnaire, salarieId } = await mise('cond-minutes');
+    const partiel = {
+      regime: 'TEMPS_PARTIEL',
+      heuresSemaineMinutes: 1824,
+      heuresReferenceMinutes: 2280,
+    };
+
+    const res = await ajouterCondition(salarieId, condition(jourDans(30), partiel), gestionnaire.cj);
+    expect(res.status).toBe(201);
+    const { id } = await res.json();
+    expect(await prisma.conditionTravail.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      regime: 'TEMPS_PARTIEL',
+      heuresSemaineMinutes: 1824,
+      heuresReferenceMinutes: 2280,
+    });
+
+    // Corriger : 30 h 24 devient 28 h, l'audit ne nomme que le champ.
+    const correction = await corrigerCondition(
+      salarieId,
+      id,
+      condition(jourDans(30), { ...partiel, heuresSemaineMinutes: 1680 }),
+      gestionnaire.cj,
+    );
+    expect(correction.status).toBe(200);
+    expect((await correction.json()).changed).toEqual(['heuresSemaineMinutes']);
+    const [audit] = await audits(cabinetId, 'SALARIE_CONDITION_UPDATED');
+    expect(audit.metadata).toMatchObject({ fields: ['heuresSemaineMinutes'] });
+    expect(JSON.stringify(audit)).not.toContain('1680');
+
+    // Retour à temps plein : les durées s'effacent (null en base).
+    const plein = await corrigerCondition(
+      salarieId,
+      id,
+      condition(jourDans(30), { regime: 'TEMPS_PLEIN' }),
+      gestionnaire.cj,
+    );
+    expect(plein.status).toBe(200);
+    expect(await prisma.conditionTravail.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      regime: 'TEMPS_PLEIN',
+      heuresSemaineMinutes: null,
+      heuresReferenceMinutes: null,
+    });
+  });
+
+  it('refuse des heures à virgule, trop longues ou supérieures à la référence, sans rien écrire', async () => {
+    const { gestionnaire, salarieId } = await mise('cond-minutes-refus');
+    const essai = async (heures: Record<string, unknown>) =>
+      ajouterCondition(
+        salarieId,
+        condition(jourDans(30), { regime: 'TEMPS_PARTIEL', ...heures }),
+        gestionnaire.cj,
+      );
+
+    const virgule = await essai({ heuresSemaineMinutes: 30.4, heuresReferenceMinutes: 2280 });
+    expect(virgule.status).toBe(400);
+    expect((await virgule.json()).fields).toEqual({
+      heuresSemaineMinutes: 'INVALID_HEURES_SEMAINE_MINUTES',
+    });
+    const trop = await essai({ heuresSemaineMinutes: 1000, heuresReferenceMinutes: 3601 });
+    expect((await trop.json()).fields).toEqual({
+      heuresReferenceMinutes: 'INVALID_HEURES_REFERENCE_MINUTES',
+    });
+    const inverse = await essai({ heuresSemaineMinutes: 2400, heuresReferenceMinutes: 2280 });
+    expect((await inverse.json()).fields).toEqual({
+      heuresSemaineMinutes: 'INVALID_HEURES_SEMAINE_MINUTES',
+    });
+    expect(await prisma.conditionTravail.count({ where: { salarieId } })).toBe(1);
+  });
+
   it('accepte une date passée (rattrapage), mais pas avant l’entrée ni après la sortie', async () => {
     const { gestionnaire, salarieId } = await mise('cond-bornes');
 
