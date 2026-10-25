@@ -33,7 +33,7 @@ export async function requireAuthorized(action: ActionId) {
 
   if (
     session.user.role === 'SUPER_ADMIN' &&
-    !('twoFactorExempt' in ACTIONS[action]) &&
+    !ACTIONS[action].twoFactorExempt &&
     !session.user.twoFactorEnabled
   ) {
     redirect(TWO_FACTOR_REQUIRED_URL);

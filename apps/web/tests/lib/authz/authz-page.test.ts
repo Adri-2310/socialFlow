@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const getSession = vi.fn();
 vi.mock('@/lib/auth/auth', () => ({ auth: { api: { getSession } } }));
@@ -60,11 +60,45 @@ describe('requireAuthorized', () => {
 
     it.each(superAdminActions)('%s : exige la 2FA, sauf exemption', async (action) => {
       sessionFor('SUPER_ADMIN', { twoFactorEnabled: false });
-      if ('twoFactorExempt' in ACTIONS[action]) {
+      if (ACTIONS[action].twoFactorExempt) {
         await expect(requireAuthorized(action)).resolves.toBeDefined();
       } else {
         await expect(requireAuthorized(action)).rejects.toThrow('REDIRECT:/profil?2fa=requise');
       }
+    });
+
+    // Le catalogue n'a aujourd'hui que des exemptions à `true` ou absentes ; ces tests déclarent
+    // une action fictive pour que la page lise la valeur de `twoFactorExempt` comme le fait la
+    // route (`authorize`), et non la simple présence de la clé.
+    describe('valeur explicite de twoFactorExempt', () => {
+      const ID = 'test.exemption-explicite' as ActionId;
+      const declarer = (twoFactorExempt: boolean) => {
+        (ACTIONS as Record<string, unknown>)[ID] = {
+          ...ACTIONS['plateforme.superviser'],
+          twoFactorExempt,
+        };
+      };
+      afterEach(() => {
+        delete (ACTIONS as Record<string, unknown>)[ID];
+      });
+
+      it('twoFactorExempt: false exige la 2FA, comme sur les routes', async () => {
+        declarer(false);
+        sessionFor('SUPER_ADMIN', { twoFactorEnabled: false });
+        await expect(requireAuthorized(ID)).rejects.toThrow('REDIRECT:/profil?2fa=requise');
+      });
+
+      it('twoFactorExempt: true dispense de la 2FA', async () => {
+        declarer(true);
+        sessionFor('SUPER_ADMIN', { twoFactorEnabled: false });
+        await expect(requireAuthorized(ID)).resolves.toBeDefined();
+      });
+
+      it('twoFactorExempt: false laisse passer un SuperAdmin dont la 2FA est activée', async () => {
+        declarer(false);
+        sessionFor('SUPER_ADMIN', { twoFactorEnabled: true });
+        await expect(requireAuthorized(ID)).resolves.toBeDefined();
+      });
     });
 
     it('laisse le SuperAdmin accéder à son profil sans 2FA, pour pouvoir l activer', async () => {
