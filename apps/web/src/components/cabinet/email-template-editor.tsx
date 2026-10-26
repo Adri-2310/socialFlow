@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
+import { FormField } from '@/components/shared/form-field';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import { buildTemplatePreview, inertLinks } from '@/lib/email/email-layout';
 import type { CabinetEmailBrand } from '@/lib/email/email-brand';
 import {
@@ -41,9 +47,6 @@ function describe(error: TemplateError | null): string | null {
       return `Variable inconnue : ${error.variables.map((v) => `{{${v}}}`).join(', ')}.`;
   }
 }
-
-const inputClass =
-  'w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
 type Props = {
   type: TemplateType;
@@ -160,77 +163,66 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
           <h3 className="text-sm font-bold text-foreground">{definition.label}</h3>
           <p className="mt-1 text-xs text-muted-foreground">{definition.description}</p>
         </div>
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-            custom ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
-          }`}
-        >
-          {custom ? 'Personnalisé' : 'Modèle par défaut'}
-        </span>
+        <StatusBadge domain="modele" status={custom ? 'personnalise' : 'defaut'} />
       </div>
 
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
         <fieldset disabled={readOnly || loading !== null} className="space-y-4">
-          <div>
-            <label htmlFor={`${type}-subject`} className="text-sm font-medium text-foreground">
-              Sujet
-            </label>
-            <input
-              id={`${type}-subject`}
-              value={subject}
-              onChange={(e) => {
-                touch();
-                setSubject(e.target.value);
-              }}
-              className={`${inputClass} mt-1`}
-            />
-            {errors.subject && (
-              <p role="alert" className="mt-1 text-xs text-destructive-text">
-                {describe(errors.subject)}
-              </p>
+          <FormField id={`${type}-subject`} label="Sujet" error={describe(errors.subject)}>
+            {(c) => (
+              <Input
+                {...c}
+                value={subject}
+                onChange={(e) => {
+                  touch();
+                  setSubject(e.target.value);
+                }}
+              />
             )}
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor={`${type}-body`} className="text-sm font-medium text-foreground">
-              Message
-            </label>
-            <textarea
-              id={`${type}-body`}
-              ref={bodyRef}
-              value={body}
-              rows={9}
-              onChange={(e) => {
-                touch();
-                setBody(e.target.value);
-              }}
-              className={`${inputClass} mt-1 font-mono`}
-            />
-            {errors.body ? (
-              <p role="alert" className="mt-1 text-xs text-destructive-text">
-                {describe(errors.body)}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Une ligne vide sépare les paragraphes. <strong>**gras**</strong>, <em>*italique*</em>{' '}
-                et [texte](https://…) sont pris en charge ; tout autre balisage est affiché tel quel.
-              </p>
+          <FormField
+            id={`${type}-body`}
+            label="Message"
+            hint={
+              <>
+                Une ligne vide sépare les paragraphes. <strong>**gras**</strong>,{' '}
+                <em>*italique*</em> et [texte](https://…) sont pris en charge ; tout autre balisage
+                est affiché tel quel.
+              </>
+            }
+            error={describe(errors.body)}
+          >
+            {(c) => (
+              <Textarea
+                {...c}
+                ref={bodyRef}
+                value={body}
+                rows={9}
+                onChange={(e) => {
+                  touch();
+                  setBody(e.target.value);
+                }}
+                className="field-sizing-fixed font-mono"
+              />
             )}
-          </div>
+          </FormField>
 
           <div>
             <p className="text-xs font-medium text-foreground">Variables (cliquez pour insérer)</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {definition.variables.map((variable) => (
-                <button
+                <Button
                   key={variable.name}
                   type="button"
+                  variant="outline"
+                  size="sm"
                   title={variable.label}
                   onClick={() => insertVariable(variable.name)}
-                  className="rounded-lg border border-border bg-background px-2.5 py-1 font-mono text-xs text-foreground transition hover:bg-muted"
+                  className="font-mono text-xs font-normal"
                 >
                   {`{{${variable.name}}}`}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -240,9 +232,14 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
             dans un cadre isole. Le cadre n'a aucun droit (pas de script, de
             formulaire ni de navigation), seul allow-same-origin permet de lire sa
             hauteur. Le HTML vient de renderBody : texte echappe, balisage limite. */}
-        <div aria-label="Aperçu" className="overflow-hidden rounded-xl border border-border bg-card">
+        <div
+          aria-label="Aperçu"
+          className="overflow-hidden rounded-xl border border-border bg-card"
+        >
           <div className="space-y-1 border-b border-border px-4 py-3 text-xs">
-            <p className="font-medium text-muted-foreground">Aperçu de l’email reçu (données fictives)</p>
+            <p className="font-medium text-muted-foreground">
+              Aperçu de l’email reçu (données fictives)
+            </p>
             <p className="text-foreground">
               <span className="text-muted-foreground">De : </span>
               {fromLabel}
@@ -272,7 +269,8 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
 
       {readOnly && (
         <p className="mt-4 text-xs text-muted-foreground">
-          Votre cabinet est en lecture seule : régularisez votre abonnement pour modifier les modèles.
+          Votre cabinet est en lecture seule : régularisez votre abonnement pour modifier les
+          modèles.
         </p>
       )}
       {error && (
@@ -288,7 +286,7 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
 
       {!readOnly && (
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
+          <Button
             type="button"
             disabled={loading !== null || !validation.ok}
             onClick={() =>
@@ -302,13 +300,13 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
                 },
               )
             }
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading === 'save' && <Loader2 className="h-4 w-4 animate-spin" />}
+            {loading === 'save' && <Spinner />}
             Enregistrer
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             disabled={loading !== null || !validation.ok}
             onClick={() =>
               call(
@@ -317,14 +315,14 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
                 'Email de test envoyé à votre adresse.',
               )
             }
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading === 'test' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {loading === 'test' ? <Spinner /> : <Send />}
             Envoyer un test
-          </button>
+          </Button>
           {custom && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               disabled={loading !== null}
               onClick={() =>
                 call(
@@ -339,10 +337,10 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
                   },
                 )
               }
-              className="rounded-xl px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-60"
+              className="text-muted-foreground"
             >
               Rétablir le modèle par défaut
-            </button>
+            </Button>
           )}
         </div>
       )}

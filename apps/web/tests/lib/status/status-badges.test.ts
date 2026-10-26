@@ -40,6 +40,11 @@ describe('registre des statuts', () => {
     expect(statusEntry('periode', 'VERROUILLEE').label).toBe('Verrouillées');
   });
 
+  it('distingue le modèle d email personnalisé du modèle par défaut', () => {
+    expect(statusEntry('modele', 'personnalise')).toEqual({ label: 'Personnalisé', tone: 'info' });
+    expect(statusEntry('modele', 'defaut')).toEqual({ label: 'Modèle par défaut', tone: 'neutral' });
+  });
+
   it('affiche un statut inconnu tel quel, en ton neutre', () => {
     expect(statusEntry('compte', 'en_revue')).toEqual({ label: 'en_revue', tone: 'neutral' });
     expect(statusEntry('abonnement', 'NOUVEAU')).toEqual({ label: 'NOUVEAU', tone: 'neutral' });

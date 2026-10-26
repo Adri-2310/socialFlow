@@ -33,6 +33,25 @@ describe('BrandingForm', () => {
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
   });
 
+  it('relie l erreur de contraste au champ de couleur, avec la suggestion dans le message', () => {
+    render(<BrandingForm branding={empty} cabinetName="Cabinet" readOnly={false} />);
+
+    const field = screen.getByLabelText('Couleur principale');
+    fireEvent.change(field, { target: { value: '#00c49f' } });
+
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(/Contraste insuffisant/);
+    // La couleur secondaire, valide, n est pas marquée en erreur.
+    expect(screen.getByLabelText('Couleur secondaire')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('garde un sélecteur de couleur natif nommé pour chaque couleur', () => {
+    render(<BrandingForm branding={empty} cabinetName="Cabinet" readOnly={false} />);
+
+    expect(screen.getByLabelText('Couleur principale (sélecteur)')).toHaveAttribute('type', 'color');
+    expect(screen.getByLabelText('Couleur secondaire (sélecteur)')).toHaveAttribute('type', 'color');
+  });
+
   it('envoie le branding et confirme', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
     vi.stubGlobal('fetch', fetchMock);

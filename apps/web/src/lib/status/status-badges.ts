@@ -6,7 +6,7 @@ import { BILLING_STATUS_LABELS, type BillingStatus } from '@/lib/billing/billing
 
 export type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 
-export type StatusDomain = 'compte' | 'abonnement' | 'stripe' | 'periode';
+export type StatusDomain = 'compte' | 'abonnement' | 'stripe' | 'periode' | 'modele';
 
 export type StatusEntry = { label: string; tone: StatusTone };
 
@@ -52,11 +52,18 @@ const PERIODE: Record<string, StatusEntry> = {
   VERROUILLEE: { label: 'Verrouillées', tone: 'neutral' },
 };
 
+// Modèles d'email du cabinet (D30, D68) : personnalisé ou repli sur le modèle par défaut.
+const MODELE: Record<string, StatusEntry> = {
+  personnalise: { label: 'Personnalisé', tone: 'info' },
+  defaut: { label: 'Modèle par défaut', tone: 'neutral' },
+};
+
 export const STATUS_REGISTRY: Record<StatusDomain, Record<string, StatusEntry>> = {
   compte: COMPTE,
   abonnement: ABONNEMENT,
   stripe: STRIPE,
   periode: PERIODE,
+  modele: MODELE,
 };
 
 // Un statut inconnu (ajouté plus tard en base) s'affiche tel quel en ton neutre, comme avant

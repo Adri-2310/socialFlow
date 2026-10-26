@@ -48,6 +48,33 @@ describe('FormField', () => {
     expect(screen.queryByText('Sans espaces')).not.toBeInTheDocument();
   });
 
+  it('accepte du contenu riche dans l’erreur et l’aide (bouton de suggestion, gras)', () => {
+    render(
+      <>
+        <FormField
+          id="couleur"
+          label="Couleur"
+          error={
+            <>
+              Contraste insuffisant. <button type="button">Utiliser cette teinte</button>
+            </>
+          }
+        >
+          {(c) => <Input {...c} />}
+        </FormField>
+        <FormField id="msg" label="Message" hint={<strong>**gras** accepté</strong>}>
+          {(c) => <Input {...c} />}
+        </FormField>
+      </>,
+    );
+
+    expect(screen.getByLabelText('Couleur')).toHaveAccessibleDescription(
+      'Contraste insuffisant. Utiliser cette teinte',
+    );
+    expect(screen.getByRole('button', { name: 'Utiliser cette teinte' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Message')).toHaveAccessibleDescription('**gras** accepté');
+  });
+
   it('garde la couleur d’erreur lisible en sombre (destructive-text)', () => {
     render(
       <FormField id="nom" label="Nom" error="Obligatoire">

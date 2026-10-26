@@ -26,8 +26,9 @@ export function FormField({
 }: {
   id?: string;
   label: string;
-  hint?: string;
-  error?: string;
+  // Du texte, ou du contenu riche (gras, bouton « Utiliser cette teinte »…).
+  hint?: ReactNode;
+  error?: ReactNode;
   required?: boolean;
   className?: string;
   children: (control: FormControlProps) => ReactNode;
