@@ -52,7 +52,7 @@ export function ConfirmDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>Annuler</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={onConfirm} disabled={loading}>
-            {loading && <Spinner aria-hidden="true" role="presentation" />}
+            {loading && <Spinner />}
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

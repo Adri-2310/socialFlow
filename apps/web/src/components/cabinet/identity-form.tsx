@@ -2,7 +2,11 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import type { CountryOption } from '@/lib/countries';
 import type { CabinetIdentity } from '@/lib/cabinet/cabinet-identity';
 
@@ -38,38 +42,6 @@ const toForm = (identity: CabinetIdentity): FormState => ({
   contactPhone: identity.contactPhone ?? '',
 });
 
-const inputClass =
-  'mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
-
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-      </label>
-      {children}
-      {hint && !error && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-destructive-text">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 // Identite du cabinet (D30) : ce que ses clients voient d'elle. Le serveur
 // revalide tout ; les erreurs reviennent champ par champ.
 // `countries` est calcule cote serveur : les noms de pays et leur tri viennent
@@ -93,9 +65,9 @@ export function IdentityForm({
 
   const set =
     (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setSaved(false);
-    setForm((current) => ({ ...current, [field]: e.target.value }));
-  };
+      setSaved(false);
+      setForm((current) => ({ ...current, [field]: e.target.value }));
+    };
 
   async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -129,7 +101,8 @@ export function IdentityForm({
     }
   }
 
-  const err = (field: string) => (fieldErrors[field] ? FIELD_ERRORS[fieldErrors[field]] ?? FALLBACK : undefined);
+  const err = (field: string) =>
+    fieldErrors[field] ? (FIELD_ERRORS[fieldErrors[field]] ?? FALLBACK) : undefined;
 
   return (
     <form
@@ -144,72 +117,114 @@ export function IdentityForm({
 
       <fieldset disabled={readOnly || loading} className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field id="name" label="Raison sociale" error={err('name')}>
-            <input id="name" value={form.name} onChange={set('name')} required autoComplete="organization" className={inputClass} />
-          </Field>
+          <FormField id="name" label="Raison sociale" error={err('name')}>
+            {(c) => (
+              <Input
+                {...c}
+                value={form.name}
+                onChange={set('name')}
+                required
+                autoComplete="organization"
+              />
+            )}
+          </FormField>
         </div>
 
-        <Field
+        <FormField
           id="vatNumber"
           label="N° de TVA / d’entreprise"
           hint="Format belge : BE0123.456.749"
           error={err('vatNumber')}
         >
-          <input
-            id="vatNumber"
-            value={form.vatNumber}
-            onChange={set('vatNumber')}
-            placeholder="BE0123.456.749"
-            autoComplete="off"
-            autoCapitalize="characters"
-            className={inputClass}
-          />
-        </Field>
+          {(c) => (
+            <Input
+              {...c}
+              value={form.vatNumber}
+              onChange={set('vatNumber')}
+              placeholder="BE0123.456.749"
+              autoComplete="off"
+              autoCapitalize="characters"
+            />
+          )}
+        </FormField>
 
-        <Field id="country" label="Pays" error={err('country')}>
-          <select id="country" value={form.country} onChange={set('country')} autoComplete="country" className={inputClass}>
-            {countries.map((country) => (
-              <option key={country.code} value={country.code}>
-                {country.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <FormField id="country" label="Pays" error={err('country')}>
+          {(c) => (
+            <NativeSelect
+              {...c}
+              value={form.country}
+              onChange={set('country')}
+              autoComplete="country"
+            >
+              {countries.map((country) => (
+                <NativeSelectOption key={country.code} value={country.code}>
+                  {country.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          )}
+        </FormField>
 
         <div className="sm:col-span-2">
-          <Field id="addressLine" label="Adresse" error={err('addressLine')}>
-            <input id="addressLine" value={form.addressLine} onChange={set('addressLine')} autoComplete="street-address" className={inputClass} />
-          </Field>
+          <FormField id="addressLine" label="Adresse" error={err('addressLine')}>
+            {(c) => (
+              <Input
+                {...c}
+                value={form.addressLine}
+                onChange={set('addressLine')}
+                autoComplete="street-address"
+              />
+            )}
+          </FormField>
         </div>
 
-        <Field id="postalCode" label="Code postal" error={err('postalCode')}>
-          <input id="postalCode" value={form.postalCode} onChange={set('postalCode')} autoComplete="postal-code" className={inputClass} />
-        </Field>
+        <FormField id="postalCode" label="Code postal" error={err('postalCode')}>
+          {(c) => (
+            <Input
+              {...c}
+              value={form.postalCode}
+              onChange={set('postalCode')}
+              autoComplete="postal-code"
+            />
+          )}
+        </FormField>
 
-        <Field id="city" label="Ville" error={err('city')}>
-          <input id="city" value={form.city} onChange={set('city')} autoComplete="address-level2" className={inputClass} />
-        </Field>
+        <FormField id="city" label="Ville" error={err('city')}>
+          {(c) => (
+            <Input {...c} value={form.city} onChange={set('city')} autoComplete="address-level2" />
+          )}
+        </FormField>
 
-        <Field
+        <FormField
           id="contactEmail"
           label="Email de contact"
           hint="Utilisé comme adresse de réponse des emails envoyés à vos clients."
           error={err('contactEmail')}
         >
-          <input
-            id="contactEmail"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={form.contactEmail}
-            onChange={set('contactEmail')}
-            className={inputClass}
-          />
-        </Field>
+          {(c) => (
+            <Input
+              {...c}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={form.contactEmail}
+              onChange={set('contactEmail')}
+            />
+          )}
+        </FormField>
 
-        <Field id="contactPhone" label="Téléphone" error={err('contactPhone')}>
-          <input id="contactPhone" type="tel" inputMode="tel" value={form.contactPhone} onChange={set('contactPhone')} autoComplete="tel" className={inputClass} />
-        </Field>
+        <FormField id="contactPhone" label="Téléphone" error={err('contactPhone')}>
+          {(c) => (
+            <Input
+              {...c}
+              type="tel"
+              inputMode="tel"
+              value={form.contactPhone}
+              onChange={set('contactPhone')}
+              autoComplete="tel"
+            />
+          )}
+        </FormField>
       </fieldset>
 
       {readOnly && (
@@ -231,14 +246,10 @@ export function IdentityForm({
       )}
 
       {!readOnly && (
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-60"
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={loading} className="mt-5">
+          {loading && <Spinner />}
           Enregistrer
-        </button>
+        </Button>
       )}
     </form>
   );

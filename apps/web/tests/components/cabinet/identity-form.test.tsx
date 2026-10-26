@@ -83,6 +83,33 @@ describe('IdentityForm', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
+  it('relie l erreur du serveur à son champ pour les lecteurs d ecran', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: 'INVALID_REQUEST', fields: { vatNumber: 'INVALID_VAT' } }),
+      }),
+    );
+    render(<IdentityForm identity={identity} countries={countries} readOnly={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    const field = await screen.findByLabelText(/N° de TVA/);
+    await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'true'));
+    expect(field).toHaveAccessibleDescription(/N° de TVA belge invalide/);
+    // Les champs sans erreur ne sont pas marqués invalides.
+    expect(screen.getByLabelText('Ville')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('décrit le champ par son aide tant qu il n y a pas d erreur', () => {
+    render(<IdentityForm identity={identity} countries={countries} readOnly={false} />);
+
+    expect(screen.getByLabelText(/N° de TVA/)).toHaveAccessibleDescription(
+      'Format belge : BE0123.456.749',
+    );
+  });
+
   it('en lecture seule : champs desactives, pas de bouton, explication', () => {
     render(<IdentityForm identity={identity} countries={countries} readOnly />);
 

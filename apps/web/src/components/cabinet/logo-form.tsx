@@ -2,7 +2,10 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { ImageIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 const MAX_BYTES = 1024 * 1024;
 
@@ -73,7 +76,10 @@ export function LogoForm({
     }
     const data = new FormData();
     data.append('logo', file);
-    void send(() => fetch('/api/cabinet/settings/logo', { method: 'POST', body: data }), 'Logo enregistré.');
+    void send(
+      () => fetch('/api/cabinet/settings/logo', { method: 'POST', body: data }),
+      'Logo enregistré.',
+    );
   }
 
   return (
@@ -87,7 +93,11 @@ export function LogoForm({
         <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-background">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- URL externe (Blob), taille fixe
-            <img src={logoUrl} alt={`Logo de ${cabinetName}`} className="h-full w-full object-contain p-1" />
+            <img
+              src={logoUrl}
+              alt={`Logo de ${cabinetName}`}
+              className="h-full w-full object-contain p-1"
+            />
           ) : (
             <ImageIcon className="h-6 w-6 text-muted-foreground" aria-hidden />
           )}
@@ -95,35 +105,43 @@ export function LogoForm({
 
         {!readOnly && (
           <div className="flex flex-wrap items-center gap-2">
-            <input
+            {/* Le sélecteur de fichier natif reste masqué : le bouton visible l'ouvre, et
+                reçoit le focus au clavier (l'ancien label déguisé en bouton ne l'avait pas). */}
+            <Input
               ref={input}
               id="logo"
               type="file"
               accept="image/png,image/svg+xml,.png,.svg"
               onChange={onFile}
               disabled={loading}
+              tabIndex={-1}
+              aria-hidden="true"
               className="sr-only"
             />
-            <label
-              htmlFor="logo"
-              className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted ${
-                loading ? 'pointer-events-none opacity-60' : ''
-              }`}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={() => input.current?.click()}
             >
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading && <Spinner />}
               {logoUrl ? 'Remplacer le logo' : 'Ajouter un logo'}
-            </label>
+            </Button>
             {logoUrl && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 disabled={loading}
                 onClick={() =>
-                  send(() => fetch('/api/cabinet/settings/logo', { method: 'DELETE' }), 'Logo retiré.')
+                  send(
+                    () => fetch('/api/cabinet/settings/logo', { method: 'DELETE' }),
+                    'Logo retiré.',
+                  )
                 }
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-destructive-text transition hover:bg-destructive/10 disabled:opacity-60"
+                className="text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
               >
                 Retirer le logo
-              </button>
+              </Button>
             )}
           </div>
         )}

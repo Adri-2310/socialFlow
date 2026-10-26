@@ -66,6 +66,14 @@ describe('PortalForm (D76)', () => {
     expect(screen.getByLabelText('Adresse du portail')).toHaveTextContent('/connexion/cabinet-dupont');
   });
 
+  it('décrit le champ par l avertissement sur les liens deja envoyes', () => {
+    renderForm();
+
+    expect(screen.getByLabelText('Identifiant du portail')).toHaveAccessibleDescription(
+      /liens déjà envoyés/,
+    );
+  });
+
   it('copie l adresse du portail', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
