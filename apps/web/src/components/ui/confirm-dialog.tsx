@@ -1,10 +1,24 @@
 'use client';
 
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Spinner } from '@/components/ui/spinner';
 
-// Petite modale de confirmation generique (pas de lib de dialog dans le
-// projet - voir exploration du design system existant). A reutiliser pour
-// toute future action destructive necessitant une confirmation explicite.
+// Modale de confirmation générique, à réutiliser pour toute action destructive. Les appelants
+// la montent seulement quand la confirmation est demandée (`{open && <ConfirmDialog … />}`) :
+// elle est donc toujours ouverte, et c'est `onCancel` qui la ferme (bouton Annuler ou Échap).
+// Pendant `loading`, Échap est ignoré et les deux boutons sont désactivés : l'action en cours
+// ne peut pas être abandonnée à mi-chemin.
 export function ConfirmDialog({
   title,
   description,
@@ -21,37 +35,28 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6">
-        <div className="flex items-start gap-4">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-          </span>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+    <AlertDialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !loading) onCancel();
+      }}
+    >
+      <AlertDialogContent className="p-5 data-[size=default]:sm:max-w-md sm:p-6">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <AlertTriangle aria-hidden="true" />
+          </AlertDialogMedia>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={loading}>Annuler</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm} disabled={loading}>
+            {loading && <Spinner aria-hidden="true" role="presentation" />}
             {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
