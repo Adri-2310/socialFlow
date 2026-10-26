@@ -11,7 +11,7 @@
 | Fusion | `feature/*` → `dev` par pull request quand les tests passent ; `dev` → `main` à chaque jalon stable |
 | Messages de commit | En français, au présent, verbe d'action en tête, sans point final : « Ajoute la page Gestionnaires », « Corrige la restauration d'un plan… » |
 | Taille | Un commit = un changement cohérent qu'on peut expliquer en une phrase |
-| Interdits | Commiter `.env*` (hors `.env.example`), des secrets ou des données réelles de salariés |
+| Interdits | Commiter `.env*` (hors `.env.example`), des secrets ; aucune donnée personnelle réelle (salariés, fiches de paie, y compris celles du développeur) dans le dépôt, qui est public : les cas de référence sont anonymisés |
 
 ## 2. Organisation du code (`apps/web/src`)
 
