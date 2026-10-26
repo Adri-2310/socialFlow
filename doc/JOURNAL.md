@@ -192,3 +192,46 @@
 - Les dates et les mois des tests sont toujours calculés par rapport à aujourd'hui, ou passés en paramètre : sinon les tests cassent le jour où le mois change.
 
 **Reste à faire** : moteur de paie et cycle des fiches, DIMONA et dernière fiche d'un salarié sorti, file des demandes avec le portail Entreprise, qui apportera aussi l'écran d'encodage des prestations par l'entreprise et les rappels J-3 et J-1. Pour cette branche : appliquer les quatre migrations en attente (`add_salarie`, `add_invitation_salarie`, `add_entreprise_jour_limite`, `add_periode_paie_prestation`) sur `production` avant la mise en ligne, avec `ENCRYPTION_KEY` sur Vercel, puis fusionner dans `dev` (la CI applique les migrations sur la base `test`, que j'avais vidée au préalable). Dettes et idées : voir `AMELIORATIONS.md`.
+
+
+---
+
+## 2026-10-26 — Second audit avant le moteur de paie : paie conservée, situation fiscale, heures, 2FA et chiffrement
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
+
+**Objectif** : corriger les points relevés à l'audit du 24/10/2026 avant de commencer le moteur de paie. Une donnée à conserver 5 ans pouvait être effacée par la purge d'un cabinet, le modèle fiscal du salarié ne suffisait pas au précompte, des durées étaient stockées en flottants, une garde 2FA ne lisait pas la même valeur sur les pages et sur les routes, et le NISS et l'IBAN chiffrés n'étaient pas liés à leur dossier.
+
+**Décisions prises** : D94 à D97 (voir `DECISIONS.md`), rédigées avant le code.
+- D94 : à la purge d'un cabinet archivé depuis 90 jours, les comptes, le branding et le lien d'abonnement partent mais les entreprises et toutes les données de paie restent jusqu'à 5 ans après la fin de l'année de la dernière période. Une seconde tâche supprime ensuite tout. Les clés étrangères de la paie passent en `Restrict`, pour qu'une suppression directe échoue au lieu d'effacer en cascade.
+- D95 : la situation fiscale du dossier reprend les critères de l'Annexe III 2026 (revenus du conjoint en cinq cas, handicaps, enfants et autres personnes à charge, parent isolé, attribution des charges de famille), jamais un montant. Le formulaire est guidé et ne pose que les questions utiles.
+- D96 : les heures par semaine du temps partiel sont des minutes entières, comme les heures prestées.
+- D97 : le NISS et l'IBAN sont chiffrés avec des données associées (identifiant du dossier et nom du champ) ; une valeur recopiée ailleurs ne se lit plus. L'ancien format reste lisible et un script convertit le reste.
+
+**Réalisé** : branche `feature/correctifs-audit` (réutilisée après fusion du premier audit), 14 commits en français, un à trois par étape présentée et validée avant d'être codée.
+- Étape 1 : inventaire des cascades, trois options présentées, option (c) retenue (purge partielle plus `Restrict` en filet) ; `lib/cabinet/cabinet-purge.ts`, tâche `purge-expired-retention`, et tous les nettoyages de tests passent par `supprimerCabinetsEtDonnees`.
+- Étape 2 : lecture de l'Annexe III 2026 (44 pages) pour établir la liste des critères avec leur numéro ; migration additive avec reprise des dossiers existants, schéma, formulaire, import CSV.
+- Étape 3 : migration écrite à la main (renommage puis conversion, un « supprimer puis ajouter » généré par Prisma aurait perdu les valeurs), vérifiée ensuite sur les trois lignes existantes.
+- Étape 4 : une garde de page testait la présence de la clé `twoFactorExempt` au lieu de sa valeur.
+- Étape 5 : format `v2`, contexte construit à un seul endroit, script `npm run db:reencrypt`.
+
+**Contrôlé / corrigé par moi**
+- J'ai choisi l'option (c) pour la conservation, et validé les quatre propositions qui l'accompagnaient (point de départ des 5 ans, ce qui compte comme « données à conserver », aucun accès pendant la conservation, restitution à l'employeur notée pour plus tard). ?
+- J'ai demandé que le gestionnaire ait le moins possible à saisir, ce qui a donné un formulaire guidé et l'idée de faire déclarer la situation fiscale par le salarié lui-même depuis son portail. ?
+- J'ai fourni le PDF de l'Annexe III moi-même, et demandé que l'application ne se base que sur lui, pas sur la mémoire de l'assistant. ?
+- J'ai fait supprimer la branche `feature/audit-avant-paie`, vide, pour regrouper mes audits dans `feature/correctifs-audit`. ?
+- J'ai proposé de récupérer automatiquement les barèmes sur internet ; nous avons décidé d'en faire un chantier de finitions (D51) à deux niveaux, la validation humaine restant obligatoire. ?
+- J'ai choisi de faire l'étape 5, facultative, alors que l'assistant recommandait de la reporter. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Tests** : la suite complète de départ comptait 133 fichiers et 2 749 tests, verts à un test près (un dépassement de délai qui passait ensuite seul). Chaque étape a ajouté ses propres fichiers, dont les tests de purge (`cabinet-purge`), de situation fiscale (schéma, formulaire, import, composant), de durées, de garde 2FA (un test échouait sur l'ancien code) et de chiffrement (16 tests en base, dont valeur recopiée, anciennes valeurs, conflit simulé). Suite complète finale à renseigner. ?
+
+**Difficultés et apprentissages**
+- Passer des clés étrangères en `Restrict` casse tous les nettoyages de tests qui comptaient sur la cascade : une trentaine de fichiers à adapter, d'où une seule fonction de suppression partagée.
+- Prisma refuse de générer une migration qui supprime une colonne en mode non interactif, et la version qu'il aurait écrite perdait les données : le SQL de conversion s'écrit à la main.
+- Un test qui reprend la même erreur que le code ne peut rien détecter : celui de la garde 2FA copiait la condition fautive. Le nouveau test déclare une action fictive pour échouer sur l'ancien code.
+- Je n'ai pas trouvé de texte fiable de l'article 136 CIR 92 : la notion « à charge » reste déclarée par le gestionnaire, et les seuils de l'Annexe ne peuvent pas encore s'afficher (aucun montant dans le code avant `BaremeVersion`). Les libellés citent donc le numéro de l'Annexe.
+- Les tests contre la base distante dépassent parfois les 15 secondes ou perdent la connexion : on relance le fichier seul avant de conclure à une régression.
+- Une série de tests lancée en arrière-plan survit à la fermeture de l'éditeur : il faut l'arrêter avant d'en relancer une, sinon le nettoyage de fin de l'une efface les comptes de test de l'autre.
+
+**Reste à faire** : lancer `npm run db:reencrypt` (d'abord `--dry-run`) sur `dev`, puis sur la production après un point de restauration Neon ; appliquer sur la production les trois migrations de cette branche ; fusionner dans `dev` ; trancher les points ouverts n° 5 et 6 avant le moteur de paie (`feature/moteur-paie`). Plus tard : rotation de `ENCRYPTION_KEY`, déclaration de la situation fiscale par le salarié, texte de l'article 136. Dettes et idées : voir `AMELIORATIONS.md`.

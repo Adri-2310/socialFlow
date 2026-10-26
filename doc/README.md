@@ -20,7 +20,7 @@ Travail de fin d'études — Adrien Mertens — remise le 30/06/2027.
 |---|---|---|
 | 1 | [SuperAdmin](roles/01-superadmin.md) | Construit en grande partie |
 | 2 | [Cabinet RH](roles/02-cabinet-rh.md) | Construit (reste ce qui dépend d'autres modules) |
-| 3 | [Gestionnaire RH](roles/03-gestionnaire-rh.md) | Dossiers salariés construits (G1) ; paie, déclarations et demandes à venir |
+| 3 | [Gestionnaire RH](roles/03-gestionnaire-rh.md) | Dossiers salariés, périodes, prestations et tableau de bord construits ; paie, déclarations et demandes à venir |
 | 4 | [Entreprise cliente](roles/04-entreprise-cliente.md) | À construire |
 | 5 | [Collaborateur](roles/05-collaborateur.md) | À construire (invitation par le gestionnaire faite) |
 
@@ -59,8 +59,9 @@ Toute nouvelle décision s'ajoute dans `DECISIONS.md` (numéro suivant, date) **
 | 1 | Durée de conservation du journal d'audit | `FONCTIONNEMENT.md` § 12, `RGPD.md` |
 | 2 | Fiche fiscale 281.10 générée dans l'application ? | `roles/05-collaborateur.md`, `modules/integrations.md` § 6 |
 | 3 | ~~Délai de grâce de 14 jours~~ : fixé à 7 jours (D57) | `DECISIONS.md` |
-| 4 | Barèmes : détection automatique + activation validée par le SuperAdmin ? | `roles/01-superadmin.md` § 7, `modules/paie.md` § 5 |
-| 5 | Accès à des fiches réelles anonymisées pour les cas de référence ? | `modules/paie.md` § 8 |
-| 6 | Catégorie d'employeur pour les cotisations patronales | `modules/paie.md` § 8 |
+| 4 | Barèmes : veille automatique (D51, chantier F de `ROADMAP.md`) en deux niveaux, détection puis extraction assistée, toujours validée par le SuperAdmin ; reste à confirmer sur les vrais PDF et la politique des robots | `roles/01-superadmin.md` § 7, `modules/paie.md` § 5 |
+| 5 | Accès à des fiches réelles anonymisées pour les cas de référence ? **À trancher avant G2a** | `modules/paie.md` § 8 |
+| 6 | Catégorie d'employeur pour les cotisations patronales. **À trancher avant G2a** | `modules/paie.md` § 8 |
 | 7 | Priorité, fournisseur et budget du module IA | `modules/intelligence.md` § 4 |
 | 8 | Taille maximale d'un document déposé | `modules/collaboration.md` § 3 |
+| 9 | Texte de l'article 136 CIR 92 (notion de personne « à charge »), à joindre à `reference/` : le dossier ne fait que reprendre ce que le gestionnaire déclare (D95) | `DECISIONS.md` D95 |
