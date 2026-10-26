@@ -2,8 +2,12 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { DoorOpen, Loader2 } from 'lucide-react';
-import { Field, inputClass } from '@/components/gestionnaire/form-field';
+import { DoorOpen } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { ERROR_MESSAGES, FALLBACK, FIELD_ERRORS } from '@/lib/salarie/form-messages';
 
 // Messages propres à cette boîte : la date de sortie s'y saisit, contrairement au formulaire
@@ -77,57 +81,41 @@ export function SalarieSortie({
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => setOpen(true)}
         disabled={readOnly}
         title={readOnly ? 'Votre cabinet est en lecture seule.' : undefined}
-        className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+        className="shrink-0"
       >
-        <DoorOpen className="h-4 w-4" />
+        <DoorOpen />
         {existante ? 'Modifier la sortie' : 'Enregistrer la sortie'}
-      </button>
+      </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="sortie-title"
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
-          >
-            <div className="flex items-start gap-4">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                <DoorOpen className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 id="sortie-title" className="text-lg font-semibold text-foreground">
-                  {existante ? 'Modifier la sortie' : 'Enregistrer la sortie'}
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Le dossier reste actif : la dernière fiche de paie reste à préparer. La
-                  déclaration DIMONA de sortie sera générée avec le module des déclarations.
-                </p>
-              </div>
-            </div>
-
-            <fieldset disabled={loading} className="mt-5">
-              <Field
+        <FormDialog
+          icon={<DoorOpen />}
+          title={existante ? 'Modifier la sortie' : 'Enregistrer la sortie'}
+          description="Le dossier reste actif : la dernière fiche de paie reste à préparer. La déclaration DIMONA de sortie sera générée avec le module des déclarations."
+        >
+          <form onSubmit={handleSubmit} noValidate>
+            <fieldset disabled={loading}>
+              <FormField
                 id="sortie-date"
                 label="Dernier jour de travail"
                 error={fieldError ? (DATE_ERRORS[fieldError] ?? 'Valeur invalide.') : undefined}
                 hint="Peut être passée ou future, mais pas avant l’entrée du salarié."
               >
-                <input
-                  id="sortie-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className={inputClass}
-                />
-              </Field>
+                {(c) => (
+                  <Input
+                    {...c}
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                )}
+              </FormField>
             </fieldset>
 
             {error && (
@@ -138,34 +126,26 @@ export function SalarieSortie({
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
               {existante && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => void envoyer(null)}
                   disabled={loading}
-                  className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:mr-auto"
+                  className="sm:mr-auto"
                 >
                   Effacer la sortie
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
-                onClick={fermer}
-                disabled={loading}
-                className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-              >
+              <Button type="button" variant="outline" onClick={fermer} disabled={loading}>
                 Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Spinner />}
                 Enregistrer
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </FormDialog>
       )}
     </>
   );
