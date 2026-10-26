@@ -20,7 +20,7 @@ vi.mock('@/lib/email/email', () => ({
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
-const { decryptField } = await import('@/lib/crypto/field-encryption');
+const { dechiffrerSalarie } = await import('@/lib/salarie/salarie-crypto');
 const { POST: creerSalarie } = await import('@/app/api/entreprises/[id]/salaries/route');
 const { PATCH } = await import('@/app/api/salaries/[id]/route');
 
@@ -287,7 +287,8 @@ describe('PATCH /api/salaries/[id] : modification', () => {
     const res = await modifier(salarieId, modification({ iban: IBAN_B }), gestionnaire.cj);
     expect((await res.json()).changed).toEqual(['iban']);
     const enBase = await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } });
-    expect(decryptField(enBase.ibanEncrypted)).toBe('BE26458745963529');
+    expect(dechiffrerSalarie(salarieId, 'iban', enBase.ibanEncrypted)).toBe('BE26458745963529');
+    expect(enBase.ibanEncrypted.startsWith('v2:')).toBe(true);
     expect(enBase.ibanEncrypted).not.toContain('4587');
 
     const encore = await modifier(salarieId, modification({ iban: IBAN_B }), gestionnaire.cj);
@@ -320,7 +321,7 @@ describe('PATCH /api/salaries/[id] : modification', () => {
     const ok = await modifier(salarieId, modification({ niss: nouveau }), gestionnaire.cj);
     expect((await ok.json()).changed).toEqual(['niss']);
     const apres = await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } });
-    expect(decryptField(apres.nissEncrypted)).toBe(nouveau);
+    expect(dechiffrerSalarie(salarieId, 'niss', apres.nissEncrypted)).toBe(nouveau);
     expect(apres.nissHash).not.toBe(avant.nissHash);
   });
 
@@ -328,8 +329,8 @@ describe('PATCH /api/salaries/[id] : modification', () => {
     const { gestionnaire, salarieId, niss } = await mise('upd-absents');
     await modifier(salarieId, modification({ nom: 'Autre' }), gestionnaire.cj);
     const enBase = await prisma.salarie.findUniqueOrThrow({ where: { id: salarieId } });
-    expect(decryptField(enBase.nissEncrypted)).toBe(niss);
-    expect(decryptField(enBase.ibanEncrypted)).toBe('BE68539007547034');
+    expect(dechiffrerSalarie(salarieId, 'niss', enBase.nissEncrypted)).toBe(niss);
+    expect(dechiffrerSalarie(salarieId, 'iban', enBase.ibanEncrypted)).toBe('BE68539007547034');
   });
 });
 

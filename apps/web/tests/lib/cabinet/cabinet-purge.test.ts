@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../../helpers/auth-test-utils';
 
@@ -19,7 +20,8 @@ vi.mock('@/lib/email/email', () => ({
 
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
-const { encryptField, lookupHash } = await import('@/lib/crypto/field-encryption');
+const { lookupHash } = await import('@/lib/crypto/field-encryption');
+const { chiffrerSalarie } = await import('@/lib/salarie/salarie-crypto');
 const { CABINET_DELETION_RETENTION_DAYS } = await import('@/lib/cabinet/cabinet-retention');
 const {
   finDeConservation,
@@ -61,16 +63,18 @@ const creerEntreprise = (cabinetId: string) =>
 let niss = 85_073_003_000;
 async function creerSalarie(cabinetId: string, entrepriseId: string) {
   const numero = String(++niss);
+  const id = randomUUID();
   return prisma.salarie.create({
     data: {
+      id,
       cabinetId,
       entrepriseId,
       nom: 'Dupont',
       prenom: 'Marie',
       dateNaissance: new Date('1985-07-30'),
-      nissEncrypted: encryptField(numero),
+      nissEncrypted: chiffrerSalarie(id, 'niss', numero),
       nissHash: lookupHash(entrepriseId, numero),
-      ibanEncrypted: encryptField('BE68539007547034'),
+      ibanEncrypted: chiffrerSalarie(id, 'iban', 'BE68539007547034'),
       typeContrat: 'CDI',
       dateEntree: new Date('2020-01-01'),
       situationFamiliale: 'ISOLE',

@@ -1,5 +1,6 @@
 import { entrepriseWhere, type Scope } from '@/lib/authz/authz';
-import { DecryptionError, decryptField } from '@/lib/crypto/field-encryption';
+import { DecryptionError } from '@/lib/crypto/field-encryption';
+import { dechiffrerSalarie } from '@/lib/salarie/salarie-crypto';
 import { maskIban, maskNiss } from '@/lib/crypto/masking';
 import { prisma } from '@/lib/prisma';
 import { conditionEnVigueur } from '@/lib/salarie/conditions';
@@ -52,9 +53,9 @@ export async function getEntreprisesAvecEffectif(scope: Scope): Promise<Entrepri
 // Le NISS est déchiffré uniquement pour être masqué aussitôt. Une valeur
 // illisible ne doit pas faire tomber toute la liste : elle s'affiche masquée
 // en entier (une erreur de clé, elle, remonte).
-function masquerNiss(nissEncrypted: string): string {
+function masquerNiss(salarieId: string, nissEncrypted: string): string {
   try {
-    return maskNiss(decryptField(nissEncrypted));
+    return maskNiss(dechiffrerSalarie(salarieId, 'niss', nissEncrypted));
   } catch (error) {
     if (error instanceof DecryptionError) return maskNiss('');
     throw error;
@@ -147,7 +148,7 @@ export async function getSalariesEntreprise(
         id: s.id,
         nom: s.nom,
         prenom: s.prenom,
-        nissMasque: masquerNiss(s.nissEncrypted),
+        nissMasque: masquerNiss(s.id, s.nissEncrypted),
         fonction: condition?.fonction ?? null,
         statut: condition?.statut ?? null,
         dateEntree: s.dateEntree,
@@ -212,9 +213,9 @@ export type SalarieDetail = {
   conditions: ConditionRow[];
 };
 
-function masquerIban(ibanEncrypted: string): string {
+function masquerIban(salarieId: string, ibanEncrypted: string): string {
   try {
-    return maskIban(decryptField(ibanEncrypted));
+    return maskIban(dechiffrerSalarie(salarieId, 'iban', ibanEncrypted));
   } catch (error) {
     if (error instanceof DecryptionError) return maskIban('');
     throw error;
@@ -306,8 +307,8 @@ export async function getSalarieDetail(
     ...dossier,
     archive: deletedAt !== null,
     portail: etatPortail({ userId, invitations }, at),
-    nissMasque: masquerNiss(nissEncrypted),
-    ibanMasque: masquerIban(ibanEncrypted),
+    nissMasque: masquerNiss(dossier.id, nissEncrypted),
+    ibanMasque: masquerIban(dossier.id, ibanEncrypted),
     conditions: conditions.map((c) => ({
       ...c,
       etat:

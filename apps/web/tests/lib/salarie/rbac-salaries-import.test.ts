@@ -20,7 +20,7 @@ vi.mock('@/lib/email/email', () => ({
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
-const { decryptField } = await import('@/lib/crypto/field-encryption');
+const { dechiffrerSalarie } = await import('@/lib/salarie/salarie-crypto');
 const { POST: importer } = await import('@/app/api/entreprises/[id]/salaries/import/route');
 const { GET: modele } = await import('@/app/api/entreprises/[id]/salaries/import/modele/route');
 const { COLONNES } = await import('@/lib/salarie/import-columns');
@@ -190,7 +190,7 @@ describe('POST …/salaries/import : vérification (rien n’est écrit)', () =>
       gestionnaire.cj,
     );
     const dossiers = await prisma.salarie.findMany({ where: { entrepriseId: entreprise.id } });
-    const archives = dossiers.find((d) => decryptField(d.nissEncrypted) === archive)!;
+    const archives = dossiers.find((d) => dechiffrerSalarie(d.id, 'niss', d.nissEncrypted) === archive)!;
     await prisma.salarie.update({ where: { id: archives.id }, data: { deletedAt: new Date() } });
     const avant = await prisma.salarie.count({ where: { cabinetId } });
     const auditsAvant = await prisma.auditLog.count({ where: { cabinetId } });
@@ -284,7 +284,7 @@ describe('POST …/salaries/import : import', () => {
       expect(dossier.nissEncrypted).not.toContain(niss1);
       expect(dossier.conditions).toHaveLength(1);
     }
-    expect(decryptField(dossiers[0].nissEncrypted)).toBe(niss1);
+    expect(dechiffrerSalarie(dossiers[0].id, 'niss', dossiers[0].nissEncrypted)).toBe(niss1);
     expect(dossiers[0].conditions[0]).toMatchObject({
       statut: 'EMPLOYE',
       commissionParitaire: '200',

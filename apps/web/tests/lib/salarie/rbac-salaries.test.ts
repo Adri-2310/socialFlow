@@ -20,7 +20,7 @@ vi.mock('@/lib/email/email', () => ({
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
-const { decryptField } = await import('@/lib/crypto/field-encryption');
+const { dechiffrerSalarie } = await import('@/lib/salarie/salarie-crypto');
 const { POST } = await import('@/app/api/entreprises/[id]/salaries/route');
 
 afterAll(async () => {
@@ -138,8 +138,11 @@ describe('POST /api/entreprises/[id]/salaries : création', () => {
     expect(salarie).toMatchObject({ cabinetId, entrepriseId: entreprise.id, nom: 'Dupont' });
     // Chiffrés en base, restitués au déchiffrement.
     expect(salarie.nissEncrypted).not.toContain(body.niss);
-    expect(decryptField(salarie.nissEncrypted)).toBe(body.niss);
-    expect(decryptField(salarie.ibanEncrypted)).toBe('BE68539007547034');
+    expect(dechiffrerSalarie(id, 'niss', salarie.nissEncrypted)).toBe(body.niss);
+    expect(dechiffrerSalarie(id, 'iban', salarie.ibanEncrypted)).toBe('BE68539007547034');
+    // D97 : écrits au format v2, liés à l'identifiant du dossier et au champ.
+    expect(salarie.nissEncrypted.startsWith('v2:')).toBe(true);
+    expect(salarie.ibanEncrypted.startsWith('v2:')).toBe(true);
     // Première ligne de l'historique daté, à la date d'entrée.
     expect(salarie.conditions).toHaveLength(1);
     expect(salarie.conditions[0]).toMatchObject({

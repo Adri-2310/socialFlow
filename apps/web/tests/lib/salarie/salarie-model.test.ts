@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../../helpers/auth-test-utils';
 
@@ -20,7 +21,8 @@ vi.mock('@/lib/email/email', () => ({
 const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
-const { decryptField, encryptField, lookupHash } = await import('@/lib/crypto/field-encryption');
+const { lookupHash } = await import('@/lib/crypto/field-encryption');
+const { chiffrerSalarie, dechiffrerSalarie } = await import('@/lib/salarie/salarie-crypto');
 
 afterAll(async () => {
   const testUsers = await prisma.user.findMany({
@@ -65,15 +67,17 @@ const NISS = '85073003328';
 const IBAN = 'BE68539007547034';
 
 function donneesSalarie(cabinetId: string, entrepriseId: string, niss = NISS) {
+  const id = randomUUID();
   return {
+    id,
     cabinetId,
     entrepriseId,
     nom: 'Dupont',
     prenom: 'Marie',
     dateNaissance: new Date('1985-07-30'),
-    nissEncrypted: encryptField(niss),
+    nissEncrypted: chiffrerSalarie(id, 'niss', niss),
     nissHash: lookupHash(entrepriseId, niss),
-    ibanEncrypted: encryptField(IBAN),
+    ibanEncrypted: chiffrerSalarie(id, 'iban', IBAN),
     typeContrat: 'CDI',
     dateEntree: new Date('2026-11-01'),
     situationFamiliale: 'ISOLE',
@@ -101,8 +105,8 @@ describe('modèle Salarie', () => {
     const brut = JSON.stringify(enBase);
     expect(brut).not.toContain(NISS);
     expect(brut).not.toContain(IBAN);
-    expect(decryptField(enBase.nissEncrypted)).toBe(NISS);
-    expect(decryptField(enBase.ibanEncrypted)).toBe(IBAN);
+    expect(dechiffrerSalarie(enBase.id, 'niss', enBase.nissEncrypted)).toBe(NISS);
+    expect(dechiffrerSalarie(enBase.id, 'iban', enBase.ibanEncrypted)).toBe(IBAN);
   });
 
   it('refuse le même NISS deux fois dans une entreprise, archivé compris', async () => {

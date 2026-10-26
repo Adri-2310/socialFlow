@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { cookieJar, testEmail, TEST_EMAIL_PREFIX } from '../../helpers/auth-test-utils';
 
@@ -21,7 +22,8 @@ const { auth } = await import('@/lib/auth/auth');
 const { prisma } = await import('@/lib/prisma');
 const { supprimerCabinetsEtDonnees } = await import('@/lib/cabinet/cabinet-purge');
 const { resolveScope } = await import('@/lib/authz/authz');
-const { encryptField, lookupHash } = await import('@/lib/crypto/field-encryption');
+const { lookupHash } = await import('@/lib/crypto/field-encryption');
+const { chiffrerSalarie } = await import('@/lib/salarie/salarie-crypto');
 const { getEntreprisesAvecEffectif, getSalariesEntreprise, getSalarieDetail } =
   await import('@/lib/salarie/salarie-data');
 
@@ -79,16 +81,18 @@ async function creerSalarie(
 ) {
   // Le contrôle du NISS n'est pas l'objet de ces tests : une valeur par salarié suffit.
   const niss = `8507300${String(++nissCompteur).padStart(4, '0')}`;
+  const id = randomUUID();
   const salarie = await prisma.salarie.create({
     data: {
+      id,
       cabinetId,
       entrepriseId,
       nom: extra.nom ?? 'Dupont',
       prenom: 'Marie',
       dateNaissance: new Date('1985-07-30'),
-      nissEncrypted: encryptField(niss),
+      nissEncrypted: chiffrerSalarie(id, 'niss', niss),
       nissHash: lookupHash(entrepriseId, niss),
-      ibanEncrypted: encryptField('BE68539007547034'),
+      ibanEncrypted: chiffrerSalarie(id, 'iban', 'BE68539007547034'),
       typeContrat: 'CDI',
       dateEntree: new Date('2026-11-01'),
       situationFamiliale: 'ISOLE',

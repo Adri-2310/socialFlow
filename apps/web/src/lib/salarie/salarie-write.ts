@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { entrepriseWhere, type Scope } from '@/lib/authz/authz';
-import { decryptField, encryptField, lookupHash } from '@/lib/crypto/field-encryption';
+import { DecryptionError, lookupHash } from '@/lib/crypto/field-encryption';
 import { prisma } from '@/lib/prisma';
+import { chiffrerSalarie, dechiffrerSalarie } from '@/lib/salarie/salarie-crypto';
 import type { SalarieInput, SalarieModificationInput } from '@/lib/schemas/salarie';
 
 // Écritures sur les dossiers salariés (D6, roles/03 § 4). Même principe que les
@@ -55,8 +57,12 @@ export async function createSalarie(
       });
       if (!entreprise) return { ok: false as const, error: 'ENTREPRISE_NOT_FOUND' as const };
 
+      // D97 : le NISS et l'IBAN sont liés à l'identifiant du dossier, qui doit donc exister avant
+      // le chiffrement (un identifiant fourni par l'application, pas par la base).
+      const salarieId = randomUUID();
       const salarie = await tx.salarie.create({
         data: {
+          id: salarieId,
           cabinetId: scope.cabinetId,
           entrepriseId: entreprise.id,
           nom: input.nom,
@@ -67,9 +73,9 @@ export async function createSalarie(
           ville: input.ville,
           pays: input.pays,
           email: input.email,
-          nissEncrypted: encryptField(input.niss),
+          nissEncrypted: chiffrerSalarie(salarieId, 'niss', input.niss),
           nissHash: lookupHash(entreprise.id, input.niss),
-          ibanEncrypted: encryptField(input.iban),
+          ibanEncrypted: chiffrerSalarie(salarieId, 'iban', input.iban),
           typeContrat: input.typeContrat,
           dateEntree: toDate(input.dateEntree),
           dateFinContrat: input.dateFinContrat ? toDate(input.dateFinContrat) : null,
@@ -193,7 +199,7 @@ export async function updateSalarie(
       if (input.niss) {
         const nissHash = lookupHash(current.entrepriseId, input.niss);
         if (nissHash !== current.nissHash) {
-          data.nissEncrypted = encryptField(input.niss);
+          data.nissEncrypted = chiffrerSalarie(current.id, 'niss', input.niss);
           data.nissHash = nissHash;
           changed.push('niss');
         }
@@ -202,12 +208,13 @@ export async function updateSalarie(
       if (input.iban) {
         let identique = false;
         try {
-          identique = decryptField(current.ibanEncrypted) === input.iban;
-        } catch {
-          // Valeur illisible : on la remplace.
+          identique = dechiffrerSalarie(current.id, 'iban', current.ibanEncrypted) === input.iban;
+        } catch (error) {
+          // Valeur illisible : on la remplace. Une erreur de clé, elle, remonte.
+          if (!(error instanceof DecryptionError)) throw error;
         }
         if (!identique) {
-          data.ibanEncrypted = encryptField(input.iban);
+          data.ibanEncrypted = chiffrerSalarie(current.id, 'iban', input.iban);
           changed.push('iban');
         }
       }

@@ -3,11 +3,16 @@ import { createCipheriv, createDecipheriv, createHmac, hkdfSync, randomBytes } f
 // Chiffrement applicatif des données sensibles (NISS, IBAN, secrets
 // d'intégration) : CONVENTIONS § 4. AES-256-GCM, clé dans ENCRYPTION_KEY.
 //
-// Format stocké : `v1:<iv>:<tag>:<texte chiffré>` (base64url). Le préfixe de
+// Format stocké : `<version>:<iv>:<tag>:<texte chiffré>` (base64url). Le préfixe de
 // version permet de changer d'algorithme ou de clé plus tard sans casser les
 // valeurs déjà en base.
+//   v2 (D97) : la valeur est liée à un contexte (`aad`, « données associées » de GCM) :
+//              copiée dans un autre dossier ou un autre champ, elle ne se déchiffre plus.
+//   v1       : sans contexte. Toujours lisible, jamais écrite : lib/crypto/reencrypt-salaries.ts
+//              convertit les valeurs restantes.
 
-const VERSION = 'v1';
+const VERSION = 'v2';
+const LEGACY_VERSION = 'v1';
 const IV_BYTES = 12; // taille recommandée pour GCM
 const KEY_BYTES = 32;
 
@@ -46,9 +51,18 @@ function derivedKey(purpose: 'encrypt' | 'lookup'): Buffer {
   );
 }
 
-export function encryptField(plaintext: string): string {
+// Le contexte est obligatoire : un contexte vide lierait la valeur à rien, ce que le format
+// v2 existe pour éviter. Les appelants passent par lib/salarie/salarie-crypto.ts.
+function requireAad(aad: string): Buffer {
+  if (!aad) throw new TypeError('AAD_REQUIRED');
+  return Buffer.from(aad, 'utf8');
+}
+
+export function encryptField(plaintext: string, aad: string): string {
+  const context = requireAad(aad);
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv('aes-256-gcm', derivedKey('encrypt'), iv);
+  cipher.setAAD(context);
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [
@@ -59,15 +73,21 @@ export function encryptField(plaintext: string): string {
   ].join(':');
 }
 
-export function decryptField(stored: string): string {
+// Une valeur v1 se déchiffre sans contexte (il n'en avait pas) ; une valeur v2 exige
+// exactement celui avec lequel elle a été chiffrée.
+export function decryptField(stored: string, aad: string): string {
   const [version, iv, tag, data] = stored.split(':');
-  if (version !== VERSION || !iv || !tag || data === undefined) throw new DecryptionError();
+  const legacy = version === LEGACY_VERSION;
+  if ((version !== VERSION && !legacy) || !iv || !tag || data === undefined) {
+    throw new DecryptionError();
+  }
   try {
     const decipher = createDecipheriv(
       'aes-256-gcm',
       derivedKey('encrypt'),
       Buffer.from(iv, 'base64url'),
     );
+    if (!legacy) decipher.setAAD(requireAad(aad));
     decipher.setAuthTag(Buffer.from(tag, 'base64url'));
     return Buffer.concat([
       decipher.update(Buffer.from(data, 'base64url')),
@@ -75,10 +95,15 @@ export function decryptField(stored: string): string {
     ]).toString('utf8');
   } catch (error) {
     // Une erreur de configuration (clé absente) doit rester visible ; le reste
-    // (valeur altérée, mauvaise clé) est une seule erreur opaque.
+    // (valeur altérée, mauvaise clé, mauvais contexte) est une seule erreur opaque.
     if (error instanceof EncryptionConfigError) throw error;
     throw new DecryptionError();
   }
+}
+
+// Valeur encore au format v1, à convertir (lib/crypto/reencrypt-salaries.ts).
+export function isLegacyFormat(stored: string): boolean {
+  return stored.startsWith(`${LEGACY_VERSION}:`);
 }
 
 // Empreinte déterministe pour retrouver ou dédoublonner une valeur chiffrée

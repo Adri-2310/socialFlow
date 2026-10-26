@@ -1,8 +1,8 @@
 import { entrepriseWhere, type Scope } from '@/lib/authz/authz';
-import { decryptField } from '@/lib/crypto/field-encryption';
 import { prisma } from '@/lib/prisma';
 import { formatIban } from '@/lib/salarie/iban';
 import { formatNiss } from '@/lib/salarie/niss';
+import { dechiffrerSalarie } from '@/lib/salarie/salarie-crypto';
 
 // Dévoilement du NISS ou de l'IBAN d'un salarié (roles/03 § 4.1, FONCTIONNEMENT § 4) : le
 // clair ne quitte le serveur que par ici, et chaque dévoilement est journalisé.
@@ -42,8 +42,8 @@ export async function revealSensitiveField(
 
     const value =
       field === 'niss'
-        ? formatNiss(decryptField(salarie.nissEncrypted))
-        : formatIban(decryptField(salarie.ibanEncrypted));
+        ? formatNiss(dechiffrerSalarie(salarie.id, 'niss', salarie.nissEncrypted))
+        : formatIban(dechiffrerSalarie(salarie.id, 'iban', salarie.ibanEncrypted));
 
     // D8, D26 : le journal est lu par le SuperAdmin et le Cabinet RH. Le nom du champ
     // dévoilé, jamais sa valeur.
