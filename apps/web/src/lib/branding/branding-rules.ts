@@ -20,6 +20,10 @@ export const DEFAULT_SECONDARY = '#00c49f';
 // sert de couleur de lien sur fond clair.
 export const MIN_PRIMARY_CONTRAST = 4.5;
 
+// Valeurs de `--accent` dans globals.css (clair et sombre), non personnalisées par le cabinet.
+const LIGHT_ACCENT_BACKGROUND = '#f1f5f9';
+const DARK_ACCENT_BACKGROUND = '#1e293b';
+
 export const DISPLAY_NAME_MAX = 80;
 
 export type CabinetBranding = {
@@ -109,9 +113,15 @@ export function buildThemeCss(branding: {
     if (primaryColor) {
       const value = dark ? lightenForDarkTheme(primaryColor) : primaryColor;
       const fg = readableForeground(value);
+      // D62 : le texte d'un élément survolé (menus, listes) se pose sur `--accent`, plus clair
+      // que le fond de page en sombre ; la couleur est donc recalculée contre ce fond.
+      const accentText = dark
+        ? lightenForDarkTheme(value, DARK_ACCENT_BACKGROUND)
+        : (darkenToContrast(value, LIGHT_ACCENT_BACKGROUND, MIN_PRIMARY_CONTRAST) ?? value);
       lines.push(
         `--primary:${value}`,
         `--primary-foreground:${fg}`,
+        `--accent-foreground:${accentText}`,
         `--ring:${value}`,
         `--chart-1:${value}`,
         `--sidebar-primary:${value}`,
