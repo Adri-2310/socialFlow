@@ -95,7 +95,7 @@ Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED
 - Montants : `Int` en centimes. Dates de paie : `annee` + `mois` en `Int`.
 - Soft-delete : `deletedAt DateTime?`, toujours indexé ; toutes les lectures filtrent `deletedAt: null` sauf écrans d'archives.
 - Toute table métier porte `cabinetId` (même si déductible par jointure), indexé, pour le filtrage et l'audit.
-- Données sensibles (NISS, IBAN, secrets d'intégration) : chiffrement applicatif AES-256-GCM, clé dans `ENCRYPTION_KEY`.
+- Données sensibles (NISS, IBAN, secrets d'intégration) : chiffrement applicatif AES-256-GCM, clé dans `ENCRYPTION_KEY`. Format `v2:<iv>:<tag>:<chiffré>` avec des **données associées** : la valeur est liée à son dossier et à son champ (`lib/salarie/salarie-crypto.ts`, D97). Toute nouvelle donnée chiffrée définit son contexte ; le format `v1` (sans contexte) n'est plus écrit.
 - Migrations : `prisma migrate dev` en local, nommées en anglais court (`add_entreprise`) ; jamais de modification d'une migration déjà poussée.
 
 ## 5. Front-end
