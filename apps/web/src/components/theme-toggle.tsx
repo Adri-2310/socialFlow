@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
@@ -32,12 +33,14 @@ export function ThemeToggle() {
   if (!mounted) return null;
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="icon-lg"
       onClick={toggleTheme}
       aria-label="Basculer le thème clair/sombre"
-      className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
+      className="text-muted-foreground"
     >
       {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-    </button>
+    </Button>
   );
 }
