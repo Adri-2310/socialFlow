@@ -6,6 +6,7 @@ import { Check } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
 import type { Plan } from '@/lib/billing/plans';
 import { planPriceDisplay } from '@/lib/billing/plan-price-display';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 export function Pricing({ plans }: { plans: Plan[] }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
@@ -14,22 +15,29 @@ export function Pricing({ plans }: { plans: Plan[] }) {
     <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
       <div className="flex justify-center">
         <div className="inline-flex items-center gap-3 rounded-full border border-border/60 bg-card/60 p-1 shadow-sm backdrop-blur-sm">
-          <button
+          {/* `aria-pressed` dit quelle période est active. */}
+          <Button
+            type="button"
+            variant={billing === 'monthly' ? 'default' : 'ghost'}
+            size="sm"
+            aria-pressed={billing === 'monthly'}
             onClick={() => setBilling('monthly')}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              billing === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-            }`}
+            className={`rounded-full px-4 ${billing === 'monthly' ? '' : 'text-muted-foreground'}`}
           >
             Mensuel
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant={billing === 'yearly' ? 'default' : 'ghost'}
+            size="sm"
+            aria-pressed={billing === 'yearly'}
             onClick={() => setBilling('yearly')}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              billing === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-            }`}
+            className={`rounded-full px-4 ${billing === 'yearly' ? '' : 'text-muted-foreground'}`}
           >
-            Annuel <span className="text-secondary">−20%</span>
-          </button>
+            {/* D62 : le teal `secondary` n'est pas lisible en texte ; l'émeraude l'est, sauf sur l'aplat actif. */}
+            Annuel{' '}
+            <span className={billing === 'yearly' ? '' : 'text-emerald-800 dark:text-emerald-300'}>−20%</span>
+          </Button>
         </div>
       </div>
 
@@ -66,18 +74,20 @@ export function Pricing({ plans }: { plans: Plan[] }) {
               </p>
               <Link
                 href={`/register?plan=${plan.id}`}
-                className={`mt-6 block rounded-xl py-2.5 text-center text-sm font-semibold transition ${
-                  plan.highlighted
-                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:opacity-90'
-                    : 'border border-border text-foreground hover:bg-muted'
-                }`}
+                className={buttonVariants({
+                  variant: plan.highlighted ? 'default' : 'outline',
+                  size: 'lg',
+                  className: `mt-6 w-full rounded-xl ${
+                    plan.highlighted ? 'shadow-lg shadow-primary/30 hover:opacity-90' : ''
+                  }`,
+                })}
               >
                 Démarrer l&apos;essai
               </Link>
               <ul className="mt-6 space-y-3 text-sm text-foreground">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex gap-2">
-                    <Check className="h-5 w-5 shrink-0 text-secondary" />
+                    <Check aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />
                     {feature}
                   </li>
                 ))}
