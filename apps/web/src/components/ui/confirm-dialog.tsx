@@ -18,12 +18,15 @@ import { Spinner } from '@/components/ui/spinner';
 // la montent seulement quand la confirmation est demandée (`{open && <ConfirmDialog … />}`) :
 // elle est donc toujours ouverte, et c'est `onCancel` qui la ferme (bouton Annuler ou Échap).
 // Pendant `loading`, Échap est ignoré et les deux boutons sont désactivés : l'action en cours
-// ne peut pas être abandonnée à mi-chemin.
+// ne peut pas être abandonnée à mi-chemin. `error` affiche l'échec de l'action dans la boîte
+// même : un message posé à l'extérieur serait inerte pour les lecteurs d'écran, la modale
+// masquant le reste de la page.
 export function ConfirmDialog({
   title,
   description,
   confirmLabel,
   loading,
+  error,
   onCancel,
   onConfirm,
 }: {
@@ -31,6 +34,7 @@ export function ConfirmDialog({
   description: string;
   confirmLabel: string;
   loading?: boolean;
+  error?: string | null;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -49,6 +53,11 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {error && (
+          <p role="alert" className="text-sm text-destructive-text">
+            {error}
+          </p>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>Annuler</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={onConfirm} disabled={loading}>

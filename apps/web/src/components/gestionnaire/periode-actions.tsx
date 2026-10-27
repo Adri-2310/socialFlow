@@ -124,6 +124,7 @@ export function PeriodeActions({
           }
           confirmLabel={verrouillee ? 'Déverrouiller' : 'Verrouiller'}
           loading={loading}
+          error={error}
           onCancel={fermer}
           onConfirm={() =>
             void envoyer(`/api/periodes/${periodeId}/verrouillage`, {
@@ -131,14 +132,6 @@ export function PeriodeActions({
             })
           }
         />
-      )}
-      {dialog === 'verrou' && error && (
-        <p
-          role="alert"
-          className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-lg bg-card px-4 py-2 text-sm text-destructive-text shadow-xl"
-        >
-          {error}
-        </p>
       )}
 
       {dialog === 'date' && (
