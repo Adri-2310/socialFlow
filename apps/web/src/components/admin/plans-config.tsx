@@ -2,237 +2,22 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, CheckCircle2, AlertTriangle, Pencil, Plus, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { PlanCard } from '@/components/admin/plan-card';
+import {
+  EMPTY_FORM,
+  formToBody,
+  PlanFormFields,
+  toFormState,
+  type FormState,
+} from '@/components/admin/plan-form';
+import { Notice } from '@/components/shared/notice';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Spinner } from '@/components/ui/spinner';
 import type { PlanConfigRow } from '@/lib/admin/admin-data';
 
-// D15, D34 : une limite vide (null) signifie "illimite", pas "non renseignee".
-function quotaLabel(value: number | null, noun: string): string {
-  if (value === null) return `${noun.charAt(0).toUpperCase()}${noun.slice(1)}s illimité${noun === 'entreprise' ? 'e' : ''}s`;
-  return `${value} ${noun}${value > 1 ? 's' : ''}`;
-}
-
-const AMOUNT_FORMATTER = new Intl.NumberFormat('fr-BE', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-});
-
-type FormState = {
-  name: string;
-  description: string;
-  monthlyPrice: string;
-  yearlyPrice: string;
-  badge: string;
-  highlighted: boolean;
-  sortOrder: string;
-  features: string;
-  // Quotas (D15) : champ vide = illimite. Stockage saisi en Go.
-  maxEntreprises: string;
-  maxUtilisateurs: string;
-  maxStorageGb: string;
-};
-
-const EMPTY_FORM: FormState = {
-  name: '',
-  description: '',
-  monthlyPrice: '',
-  yearlyPrice: '',
-  badge: '',
-  highlighted: false,
-  sortOrder: '0',
-  features: '',
-  maxEntreprises: '',
-  maxUtilisateurs: '',
-  maxStorageGb: '',
-};
-
-function toFormState(plan: PlanConfigRow): FormState {
-  return {
-    name: plan.name,
-    description: plan.description,
-    monthlyPrice: plan.monthlyPrice === null ? '' : String(plan.monthlyPrice),
-    yearlyPrice: plan.yearlyPrice === null ? '' : String(plan.yearlyPrice),
-    badge: plan.badge ?? '',
-    highlighted: plan.highlighted,
-    sortOrder: String(plan.sortOrder),
-    features: plan.features.join('\n'),
-    maxEntreprises: plan.maxEntreprises === null ? '' : String(plan.maxEntreprises),
-    maxUtilisateurs: plan.maxUtilisateurs === null ? '' : String(plan.maxUtilisateurs),
-    maxStorageGb: plan.maxStorageMb === null ? '' : String(plan.maxStorageMb / 1024),
-  };
-}
-
-function formToBody(form: FormState) {
-  return {
-    name: form.name,
-    description: form.description,
-    monthlyPrice: form.monthlyPrice === '' ? null : Number(form.monthlyPrice),
-    yearlyPrice: form.yearlyPrice === '' ? null : Number(form.yearlyPrice),
-    badge: form.badge === '' ? null : form.badge,
-    highlighted: form.highlighted,
-    sortOrder: Number(form.sortOrder),
-    features: form.features.split('\n'),
-    maxEntreprises: form.maxEntreprises === '' ? null : Number(form.maxEntreprises),
-    maxUtilisateurs: form.maxUtilisateurs === '' ? null : Number(form.maxUtilisateurs),
-    maxStorageMb: form.maxStorageGb === '' ? null : Math.round(Number(form.maxStorageGb) * 1024),
-  };
-}
-
-// Champs partages entre le formulaire de creation et celui d'edition d'un
-// plan existant - seule la creation affiche le champ planId (immuable une
-// fois le plan cree, sert de metadata Stripe).
-function PlanFormFields({
-  form,
-  onChange,
-  newPlanId,
-  onPlanIdChange,
-}: {
-  form: FormState;
-  onChange: (patch: Partial<FormState>) => void;
-  newPlanId?: string;
-  onPlanIdChange?: (value: string) => void;
-}) {
-  return (
-    <>
-      {onPlanIdChange !== undefined && (
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-foreground">Identifiant (planId)</span>
-          <input
-            value={newPlanId}
-            onChange={(e) => onPlanIdChange(e.target.value)}
-            placeholder="ex : premium"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Nom</span>
-          <input
-            value={form.name}
-            onChange={(e) => onChange({ name: e.target.value })}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Badge</span>
-          <input
-            value={form.badge}
-            onChange={(e) => onChange({ badge: e.target.value })}
-            placeholder="Ex : Le plus choisi"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-      </div>
-
-      <label className="block text-sm">
-        <span className="mb-1 block font-medium text-foreground">Description</span>
-        <input
-          value={form.description}
-          onChange={(e) => onChange({ description: e.target.value })}
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-        />
-      </label>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Prix mensuel (EUR)</span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.monthlyPrice}
-            onChange={(e) => onChange({ monthlyPrice: e.target.value })}
-            placeholder="Sur devis"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Prix mensuel en facturation annuelle (EUR)</span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.yearlyPrice}
-            onChange={(e) => onChange({ yearlyPrice: e.target.value })}
-            placeholder="Sur devis"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Ordre d&apos;affichage</span>
-          <input
-            type="number"
-            value={form.sortOrder}
-            onChange={(e) => onChange({ sortOrder: e.target.value })}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Entreprises clientes (max)</span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.maxEntreprises}
-            onChange={(e) => onChange({ maxEntreprises: e.target.value })}
-            placeholder="Illimité"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Gestionnaires RH (max)</span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.maxUtilisateurs}
-            onChange={(e) => onChange({ maxUtilisateurs: e.target.value })}
-            placeholder="Illimité"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-foreground">Stockage (Go)</span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.maxStorageGb}
-            onChange={(e) => onChange({ maxStorageGb: e.target.value })}
-            placeholder="Illimité"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-          />
-        </label>
-      </div>
-
-      <label className="block text-sm">
-        <span className="mb-1 block font-medium text-foreground">Fonctionnalités (une par ligne)</span>
-        <textarea
-          value={form.features}
-          onChange={(e) => onChange({ features: e.target.value })}
-          rows={5}
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-        />
-      </label>
-
-      <label className="flex items-center gap-2 text-sm text-foreground">
-        <input
-          type="checkbox"
-          checked={form.highlighted}
-          onChange={(e) => onChange({ highlighted: e.target.checked })}
-          className="h-4 w-4 rounded border-input"
-        />
-        Plan mis en avant sur la page tarifs
-      </label>
-    </>
-  );
-}
+const ERROR_MESSAGE = 'Une erreur est survenue. Réessayez.';
 
 export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
   const router = useRouter();
@@ -278,7 +63,7 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
       router.refresh();
       cancelEdit();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setSaving(false);
     }
@@ -323,7 +108,7 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setActionError('Une erreur est survenue. Réessayez.');
+      setActionError(ERROR_MESSAGE);
     } finally {
       setActionLoadingId(null);
       setPendingArchive(null);
@@ -338,7 +123,7 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setActionError('Une erreur est survenue. Réessayez.');
+      setActionError(ERROR_MESSAGE);
     } finally {
       setActionLoadingId(null);
     }
@@ -349,17 +134,17 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-foreground">Plans tarifaires</h2>
         {!creating && (
-          <button
-            type="button"
-            onClick={startCreate}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
-          >
-            <Plus className="h-3.5 w-3.5" /> Nouveau plan
-          </button>
+          <Button type="button" size="sm" onClick={startCreate}>
+            <Plus aria-hidden="true" /> Nouveau plan
+          </Button>
         )}
       </div>
 
-      {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+      {actionError && (
+        <Notice tone="danger" role="alert">
+          {actionError}
+        </Notice>
+      )}
 
       {creating && (
         <form
@@ -370,7 +155,11 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
           className="space-y-3 rounded-2xl border border-dashed border-border bg-card p-5"
         >
           <h3 className="font-semibold text-foreground">Nouveau plan</h3>
-          {createError && <p className="text-sm text-destructive">{createError}</p>}
+          {createError && (
+            <Notice tone="danger" role="alert">
+              {createError}
+            </Notice>
+          )}
 
           <PlanFormFields
             form={createForm}
@@ -380,129 +169,30 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
           />
 
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={cancelCreate}
-              disabled={createSaving}
-              className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="button" variant="outline" onClick={cancelCreate} disabled={createSaving}>
               Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={createSaving}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {createSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            </Button>
+            <Button type="submit" disabled={createSaving}>
+              {createSaving && <Spinner />}
               Créer le plan
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {plans.map((plan) => {
         const isEditing = editingId === plan.id;
-        const isArchived = plan.archivedAt !== null;
 
         return (
-          <div
+          <PlanCard
             key={plan.id}
-            className={`rounded-2xl border bg-card p-5 ${isArchived ? 'border-border/60 opacity-70' : 'border-border'}`}
+            plan={plan}
+            editing={isEditing}
+            loading={actionLoadingId === plan.id}
+            onEdit={() => startEdit(plan)}
+            onArchive={() => setPendingArchive(plan)}
+            onRestore={() => restorePlan(plan)}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">{plan.name}</h3>
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {plan.planId}
-                  </span>
-                  {isArchived && (
-                    <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                      Archivé
-                    </span>
-                  )}
-                  {plan.badge && !isArchived && (
-                    <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {plan.badge}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-              </div>
-              {!isEditing && (
-                <div className="flex shrink-0 gap-2">
-                  {isArchived ? (
-                    <button
-                      type="button"
-                      onClick={() => restorePlan(plan)}
-                      disabled={actionLoadingId === plan.id}
-                      className="flex items-center gap-1.5 rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {actionLoadingId === plan.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ArchiveRestore className="h-3.5 w-3.5" />
-                      )}
-                      Restaurer
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(plan)}
-                        className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Modifier
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingArchive(plan)}
-                        disabled={actionLoadingId === plan.id}
-                        title="Archiver"
-                        aria-label={`Archiver ${plan.name}`}
-                        className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <Archive className="h-3.5 w-3.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {!isEditing && (
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
-                <span className="text-foreground">
-                  {plan.monthlyPrice !== null ? `${AMOUNT_FORMATTER.format(plan.monthlyPrice)} / mois` : 'Prix non défini'}
-                </span>
-                <span className="text-muted-foreground">
-                  {plan.yearlyPrice !== null
-                    ? `${AMOUNT_FORMATTER.format(plan.yearlyPrice * 12)} / an (soit ${AMOUNT_FORMATTER.format(plan.yearlyPrice)} / mois)`
-                    : '—'}
-                </span>
-                <span className="basis-full text-muted-foreground">
-                  {quotaLabel(plan.maxEntreprises, 'entreprise')} ·{' '}
-                  {quotaLabel(plan.maxUtilisateurs, 'gestionnaire')} ·{' '}
-                  {plan.maxStorageMb === null
-                    ? 'Stockage illimité'
-                    : `${plan.maxStorageMb / 1024} Go de stockage`}
-                </span>
-                {isArchived ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <Archive className="h-3.5 w-3.5" /> Retiré de Stripe et de /tarifs
-                  </span>
-                ) : plan.inSync ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Synchronisé avec Stripe
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Désynchronisé de Stripe
-                  </span>
-                )}
-              </div>
-            )}
-
             {isEditing && form && (
               <form
                 onSubmit={(e) => {
@@ -511,7 +201,11 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
                 }}
                 className="mt-4 space-y-3"
               >
-                {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && (
+                  <Notice tone="danger" role="alert">
+                    {error}
+                  </Notice>
+                )}
 
                 <PlanFormFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} />
 
@@ -521,26 +215,17 @@ export function PlansConfig({ plans }: { plans: PlanConfigRow[] }) {
                 </p>
 
                 <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={cancelEdit}
-                    disabled={saving}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-                  >
+                  <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
                     Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving && <Spinner />}
                     Enregistrer
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
-          </div>
+          </PlanCard>
         );
       })}
 
