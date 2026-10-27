@@ -1,150 +1,101 @@
-# 🌐 apps/web
+# apps/web
 
-**Application Next.js 16 — Landing page marketing SocialFlow**
-
-Aujourd'hui, cette application contient uniquement la landing page publique. Le dashboard,
-l'authentification et les API métier sont prévus (voir [Roadmap](#-roadmap-à-venir)) mais pas
-encore implémentés.
+**Application Next.js 16 de SocialFlow** : site public, authentification, espaces de chaque rôle et API. Pour l'installation et le déploiement, voir le [README racine](../../README.md) ; pour les règles métier, la [documentation](../../doc/README.md).
 
 ---
 
-## 📁 Structure actuelle
+## Structure
 
 ```
 apps/web/
-├── public/                  # Assets statiques (logos, favicon, manifest...)
-├── __mocks__/                # Mocks de modules externes (ex: framer-motion)
+├── prisma/
+│   ├── schema.prisma        # Modèle de données (PostgreSQL)
+│   ├── migrations/          # Migrations Prisma (ne jamais modifier une migration poussée)
+│   └── seed.mjs             # Plans de base
+├── scripts/                 # Maintenance : création du SuperAdmin, rechiffrement, prix Stripe
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx          # Landing page (accueil)
-│   │   ├── layout.tsx        # Root layout
-│   │   ├── globals.css       # Styles globaux (thème Tweakcn)
-│   │   ├── fonctionnalites/  # Page dédiée
-│   │   ├── pour-qui/         # Page dédiée
-│   │   ├── tarifs/           # Page dédiée
-│   │   ├── faq/              # Page dédiée
-│   │   ├── a-propos/         # Page dédiée
-│   │   ├── contact/          # Page dédiée
-│   │   ├── rgpd/             # Page légale
-│   │   ├── conditions/       # Page légale
-│   │   └── confidentialite/  # Page légale
-│   ├── components/
-│   │   ├── landing/          # Composants de la landing page
-│   │   ├── motion/           # Wrappers d'animation (FadeIn, Counter)
-│   │   ├── providers/        # Context providers (ThemeProvider)
-│   │   └── theme-toggle.tsx
-│   └── lib/                  # Utilitaires
-├── tests/                    # Tous les tests unitaires, en miroir de src/
-│   ├── setup.ts               # Setup Vitest (jest-dom, polyfills)
-│   └── components/
-│       ├── theme-toggle.test.tsx
-│       └── landing/
-│           ├── navbar.test.tsx
-│           ├── faq.test.tsx
-│           └── pricing.test.tsx
-├── vitest.config.ts          # Config Vitest
-├── eslint.config.mjs         # ESLint (flat config)
-├── next.config.ts            # Next.js config
-├── tailwind.config.ts        # Tailwind config
-├── tsconfig.json             # TypeScript config
-└── package.json              # Dépendances
+│   │   ├── (marketing)/     # Site public : accueil, fonctionnalités, tarifs, FAQ, contact, pages légales
+│   │   ├── (auth)/          # Connexion, inscription, mot de passe, invitations, portail du cabinet (connexion/[slug])
+│   │   ├── dashboard/       # Espaces : admin, cabinet, gestionnaire, entreprise
+│   │   ├── profil/          # Compte, sécurité, 2FA, comptes liés (tous les rôles)
+│   │   └── api/             # Routes d'API, webhooks Stripe, tâches planifiées (cron)
+│   ├── components/          # Par domaine : admin, cabinet, gestionnaire, auth, layout, landing…
+│   │   └── ui/              # Composants shadcn/ui (générés)
+│   └── lib/                 # Logique métier et accès aux données, par domaine
+│       ├── auth/            # Better Auth, sessions, hooks
+│       ├── authz/           # Autorisations : authorize(), matrice des permissions, gardes
+│       ├── billing/         # Abonnements, Stripe, délai de grâce, changements de plan
+│       ├── branding/        # Thème, couleurs, logo du cabinet
+│       ├── cabinet/         # Données, quotas, audit, export, suspension, purge
+│       ├── crypto/          # Chiffrement des champs sensibles (NISS, IBAN)
+│       ├── email/           # Envoi et modèles d'emails
+│       ├── entreprise/      # Portefeuille d'entreprises clientes et leur administrateur
+│       ├── invitations/     # Création, acceptation et aperçu des invitations
+│       ├── periode/         # Périodes de paie et prestations
+│       ├── portal/          # Portail de connexion du cabinet et application installable
+│       ├── salarie/         # Dossiers salariés, conditions de travail, import CSV
+│       └── schemas/         # Schémas Zod partagés (client et serveur)
+└── tests/                   # Tests Vitest, en miroir de src/ (lib/, components/)
 ```
 
 ---
 
-## 🚀 Dev local
+## Espaces et rôles
+
+| Rôle | Espace | Écrans |
+|---|---|---|
+| SuperAdmin | `/dashboard/admin` | Vue d'ensemble, cabinets, utilisateurs, monitoring, journal d'audit, facturation, configuration des plans (2FA obligatoire) |
+| Cabinet RH | `/dashboard/cabinet` | Vue d'ensemble, gestionnaires, entreprises, abonnement et paiement, paramètres (identité, branding, emails, portail, données), journal d'audit |
+| Gestionnaire RH | `/dashboard/gestionnaire` | Tableau de bord, salariés par entreprise, fiche salarié, périodes de paie et prestations |
+| Entreprise cliente | `/dashboard/entreprise` | Accueil (le reste arrive avec le chantier Entreprise) |
+| Collaborateur | — | À venir |
+
+Chaque page appelle `requireAuthorized(action)` et chaque route d'API `authorize(request, action)` : les actions et leur niveau par rôle sont définis dans `src/lib/authz/authz.ts`, en miroir de [doc/PERMISSIONS.md](../../doc/PERMISSIONS.md).
+
+---
+
+## Scripts
 
 ```bash
-# Depuis la racine (socialflow/)
-npm run dev
+npm run dev               # serveur de développement (http://localhost:3000)
+npm run build             # build de production
+npm start                 # démarrer le build
+npm run lint              # ESLint
+npm run type-check        # TypeScript
+npm test                  # tests Vitest
+npm run test:watch        # tests en continu
+npm run test:coverage     # couverture
 
-# L'app est sur http://localhost:3000
+npm run db:generate       # générer le client Prisma
+npm run db:migrate        # créer et appliquer une migration (dev)
+npm run db:studio         # explorer la base
+npm run superadmin:create -- <email> [--nom "Prénom Nom"] [--force]
+npm run db:reencrypt      # convertir NISS et IBAN au format v2 (--dry-run pour simuler)
+node scripts/resync-yearly-prices.mjs [--apply]   # recaler les prix annuels Stripe (simulation par défaut)
 ```
 
 ---
 
-## 📝 Pages actuelles
+## Tests
 
-| Route | Contenu |
-|---|---|
-| `/` | Accueil (Hero, trust bar, stats, teasers) |
-| `/fonctionnalites` | Détail des fonctionnalités |
-| `/pour-qui` | Segments cibles (cabinet RH, gestionnaire, entreprise, salarié) |
-| `/tarifs` | Grille tarifaire |
-| `/faq` | Questions fréquentes |
-| `/a-propos` | Mission et valeurs |
-| `/contact` | Contact commercial & support |
-| `/rgpd`, `/conditions`, `/confidentialite` | Pages légales |
+- Vitest + React Testing Library, environnement `jsdom`, fichiers exécutés en série.
+- Les tests d'intégration utilisent une vraie base : la branche Neon `dev` en local (via `.env.local`), la branche `test` en CI.
+- Chaque route arrive avec ses tests d'isolation : un utilisateur d'un autre cabinet, ou un gestionnaire non assigné, obtient `404`.
+
+Voir [doc/TESTS.md](../../doc/TESTS.md).
 
 ---
 
-## 🎨 Styling
+## Interface
 
-- **Framework:** Tailwind CSS 4
-- **UI Kit:** Shadcn/UI + Tweakcn
-- **Dark Mode:** Supporté via classe `dark`
-- **Couleurs de marque:** Indigo (`#4f46e5`) + Teal (`#00c49f`)
-- **Animations:** Framer Motion
-
----
-
-## 🧪 Tests
-
-```bash
-# Lancer les tests une fois
-npm test
-
-# Mode watch
-npm run test:watch
-
-# Avec couverture de code
-npm run test:coverage
-```
-
-Tests unitaires (Vitest + React Testing Library) sur les composants avec logique
-(navbar, theme toggle, FAQ, pricing).
+- Tailwind CSS 4 et shadcn/ui (`components.json`, style `base-nova`). Tout nouvel écran utilise `components/ui`.
+- Thème clair et sombre ; couleurs SocialFlow : primaire `#4f46e5`, secondaire `#00c49f`.
+- Chaque cabinet peut appliquer sa marque (nom, logo, couleurs) à son espace et à ceux de ses clients : variables CSS posées côté serveur par `buildThemeCss` (`lib/branding/branding-rules.ts`), avec contrôle du contraste.
+- Animations du site public avec Framer Motion.
 
 ---
 
-## 📦 Scripts
+## Ressources
 
-```bash
-npm run dev            # Serveur de dev
-npm run build          # Build production
-npm start               # Démarrer le build production
-npm run lint            # ESLint
-npm run type-check      # tsc --noEmit
-npm test                # Tests unitaires
-npm run test:watch      # Tests en mode watch
-npm run test:coverage   # Tests avec couverture de code
-npm run clean           # Nettoyer .next/dist
-```
-
----
-
-## 🗺️ Roadmap (à venir)
-
-Non implémenté pour l'instant :
-
-- **Authentification** (Better Auth) — routes `(auth)/`, magic link, OAuth Google/Microsoft
-- **Dashboard Cabinet RH** — routes `(dashboard)/*`
-- **Portails Entreprise & Collaborateur** — routes `(portal)/*`
-- **API Routes** — `/api/*` (auth, companies, payrolls, webhooks Stripe)
-- **Base de données** — PostgreSQL + Prisma
-- **Composants Shadcn/UI** dans `components/ui/`, `hooks/`, `types/`, `middleware.ts`
-
-Voir [doc/analysis/ARCHITECTURE.md](../../doc/analysis/ARCHITECTURE.md) pour le détail de
-l'architecture cible.
-
----
-
-## 📚 Ressources
-
-- [Next.js 16 Docs](https://nextjs.org/docs)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Shadcn/UI](https://ui.shadcn.com)
-- [Vitest](https://vitest.dev)
-
----
-
-**Bon développement! 🚀**
+[Next.js](https://nextjs.org/docs) · [Prisma](https://www.prisma.io/docs) · [Better Auth](https://www.better-auth.com/docs) · [shadcn/ui](https://ui.shadcn.com) · [Tailwind CSS](https://tailwindcss.com) · [Vitest](https://vitest.dev)
