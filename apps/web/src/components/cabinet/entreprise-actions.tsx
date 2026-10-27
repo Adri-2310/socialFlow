@@ -10,6 +10,7 @@ import {
   type GestionnaireOption,
 } from '@/components/cabinet/entreprise-form-dialog';
 import type { CountryOption } from '@/lib/countries';
+import { Button } from '@/components/ui/button';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -58,34 +59,37 @@ export function EntrepriseActions({
     router.refresh();
   }
 
-  const buttonClass =
-    'flex items-center gap-1.5 rounded-lg border border-input min-h-10 px-3 py-2 sm:min-h-0 sm:px-2.5 sm:py-1.5 text-xs font-semibold transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60';
-
   return (
     <div className="flex flex-col items-start gap-1 sm:shrink-0 sm:items-end">
       <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-1">
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setEditing(true)}
           disabled={readOnly || loading}
           aria-label={`Modifier ${name}`}
-          className={`${buttonClass} text-foreground`}
+          className="h-10 text-xs sm:h-8"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil aria-hidden="true" />
           Modifier
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setConfirming(true)}
           disabled={readOnly || loading}
           aria-label={`Archiver ${name}`}
-          className={`${buttonClass} text-destructive-text hover:bg-destructive/10`}
+          className="h-10 text-xs sm:h-8 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
         >
-          <Archive className="h-3.5 w-3.5" />
+          <Archive aria-hidden="true" />
           Archiver
-        </button>
+        </Button>
       </div>
-      {error && <p className="max-w-xs text-left text-xs text-destructive-text sm:text-right">{error}</p>}
+      {error && (
+        <p className="max-w-xs text-left text-xs text-destructive-text sm:text-right">{error}</p>
+      )}
 
       {editing && (
         <EntrepriseFormDialog

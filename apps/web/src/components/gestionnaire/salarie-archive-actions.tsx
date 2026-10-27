@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Archive, ArchiveRestore, Loader2 } from 'lucide-react';
+import { Archive, ArchiveRestore } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ERROR_MESSAGES, FALLBACK } from '@/lib/salarie/form-messages';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 // Archiver ou restaurer le dossier d'un salarié (roles/03 § 4.2). Archiver demande une
 // confirmation (le dossier disparaît des listes, il n'est jamais supprimé) ; restaurer est
@@ -46,30 +48,27 @@ export function SalarieArchiveActions({
     }
   }
 
-  const bouton = compact
-    ? 'inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60'
-    : 'flex shrink-0 items-center justify-center gap-2 rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60';
-  const icone = compact ? 'h-3.5 w-3.5' : 'h-4 w-4';
-
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size={compact ? 'sm' : 'default'}
         onClick={archive ? envoyer : () => setConfirming(true)}
         disabled={readOnly || loading}
         title={readOnly ? 'Votre cabinet est en lecture seule.' : undefined}
         aria-label={archive ? `Restaurer le dossier de ${nom}` : `Archiver le dossier de ${nom}`}
-        className={bouton}
+        className={compact ? 'text-xs' : 'shrink-0'}
       >
         {loading ? (
-          <Loader2 className={`${icone} animate-spin`} />
+          <Spinner />
         ) : archive ? (
-          <ArchiveRestore className={icone} />
+          <ArchiveRestore aria-hidden="true" />
         ) : (
-          <Archive className={icone} />
+          <Archive aria-hidden="true" />
         )}
         {archive ? 'Restaurer' : 'Archiver'}
-      </button>
+      </Button>
       {error && (
         <p role="alert" className="basis-full text-xs text-destructive-text">
           {error}

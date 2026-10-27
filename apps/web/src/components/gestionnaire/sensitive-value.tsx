@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { ERROR_MESSAGES, FALLBACK } from '@/lib/salarie/form-messages';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 // Durée pendant laquelle le clair reste affiché avant de se remasquer tout seul.
 const AFFICHAGE_MS = 30_000;
@@ -58,22 +60,24 @@ export function SensitiveValue({
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       <span className="font-mono">{clair ?? masked}</span>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         onClick={clair === null ? reveler : () => setClair(null)}
         disabled={loading}
         aria-label={clair === null ? `Afficher le ${label}` : `Masquer le ${label}`}
         title={clair === null ? 'Afficher (inscrit à l’audit)' : 'Masquer'}
-        className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+        className="text-muted-foreground"
       >
         {loading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <Spinner />
         ) : clair === null ? (
-          <Eye className="h-3.5 w-3.5" />
+          <Eye aria-hidden="true" />
         ) : (
-          <EyeOff className="h-3.5 w-3.5" />
+          <EyeOff aria-hidden="true" />
         )}
-      </button>
+      </Button>
       {error && (
         <span role="alert" className="basis-full text-xs text-destructive-text">
           {error}

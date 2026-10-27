@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, MailX, Send, UserCheck } from 'lucide-react';
+import { Mail, MailX, Send, UserCheck } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ERROR_MESSAGES, FALLBACK } from '@/lib/salarie/form-messages';
 import { Notice } from '@/components/shared/notice';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('fr-BE', { timeZone: 'UTC' });
@@ -15,9 +17,6 @@ type Etat =
   | { etat: 'EN_ATTENTE'; expiresAt: string }
   | { etat: 'EXPIREE'; expiresAt: string }
   | { etat: 'COMPTE_ACTIF' };
-
-const bouton =
-  'inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60';
 
 // Accès du salarié à son espace (roles/03 § 4.3) : inviter, renvoyer, révoquer. L'invitation est
 // facultative : sans compte, le salarié reçoit tout de même ses fiches par lien sécurisé (D12).
@@ -68,20 +67,18 @@ export function SalariePortail({
 
   const desactive = readOnly || loading;
   const inviter = (libelle: string) => (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={() => appeler('POST')}
       disabled={desactive || !aUnEmail}
       title={readOnly ? 'Votre cabinet est en lecture seule.' : undefined}
-      className={bouton}
+      className="text-xs"
     >
-      {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <Send className="h-3.5 w-3.5" />
-      )}
+      {loading ? <Spinner /> : <Send aria-hidden="true" />}
       {libelle}
-    </button>
+    </Button>
   );
 
   return (
@@ -139,14 +136,16 @@ export function SalariePortail({
           {etat.etat === 'AUCUNE' && inviter('Inviter au portail')}
           {(etat.etat === 'EN_ATTENTE' || etat.etat === 'EXPIREE') && inviter('Renvoyer')}
           {etat.etat === 'EN_ATTENTE' && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setRevoquer(true)}
               disabled={desactive}
-              className={bouton}
+              className="text-xs"
             >
               Révoquer
-            </button>
+            </Button>
           )}
         </div>
       </div>

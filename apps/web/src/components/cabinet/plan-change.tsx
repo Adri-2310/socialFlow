@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { formatStorageMb } from '@/lib/billing/quota-format';
 import type { QuotaKey } from '@/lib/billing/cabinet-quotas';
 import type { PendingPlanChange, PlanChangeOptions, PlanOption } from '@/lib/billing/plan-change';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 type Period = 'monthly' | 'yearly';
 
@@ -127,15 +129,16 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
             : ''}
           . Vous gardez votre plan actuel jusqu’à cette date.
         </p>
-        <button
+        <Button
           type="button"
+          variant="outline"
           disabled={loading}
           onClick={() => run(() => post('/api/billing/plan-change/cancel'))}
-          className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-60"
+          className="mt-3"
         >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {loading && <Spinner />}
           Annuler le changement
-        </button>
+        </Button>
         {error && (
           <p role="alert" className="mt-2 text-xs text-destructive-text">
             {error}
@@ -172,22 +175,19 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
         className="mt-4 inline-flex rounded-xl border border-border p-1"
       >
         {(['monthly', 'yearly'] as const).map((value) => (
-          <button
+          <Button
             key={value}
             type="button"
+            size="sm"
+            variant={period === value ? 'default' : 'ghost'}
             aria-pressed={period === value}
             onClick={() => {
               setPeriod(value);
               setSelected(null);
             }}
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-              period === value
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
           >
             {PERIOD_LABELS[value]}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -230,8 +230,9 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
                     {price ? `, ${price.total}` : ''}) à partir du {dateText}.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       disabled={loading}
                       onClick={() =>
                         run(() =>
@@ -241,33 +242,35 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
                           }),
                         )
                       }
-                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
                     >
-                      {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {loading && <Spinner />}
                       Confirmer
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       disabled={loading}
                       onClick={() => setSelected(null)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
                     >
                       Annuler
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   disabled={disabled}
                   onClick={() => {
                     setError(null);
                     setSelected(plan.planId);
                   }}
-                  className="mt-3 w-full rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 w-full"
                 >
                   Choisir {plan.name}
-                </button>
+                </Button>
               )}
             </li>
           );

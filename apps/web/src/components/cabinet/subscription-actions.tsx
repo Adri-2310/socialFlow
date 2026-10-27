@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Loader2 } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -11,13 +13,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   NO_SUBSCRIPTION: "Aucun abonnement en cours n'a été trouvé.",
   ALREADY_CANCELLING: 'La résiliation est déjà programmée.',
   NOT_CANCELLING: "Aucune résiliation n'est programmée.",
-  STRIPE_FAILED: 'Le service de paiement est momentanément indisponible. Réessayez dans un instant.',
+  STRIPE_FAILED:
+    'Le service de paiement est momentanément indisponible. Réessayez dans un instant.',
 };
 
 const FALLBACK = 'Une erreur est survenue. Veuillez réessayer.';
-
-const buttonBase =
-  'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60';
 
 function ErrorText({ message }: { message: string | null }) {
   if (!message) return null;
@@ -30,7 +30,9 @@ function ErrorText({ message }: { message: string | null }) {
 
 // Envoie une action au serveur ; ne transmet rien d'autre que la demande :
 // le cabinet vient de la session.
-async function post(url: string): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; message: string }> {
+async function post(
+  url: string,
+): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; message: string }> {
   try {
     const res = await fetch(url, { method: 'POST' });
     const body = await res.json().catch(() => null);
@@ -61,15 +63,10 @@ export function CardUpdateButton({ label = 'Modifier ma carte' }: { label?: stri
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={start}
-        disabled={loading}
-        className={`${buttonBase} border border-border text-foreground hover:bg-muted`}
-      >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+      <Button type="button" variant="outline" onClick={start} disabled={loading}>
+        {loading ? <Spinner /> : <CreditCard aria-hidden="true" />}
         {label}
-      </button>
+      </Button>
       <ErrorText message={error} />
     </div>
   );
@@ -98,13 +95,14 @@ export function CancelSubscriptionButton({ endDateLabel }: { endDateLabel: strin
 
   if (!confirming) {
     return (
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setConfirming(true)}
-        className={`${buttonBase} text-destructive-text hover:bg-destructive/10`}
+        className="text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
       >
         Résilier mon abonnement
-      </button>
+      </Button>
     );
   }
 
@@ -118,23 +116,18 @@ export function CancelSubscriptionButton({ endDateLabel }: { endDateLabel: strin
         Vous pourrez annuler la résiliation avant cette date.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={cancel}
-          disabled={loading}
-          className={`${buttonBase} bg-destructive text-white hover:opacity-90`}
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="button" variant="destructive" onClick={cancel} disabled={loading}>
+          {loading && <Spinner />}
           Confirmer la résiliation
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
           onClick={() => setConfirming(false)}
           disabled={loading}
-          className={`${buttonBase} border border-border text-foreground hover:bg-muted`}
         >
           Conserver mon abonnement
-        </button>
+        </Button>
       </div>
       <ErrorText message={error} />
     </div>
@@ -160,15 +153,10 @@ export function ResumeSubscriptionButton() {
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={resume}
-        disabled={loading}
-        className={`${buttonBase} bg-primary text-primary-foreground shadow-sm hover:opacity-90`}
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      <Button type="button" onClick={resume} disabled={loading}>
+        {loading && <Spinner />}
         Reprendre mon abonnement
-      </button>
+      </Button>
       <ErrorText message={error} />
     </div>
   );

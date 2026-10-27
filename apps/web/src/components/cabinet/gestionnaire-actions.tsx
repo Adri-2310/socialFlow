@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Pencil, PauseCircle, PlayCircle, UserMinus } from 'lucide-react';
+import { Pencil, PauseCircle, PlayCircle, UserMinus } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EditEmailDialog } from '@/components/cabinet/edit-email-dialog';
 import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
 import { GESTIONNAIRE_RESTORE_WINDOW_DAYS } from '@/lib/cabinet/gestionnaire-retention';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -64,11 +66,12 @@ export function GestionnaireActions({
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       // D27 : on nomme les entreprises a reassigner avant de pouvoir continuer.
-      if (body?.error === 'GESTIONNAIRE_HAS_UNCOVERED_ENTREPRISES' && Array.isArray(body.entreprises)) {
+      if (
+        body?.error === 'GESTIONNAIRE_HAS_UNCOVERED_ENTREPRISES' &&
+        Array.isArray(body.entreprises)
+      ) {
         const names = body.entreprises.map((e: { name: string }) => e.name).join(', ');
-        setError(
-          `Réassignez d’abord ces entreprises à un autre gestionnaire actif : ${names}.`,
-        );
+        setError(`Réassignez d’abord ces entreprises à un autre gestionnaire actif : ${names}.`);
         return;
       }
       setError(ERROR_MESSAGES[body?.error] ?? 'Une erreur est survenue. Veuillez réessayer.');
@@ -78,66 +81,69 @@ export function GestionnaireActions({
     router.refresh();
   }
 
-  const buttonClass =
-    'flex items-center gap-1.5 rounded-lg border border-input min-h-10 px-3 py-2 sm:min-h-0 sm:px-2.5 sm:py-1.5 text-xs font-semibold transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60';
-
   return (
     <div className="flex flex-col items-start gap-1 sm:shrink-0 sm:items-end">
       <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-1">
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setEditingEmail(true)}
           disabled={busy !== null}
           aria-label={`Modifier l'email de ${name}`}
-          className={`${buttonClass} text-foreground`}
+          className="h-10 text-xs sm:h-8"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil aria-hidden="true" />
           Email
-        </button>
+        </Button>
         {status === 'actif' ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setConfirm('suspend')}
             disabled={busy !== null}
             aria-label={`Suspendre ${name}`}
-            className={`${buttonClass} text-foreground`}
+            className="h-10 text-xs sm:h-8"
           >
-            <PauseCircle className="h-3.5 w-3.5" />
+            <PauseCircle aria-hidden="true" />
             Suspendre
-          </button>
+          </Button>
         ) : reactivatableByCabinet ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => run('reactivate')}
             disabled={busy !== null}
             aria-label={`Réactiver ${name}`}
-            className={`${buttonClass} text-foreground`}
+            className="h-10 text-xs sm:h-8"
           >
-            {busy === 'reactivate' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <PlayCircle className="h-3.5 w-3.5" />
-            )}
+            {busy === 'reactivate' ? <Spinner /> : <PlayCircle aria-hidden="true" />}
             Réactiver
-          </button>
+          </Button>
         ) : null}
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setConfirm('archive')}
           disabled={busy !== null}
           aria-label={`Retirer ${name}`}
-          className={`${buttonClass} text-destructive-text hover:bg-destructive/10`}
+          className="h-10 text-xs sm:h-8 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
         >
-          <UserMinus className="h-3.5 w-3.5" />
+          <UserMinus aria-hidden="true" />
           Retirer
-        </button>
+        </Button>
       </div>
       {status === 'suspendu' && !reactivatableByCabinet && (
         <p className="max-w-xs text-left sm:text-right text-xs text-muted-foreground">
           Suspendu par l&apos;administration SocialFlow.
         </p>
       )}
-      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>}
+      {error && (
+        <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>
+      )}
 
       {editingEmail && (
         <EditEmailDialog

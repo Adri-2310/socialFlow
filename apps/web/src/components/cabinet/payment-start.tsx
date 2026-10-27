@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
+import { CreditCard, ShieldCheck } from 'lucide-react';
 import { Notice } from '@/components/shared/notice';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -119,15 +121,10 @@ export function PaymentStart({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={start}
-        disabled={loading}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      <Button type="button" size="lg" onClick={start} disabled={loading} className="mt-6 w-full">
+        {loading && <Spinner />}
         Démarrer mon essai gratuit
-      </button>
+      </Button>
     </div>
   );
 }
