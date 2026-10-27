@@ -62,6 +62,9 @@
 }
 
 .dark {
+  /* Contrôles natifs (icône des champs date, barres de défilement, listes) en sombre : sans cela
+     le navigateur les dessine en clair sur fond sombre. */
+  color-scheme: dark;
   --background: #060b19;
   --foreground: #ffffff;
   --card: #0f172a;
