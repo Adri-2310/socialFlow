@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Link2, Loader2, Unlink } from 'lucide-react';
+import { Link2, Unlink } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
 import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const PROVIDERS = [
   { id: 'google', label: 'Google', Icon: GoogleIcon },
@@ -87,27 +89,22 @@ export function LinkedAccounts() {
                     </p>
                   </div>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant={isLinked ? 'outline' : 'default'}
                   onClick={() => (isLinked ? handleUnlink(id) : handleLink(id))}
                   disabled={loadingProvider !== null}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                    isLinked
-                      ? 'border border-input text-foreground hover:bg-muted'
-                      : 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90'
-                  }`}
+                  className="shrink-0"
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isLinked ? (
-                    <Unlink className="h-4 w-4" />
-                  ) : (
-                    <Link2 className="h-4 w-4" />
-                  )}
+                  {isLoading ? <Spinner /> : isLinked ? <Unlink /> : <Link2 />}
                   {isLinked ? 'Délier' : 'Lier mon compte'}
-                </button>
+                </Button>
               </div>
-              {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
+              {error && (
+                <p role="alert" className="mt-1.5 text-sm text-destructive-text">
+                  {error}
+                </p>
+              )}
             </div>
           );
         })}
