@@ -9,6 +9,7 @@ import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing/billing';
 import type { CabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
 import type { BillingExtras } from '@/lib/billing/cabinet-subscription';
 import type { PlanChangeOptions } from '@/lib/billing/plan-change';
+import { Notice } from '@/components/shared/notice';
 
 // Retour de la saisie de carte chez Stripe (voir la page Mon abonnement).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;
@@ -120,18 +121,17 @@ export function SubscriptionDetails({
   return (
     <div className="space-y-6">
       {flashMessage && (
-        <p
-          role="status"
-          className={`rounded-xl border p-3 text-sm ${
+        <Notice
+          tone={
             flashMessage.tone === 'ok'
-              ? 'border-secondary/30 bg-secondary/10 text-foreground'
+              ? 'success'
               : flashMessage.tone === 'error'
-                ? 'border-destructive/30 bg-destructive/10 text-destructive-text'
-                : 'border-border bg-muted/60 text-foreground'
-          }`}
+                ? 'danger'
+                : 'neutral'
+          }
         >
           {flashMessage.text}
-        </p>
+        </Notice>
       )}
 
       <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -259,7 +259,9 @@ export function SubscriptionDetails({
                     <td className="whitespace-nowrap py-2 pr-4 font-medium">
                       {formatEuros(invoice.amountCents)}
                     </td>
-                    <td className="py-2 pr-4">{INVOICE_STATUS[invoice.status] ?? invoice.status}</td>
+                    <td className="py-2 pr-4">
+                      {INVOICE_STATUS[invoice.status] ?? invoice.status}
+                    </td>
                     <td className="py-2 text-right">
                       {invoice.pdfUrl && (
                         <a

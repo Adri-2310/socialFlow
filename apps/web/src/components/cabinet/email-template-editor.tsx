@@ -19,6 +19,7 @@ import {
   type TemplateError,
   type TemplateType,
 } from '@/lib/email/email-templates';
+import { Notice } from '@/components/shared/notice';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -279,9 +280,9 @@ export function EmailTemplateEditor({ type, initial, brand, fromLabel, readOnly 
         </p>
       )}
       {done && (
-        <p role="status" className="mt-4 text-sm text-secondary">
+        <Notice tone="success" className="mt-4">
           {done}
-        </p>
+        </Notice>
       )}
 
       {!readOnly && (

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Mail, MailX, Send, UserCheck } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ERROR_MESSAGES, FALLBACK } from '@/lib/salarie/form-messages';
+import { Notice } from '@/components/shared/notice';
 
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('fr-BE', { timeZone: 'UTC' });
@@ -151,9 +152,9 @@ export function SalariePortail({
       </div>
 
       {avertissement && (
-        <p role="status" className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+        <Notice tone="warning" className="mt-3">
           {avertissement}
-        </p>
+        </Notice>
       )}
       {erreur && (
         <p role="alert" className="mt-3 text-sm text-destructive-text">

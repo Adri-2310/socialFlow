@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
+import { Notice } from '@/components/shared/notice';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -9,8 +10,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   PLAN_REQUIRED: "Aucun plan n'est associé à votre cabinet. Contactez le support.",
   SUBSCRIPTION_ALREADY_STARTED:
     'Votre abonnement est déjà démarré. Rechargez la page pour accéder à votre espace.',
-  PRICE_NOT_FOUND: "Ce plan n'est pas disponible à la souscription pour le moment. Contactez le support.",
-  CHECKOUT_FAILED: 'Le service de paiement est momentanément indisponible. Réessayez dans un instant.',
+  PRICE_NOT_FOUND:
+    "Ce plan n'est pas disponible à la souscription pour le moment. Contactez le support.",
+  CHECKOUT_FAILED:
+    'Le service de paiement est momentanément indisponible. Réessayez dans un instant.',
 };
 
 type Props = {
@@ -77,12 +80,9 @@ export function PaymentStart({
       </p>
 
       {cancelled && (
-        <p
-          role="status"
-          className="mt-4 rounded-xl border border-border bg-muted px-4 py-3 text-sm text-foreground"
-        >
+        <Notice tone="neutral" className="mt-4">
           Le paiement n&apos;a pas été finalisé. Vous pouvez le reprendre quand vous voulez.
-        </p>
+        </Notice>
       )}
 
       <dl className="mt-6 space-y-3 rounded-xl border border-border/60 p-4 text-sm">

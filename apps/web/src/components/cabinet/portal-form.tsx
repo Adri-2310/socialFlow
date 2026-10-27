@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { SLUG_MAX, SLUG_MIN, slugify } from '@/lib/portal/portal-slug';
+import { Notice } from '@/components/shared/notice';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -127,11 +128,7 @@ export function PortalForm({
             {error}
           </p>
         )}
-        {done && (
-          <p role="status" className="text-sm text-secondary">
-            Identifiant enregistré.
-          </p>
-        )}
+        {done && <Notice tone="success">Identifiant enregistré.</Notice>}
         {readOnly ? (
           <p className="text-xs text-muted-foreground">
             Votre cabinet est en lecture seule : régularisez votre abonnement pour modifier le

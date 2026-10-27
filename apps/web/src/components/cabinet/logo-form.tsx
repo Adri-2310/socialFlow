@@ -6,6 +6,7 @@ import { ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { Notice } from '@/components/shared/notice';
 
 const MAX_BYTES = 1024 * 1024;
 
@@ -158,9 +159,9 @@ export function LogoForm({
         </p>
       )}
       {done && (
-        <p role="status" className="mt-3 text-sm text-secondary">
+        <Notice tone="success" className="mt-3">
           {done}
-        </p>
+        </Notice>
       )}
     </section>
   );

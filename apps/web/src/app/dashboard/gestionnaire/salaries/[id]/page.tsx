@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { Archive, ArrowLeft } from 'lucide-react';
 import { ConditionAdd } from '@/components/gestionnaire/condition-add';
 import { ConditionRowActions } from '@/components/gestionnaire/condition-row-actions';
 import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
@@ -22,6 +22,7 @@ import { resolveScope } from '@/lib/authz/authz';
 import { getSalarieDetail, type ConditionRow } from '@/lib/salarie/salarie-data';
 import { formatCents } from '@/lib/salarie/montant';
 import { lignesSituationFiscale, type DossierFiscal } from '@/lib/salarie/situation-fiscale';
+import { Notice } from '@/components/shared/notice';
 
 export const metadata: Metadata = {
   title: 'Dossier salarié',
@@ -158,16 +159,14 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
       </div>
 
       {salarie.archive && (
-        <div
-          role="status"
-          className="rounded-2xl border border-border bg-muted/50 p-4 text-sm text-foreground"
+        <Notice
+          tone="neutral"
+          icon={<Archive aria-hidden="true" className="size-5" />}
+          title="Dossier archivé"
         >
-          <p className="font-semibold">Dossier archivé</p>
-          <p className="text-muted-foreground">
-            Il n’apparaît plus dans les listes et ne peut plus être modifié. Il reste conservé :
-            restaurez-le pour le modifier de nouveau.
-          </p>
-        </div>
+          Il n’apparaît plus dans les listes et ne peut plus être modifié. Il reste conservé :
+          restaurez-le pour le modifier de nouveau.
+        </Notice>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">

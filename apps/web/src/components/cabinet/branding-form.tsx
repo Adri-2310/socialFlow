@@ -15,6 +15,7 @@ import {
   type CabinetBranding,
 } from '@/lib/branding/branding-rules';
 import { readableForeground } from '@/lib/branding/color';
+import { Notice } from '@/components/shared/notice';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -272,9 +273,9 @@ export function BrandingForm({
         </p>
       )}
       {saved && (
-        <p role="status" className="mt-4 text-sm text-secondary">
+        <Notice tone="success" className="mt-4">
           Identité visuelle enregistrée.
-        </p>
+        </Notice>
       )}
 
       {!readOnly && (

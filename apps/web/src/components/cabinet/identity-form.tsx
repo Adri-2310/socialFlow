@@ -9,6 +9,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Spinner } from '@/components/ui/spinner';
 import type { CountryOption } from '@/lib/countries';
 import type { CabinetIdentity } from '@/lib/cabinet/cabinet-identity';
+import { Notice } from '@/components/shared/notice';
 
 const FIELD_ERRORS: Record<string, string> = {
   NAME_REQUIRED: 'La raison sociale est obligatoire (2 caractères minimum).',
@@ -240,9 +241,9 @@ export function IdentityForm({
         </p>
       )}
       {saved && (
-        <p role="status" className="mt-4 text-sm text-secondary">
+        <Notice tone="success" className="mt-4">
           Informations enregistrées.
-        </p>
+        </Notice>
       )}
 
       {!readOnly && (
