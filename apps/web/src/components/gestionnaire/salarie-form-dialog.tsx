@@ -2,8 +2,13 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Pencil, UserPlus } from 'lucide-react';
-import { CheckField, Field, inputClass } from '@/components/gestionnaire/form-field';
+import { Pencil, UserPlus } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { CheckField, FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import type { CountryOption } from '@/lib/countries';
 import { texteEnMinutes } from '@/lib/periode/periode-format';
 import { parseEurosToCents } from '@/lib/salarie/montant';
@@ -157,65 +162,61 @@ export function SalarieFormDialog({
   const vue = vueFiscale(form);
   const toggle =
     (field: 'beneficiaireHandicape' | 'conjointHandicape' | 'autresPersonnes' | 'parentIsole') =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((current) => ({ ...current, [field]: e.target.checked }));
+    (checked: boolean) =>
+      setForm((current) => ({ ...current, [field]: checked }));
+
+  // Compteurs de la situation fiscale : mêmes bornes partout (0 à 20, voir le schéma).
+  const compteur = (
+    field:
+      | 'enfantsCharge'
+      | 'enfantsHandicapes'
+      | 'autresChargeDependantes66'
+      | 'autresChargeHandicapees'
+      | 'autresCharge',
+    id: string,
+    label: string,
+    hint?: string,
+  ) => (
+    <FormField id={id} label={label} error={err(field)} hint={hint}>
+      {(c) => (
+        <Input {...c} type="number" min={0} max={20} value={form[field]} onChange={set(field)} />
+      )}
+    </FormField>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="salarie-form-title"
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
-      >
-        <div className="flex items-start gap-4">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-            {edit ? <Pencil className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-          </span>
-          <div>
-            <h3 id="salarie-form-title" className="text-lg font-semibold text-foreground">
-              {edit ? 'Modifier le dossier' : 'Nouveau salarié'}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {edit
-                ? 'Le statut, la fonction, le régime et la rémunération sont datés : ils se changent par « Ajouter une condition ».'
-                : 'Le NISS et l’IBAN sont chiffrés à l’enregistrement et masqués à l’affichage.'}
-            </p>
-          </div>
-        </div>
-
-        <fieldset disabled={loading} className="mt-5 grid gap-4 sm:grid-cols-2">
+    <FormDialog
+      size="2xl"
+      icon={edit ? <Pencil /> : <UserPlus />}
+      title={edit ? 'Modifier le dossier' : 'Nouveau salarié'}
+      description={
+        edit
+          ? 'Le statut, la fonction, le régime et la rémunération sont datés : ils se changent par « Ajouter une condition ».'
+          : 'Le NISS et l’IBAN sont chiffrés à l’enregistrement et masqués à l’affichage.'
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate className="grid gap-6">
+        <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
           <legend className="mb-1 text-sm font-semibold text-foreground">Identité</legend>
-          <Field id="sal-prenom" label="Prénom" error={err('prenom')}>
-            <input
-              id="sal-prenom"
-              value={form.prenom}
-              onChange={set('prenom')}
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          <Field id="sal-nom" label="Nom" error={err('nom')}>
-            <input
-              id="sal-nom"
-              value={form.nom}
-              onChange={set('nom')}
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          <Field id="sal-naissance" label="Date de naissance" error={err('dateNaissance')}>
-            <input
-              id="sal-naissance"
-              type="date"
-              value={form.dateNaissance}
-              onChange={set('dateNaissance')}
-              className={inputClass}
-            />
-          </Field>
-          <Field
+          <FormField id="sal-prenom" label="Prénom" error={err('prenom')}>
+            {(c) => (
+              <Input {...c} value={form.prenom} onChange={set('prenom')} autoComplete="off" />
+            )}
+          </FormField>
+          <FormField id="sal-nom" label="Nom" error={err('nom')}>
+            {(c) => <Input {...c} value={form.nom} onChange={set('nom')} autoComplete="off" />}
+          </FormField>
+          <FormField id="sal-naissance" label="Date de naissance" error={err('dateNaissance')}>
+            {(c) => (
+              <Input
+                {...c}
+                type="date"
+                value={form.dateNaissance}
+                onChange={set('dateNaissance')}
+              />
+            )}
+          </FormField>
+          <FormField
             id="sal-niss"
             label="NISS"
             error={err('niss')}
@@ -225,99 +226,96 @@ export function SalarieFormDialog({
                 : 'Par exemple 85.07.30-033.28'
             }
           >
-            <input
-              id="sal-niss"
-              value={form.niss}
-              onChange={set('niss')}
-              inputMode="numeric"
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          <div className="sm:col-span-2">
-            <Field
-              id="sal-iban"
-              label="IBAN"
-              error={err('iban')}
-              hint={
-                target.mode === 'edit'
-                  ? `Actuel : ${target.ibanMasque}. Laissez vide pour ne pas le changer.`
-                  : 'IBAN belge, par exemple BE68 5390 0754 7034'
-              }
-            >
-              <input
-                id="sal-iban"
+            {(c) => (
+              <Input
+                {...c}
+                value={form.niss}
+                onChange={set('niss')}
+                inputMode="numeric"
+                autoComplete="off"
+              />
+            )}
+          </FormField>
+          <FormField
+            id="sal-iban"
+            label="IBAN"
+            error={err('iban')}
+            className="sm:col-span-2"
+            hint={
+              target.mode === 'edit'
+                ? `Actuel : ${target.ibanMasque}. Laissez vide pour ne pas le changer.`
+                : 'IBAN belge, par exemple BE68 5390 0754 7034'
+            }
+          >
+            {(c) => (
+              <Input
+                {...c}
                 value={form.iban}
                 onChange={set('iban')}
                 autoComplete="off"
                 autoCapitalize="characters"
-                className={inputClass}
               />
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <Field
-              id="sal-email"
-              label="Email (facultatif)"
-              error={err('email')}
-              hint="Sert à l’invitation au portail du salarié."
-            >
-              <input
-                id="sal-email"
+            )}
+          </FormField>
+          <FormField
+            id="sal-email"
+            label="Email (facultatif)"
+            error={err('email')}
+            hint="Sert à l’invitation au portail du salarié."
+            className="sm:col-span-2"
+          >
+            {(c) => (
+              <Input
+                {...c}
                 type="email"
                 inputMode="email"
                 value={form.email}
                 onChange={set('email')}
                 autoComplete="off"
-                className={inputClass}
               />
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <Field id="sal-adresse" label="Adresse (facultatif)" error={err('adresse')}>
-              <input
-                id="sal-adresse"
-                value={form.adresse}
-                onChange={set('adresse')}
+            )}
+          </FormField>
+          <FormField
+            id="sal-adresse"
+            label="Adresse (facultatif)"
+            error={err('adresse')}
+            className="sm:col-span-2"
+          >
+            {(c) => (
+              <Input {...c} value={form.adresse} onChange={set('adresse')} autoComplete="off" />
+            )}
+          </FormField>
+          <FormField id="sal-postal" label="Code postal (facultatif)" error={err('codePostal')}>
+            {(c) => (
+              <Input
+                {...c}
+                value={form.codePostal}
+                onChange={set('codePostal')}
                 autoComplete="off"
-                className={inputClass}
               />
-            </Field>
-          </div>
-          <Field id="sal-postal" label="Code postal (facultatif)" error={err('codePostal')}>
-            <input
-              id="sal-postal"
-              value={form.codePostal}
-              onChange={set('codePostal')}
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          <Field id="sal-ville" label="Ville (facultatif)" error={err('ville')}>
-            <input
-              id="sal-ville"
-              value={form.ville}
-              onChange={set('ville')}
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          <Field id="sal-pays" label="Pays" error={err('pays')}>
-            <select id="sal-pays" value={form.pays} onChange={set('pays')} className={inputClass}>
-              {countries.map((country) => (
-                <option key={country.code} value={country.code}>
-                  {country.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+            )}
+          </FormField>
+          <FormField id="sal-ville" label="Ville (facultatif)" error={err('ville')}>
+            {(c) => <Input {...c} value={form.ville} onChange={set('ville')} autoComplete="off" />}
+          </FormField>
+          <FormField id="sal-pays" label="Pays" error={err('pays')}>
+            {(c) => (
+              <NativeSelect {...c} value={form.pays} onChange={set('pays')}>
+                {countries.map((country) => (
+                  <NativeSelectOption key={country.code} value={country.code}>
+                    {country.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            )}
+          </FormField>
         </fieldset>
 
-        <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
+        <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
           <legend className="mb-1 text-sm font-semibold text-foreground">Contrat</legend>
           {!edit && (
             <>
-              <Field
+              <FormField
                 id="sal-statut"
                 label="Statut"
                 error={err('statut')}
@@ -327,82 +325,71 @@ export function SalarieFormDialog({
                     : 'Commission paritaire 100'
                 }
               >
-                <select
-                  id="sal-statut"
-                  value={form.statut}
-                  onChange={set('statut')}
-                  className={inputClass}
-                >
-                  <option value="EMPLOYE">Employé</option>
-                  <option value="OUVRIER">Ouvrier</option>
-                </select>
-              </Field>
-              <Field id="sal-fonction" label="Fonction" error={err('fonction')}>
-                <input
-                  id="sal-fonction"
-                  value={form.fonction}
-                  onChange={set('fonction')}
-                  autoComplete="off"
-                  className={inputClass}
-                />
-              </Field>
+                {(c) => (
+                  <NativeSelect {...c} value={form.statut} onChange={set('statut')}>
+                    <NativeSelectOption value="EMPLOYE">Employé</NativeSelectOption>
+                    <NativeSelectOption value="OUVRIER">Ouvrier</NativeSelectOption>
+                  </NativeSelect>
+                )}
+              </FormField>
+              <FormField id="sal-fonction" label="Fonction" error={err('fonction')}>
+                {(c) => (
+                  <Input
+                    {...c}
+                    value={form.fonction}
+                    onChange={set('fonction')}
+                    autoComplete="off"
+                  />
+                )}
+              </FormField>
             </>
           )}
-          <Field id="sal-type" label="Type de contrat" error={err('typeContrat')}>
-            <select
-              id="sal-type"
-              value={form.typeContrat}
-              onChange={set('typeContrat')}
-              className={inputClass}
-            >
-              <option value="CDI">CDI</option>
-              <option value="CDD">CDD</option>
-            </select>
-          </Field>
-          <Field
+          <FormField id="sal-type" label="Type de contrat" error={err('typeContrat')}>
+            {(c) => (
+              <NativeSelect {...c} value={form.typeContrat} onChange={set('typeContrat')}>
+                <NativeSelectOption value="CDI">CDI</NativeSelectOption>
+                <NativeSelectOption value="CDD">CDD</NativeSelectOption>
+              </NativeSelect>
+            )}
+          </FormField>
+          <FormField
             id="sal-entree"
             label="Date d’entrée"
             error={err('dateEntree')}
             hint="Peut être dans le futur : la DIMONA part avant le premier jour."
           >
-            <input
-              id="sal-entree"
-              type="date"
-              value={form.dateEntree}
-              onChange={set('dateEntree')}
-              className={inputClass}
-            />
-          </Field>
+            {(c) => (
+              <Input {...c} type="date" value={form.dateEntree} onChange={set('dateEntree')} />
+            )}
+          </FormField>
           {form.typeContrat === 'CDD' && (
-            <Field id="sal-fin" label="Date de fin du CDD" error={err('dateFinContrat')}>
-              <input
-                id="sal-fin"
-                type="date"
-                value={form.dateFinContrat}
-                onChange={set('dateFinContrat')}
-                className={inputClass}
-              />
-            </Field>
+            <FormField id="sal-fin" label="Date de fin du CDD" error={err('dateFinContrat')}>
+              {(c) => (
+                <Input
+                  {...c}
+                  type="date"
+                  value={form.dateFinContrat}
+                  onChange={set('dateFinContrat')}
+                />
+              )}
+            </FormField>
           )}
         </fieldset>
 
         {!edit && (
-          <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
+          <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
             <legend className="mb-1 text-sm font-semibold text-foreground">
               Temps de travail et rémunération
             </legend>
-            <Field id="sal-regime" label="Régime" error={err('regime')}>
-              <select
-                id="sal-regime"
-                value={form.regime}
-                onChange={set('regime')}
-                className={inputClass}
-              >
-                <option value="TEMPS_PLEIN">Temps plein</option>
-                <option value="TEMPS_PARTIEL">Temps partiel</option>
-              </select>
-            </Field>
-            <Field
+            <FormField id="sal-regime" label="Régime" error={err('regime')}>
+              {(c) => (
+                <NativeSelect {...c} value={form.regime} onChange={set('regime')}>
+                  <NativeSelectOption value="TEMPS_PLEIN">Temps plein</NativeSelectOption>
+                  <NativeSelectOption value="TEMPS_PARTIEL">Temps partiel</NativeSelectOption>
+                </NativeSelect>
+              )}
+            </FormField>
+            <FormField
               id="sal-salaire"
               label={
                 form.statut === 'EMPLOYE' ? 'Salaire mensuel brut (€)' : 'Salaire horaire brut (€)'
@@ -410,250 +397,190 @@ export function SalarieFormDialog({
               error={salaireErr}
               hint={form.statut === 'EMPLOYE' ? 'Par exemple 2850,00' : 'Par exemple 17,25'}
             >
-              <input
-                id="sal-salaire"
-                value={form.salaire}
-                onChange={set('salaire')}
-                inputMode="decimal"
-                autoComplete="off"
-                className={inputClass}
-              />
-            </Field>
+              {(c) => (
+                <Input
+                  {...c}
+                  value={form.salaire}
+                  onChange={set('salaire')}
+                  inputMode="decimal"
+                  autoComplete="off"
+                />
+              )}
+            </FormField>
             {partiel && (
               <>
-                <Field
+                <FormField
                   id="sal-heures"
                   label="Heures par semaine du salarié"
                   error={err('heuresSemaineMinutes')}
                   hint="Par exemple 30,4 ou 30:24."
                 >
-                  <input
-                    id="sal-heures"
-                    value={form.heuresSemaine}
-                    onChange={set('heuresSemaine')}
-                    inputMode="decimal"
-                    autoComplete="off"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field
+                  {(c) => (
+                    <Input
+                      {...c}
+                      value={form.heuresSemaine}
+                      onChange={set('heuresSemaine')}
+                      inputMode="decimal"
+                      autoComplete="off"
+                    />
+                  )}
+                </FormField>
+                <FormField
                   id="sal-heures-ref"
                   label="Heures par semaine de la personne de référence"
                   error={err('heuresReferenceMinutes')}
                   hint="Par exemple 38."
                 >
-                  <input
-                    id="sal-heures-ref"
-                    value={form.heuresReference}
-                    onChange={set('heuresReference')}
-                    inputMode="decimal"
-                    autoComplete="off"
-                    className={inputClass}
-                  />
-                </Field>
+                  {(c) => (
+                    <Input
+                      {...c}
+                      value={form.heuresReference}
+                      onChange={set('heuresReference')}
+                      inputMode="decimal"
+                      autoComplete="off"
+                    />
+                  )}
+                </FormField>
               </>
             )}
           </fieldset>
         )}
 
-        <fieldset disabled={loading} className="mt-6 grid gap-4 sm:grid-cols-2">
+        <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
           <legend className="mb-1 text-sm font-semibold text-foreground">Situation fiscale</legend>
-          <Field
+          <FormField
             id="sal-situation"
             label="Situation familiale"
             error={err('situationFamiliale')}
             hint="Un cohabitant de fait (sans déclaration légale) se saisit comme isolé."
           >
-            <select
-              id="sal-situation"
-              value={form.situationFamiliale}
-              onChange={set('situationFamiliale')}
-              className={inputClass}
-            >
-              <option value="ISOLE">Isolé</option>
-              <option value="MARIE_OU_COHABITANT_LEGAL">Marié ou cohabitant légal</option>
-            </select>
-          </Field>
+            {(c) => (
+              <NativeSelect
+                {...c}
+                value={form.situationFamiliale}
+                onChange={set('situationFamiliale')}
+              >
+                <NativeSelectOption value="ISOLE">Isolé</NativeSelectOption>
+                <NativeSelectOption value="MARIE_OU_COHABITANT_LEGAL">
+                  Marié ou cohabitant légal
+                </NativeSelectOption>
+              </NativeSelect>
+            )}
+          </FormField>
           {marie && (
-            <Field
+            <FormField
               id="sal-conjoint"
               label="Revenus professionnels du conjoint ou cohabitant"
               error={err('conjointRevenus')}
             >
-              <select
-                id="sal-conjoint"
-                value={form.conjointRevenus}
-                onChange={set('conjointRevenus')}
-                className={inputClass}
-              >
-                <option value="">Choisir…</option>
-                {REVENUS_CONJOINT.map((valeur) => (
-                  <option key={valeur} value={valeur}>
-                    {REVENUS_CONJOINT_LIBELLES[valeur]}
-                  </option>
-                ))}
-              </select>
-            </Field>
+              {(c) => (
+                <NativeSelect {...c} value={form.conjointRevenus} onChange={set('conjointRevenus')}>
+                  <NativeSelectOption value="">Choisir…</NativeSelectOption>
+                  {REVENUS_CONJOINT.map((valeur) => (
+                    <NativeSelectOption key={valeur} value={valeur}>
+                      {REVENUS_CONJOINT_LIBELLES[valeur]}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              )}
+            </FormField>
           )}
           <CheckField
             id="sal-handicape"
             label="Le salarié est handicapé"
             checked={form.beneficiaireHandicape}
-            onChange={toggle('beneficiaireHandicape')}
+            onCheckedChange={toggle('beneficiaireHandicape')}
             error={err('beneficiaireHandicape')}
+            disabled={loading}
           />
           {conjointSansRevenusPropres(vue) && (
             <CheckField
               id="sal-conjoint-handicape"
               label="Le conjoint ou cohabitant est handicapé"
               checked={form.conjointHandicape}
-              onChange={toggle('conjointHandicape')}
+              onCheckedChange={toggle('conjointHandicape')}
               error={err('conjointHandicape')}
+              disabled={loading}
             />
           )}
-          <Field
-            id="sal-enfants"
-            label="Enfants à charge"
-            error={err('enfantsCharge')}
-            hint="Laissez 0 s’il n’y en a pas."
-          >
-            <input
-              id="sal-enfants"
-              type="number"
-              min={0}
-              max={20}
-              value={form.enfantsCharge}
-              onChange={set('enfantsCharge')}
-              className={inputClass}
-            />
-          </Field>
-          {vue.enfantsCharge > 0 && (
-            <Field
-              id="sal-enfants-handicapes"
-              label="dont enfants handicapés"
-              error={err('enfantsHandicapes')}
-            >
-              <input
-                id="sal-enfants-handicapes"
-                type="number"
-                min={0}
-                max={20}
-                value={form.enfantsHandicapes}
-                onChange={set('enfantsHandicapes')}
-                className={inputClass}
-              />
-            </Field>
+          {compteur(
+            'enfantsCharge',
+            'sal-enfants',
+            'Enfants à charge',
+            'Laissez 0 s’il n’y en a pas.',
           )}
+          {vue.enfantsCharge > 0 &&
+            compteur('enfantsHandicapes', 'sal-enfants-handicapes', 'dont enfants handicapés')}
           {parentIsolePossible(vue) && (
             <CheckField
               id="sal-parent-isole"
               label="Parent isolé : veuf, père ou mère célibataire, divorcé ou séparé"
               checked={form.parentIsole}
-              onChange={toggle('parentIsole')}
+              onCheckedChange={toggle('parentIsole')}
               error={err('parentIsole')}
+              disabled={loading}
             />
           )}
           <CheckField
             id="sal-autres-personnes"
             label="Le salarié a d’autres personnes à charge (hors enfants)"
             checked={form.autresPersonnes}
-            onChange={toggle('autresPersonnes')}
+            onCheckedChange={toggle('autresPersonnes')}
+            disabled={loading}
           />
           {form.autresPersonnes && (
             <>
-              <Field
-                id="sal-autres-dependantes"
-                label="Personnes dépendantes de 66 ans ou plus"
-                error={err('autresChargeDependantes66')}
-              >
-                <input
-                  id="sal-autres-dependantes"
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={form.autresChargeDependantes66}
-                  onChange={set('autresChargeDependantes66')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field
-                id="sal-autres-handicapees"
-                label="Autres personnes handicapées"
-                error={err('autresChargeHandicapees')}
-              >
-                <input
-                  id="sal-autres-handicapees"
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={form.autresChargeHandicapees}
-                  onChange={set('autresChargeHandicapees')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field
-                id="sal-autres-charge"
-                label="Autres personnes à charge"
-                error={err('autresCharge')}
-              >
-                <input
-                  id="sal-autres-charge"
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={form.autresCharge}
-                  onChange={set('autresCharge')}
-                  className={inputClass}
-                />
-              </Field>
+              {compteur(
+                'autresChargeDependantes66',
+                'sal-autres-dependantes',
+                'Personnes dépendantes de 66 ans ou plus',
+              )}
+              {compteur(
+                'autresChargeHandicapees',
+                'sal-autres-handicapees',
+                'Autres personnes handicapées',
+              )}
+              {compteur('autresCharge', 'sal-autres-charge', 'Autres personnes à charge')}
             </>
           )}
           {attributionDesCharges(vue) && (
-            <Field
+            <FormField
               id="sal-attribution"
               label="Qui reçoit les réductions pour charges de famille ?"
               error={err('chargesFamilleAttribuees')}
               hint="Quand les deux conjoints ont des revenus, le couple en choisit un seul (attestation du SPF Finances). Sans réponse, la paie ne pourra pas être calculée."
             >
-              <select
-                id="sal-attribution"
-                value={form.chargesFamilleAttribuees}
-                onChange={set('chargesFamilleAttribuees')}
-                className={inputClass}
-              >
-                <option value="">À préciser</option>
-                <option value="oui">Ce salarié</option>
-                <option value="non">Son conjoint ou cohabitant</option>
-              </select>
-            </Field>
+              {(c) => (
+                <NativeSelect
+                  {...c}
+                  value={form.chargesFamilleAttribuees}
+                  onChange={set('chargesFamilleAttribuees')}
+                >
+                  <NativeSelectOption value="">À préciser</NativeSelectOption>
+                  <NativeSelectOption value="oui">Ce salarié</NativeSelectOption>
+                  <NativeSelectOption value="non">Son conjoint ou cohabitant</NativeSelectOption>
+                </NativeSelect>
+              )}
+            </FormField>
           )}
         </fieldset>
 
         {error && (
-          <p role="alert" className="mt-4 text-sm text-destructive-text">
+          <p role="alert" className="text-sm text-destructive-text">
             {error}
           </p>
         )}
 
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          >
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Spinner />}
             {edit ? 'Enregistrer' : 'Créer le dossier'}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </FormDialog>
   );
 }

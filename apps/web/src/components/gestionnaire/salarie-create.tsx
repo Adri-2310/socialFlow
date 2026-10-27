@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { SalarieFormDialog } from '@/components/gestionnaire/salarie-form-dialog';
 import type { CountryOption } from '@/lib/countries';
 
@@ -20,16 +21,16 @@ export function SalarieCreate({
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
         disabled={readOnly}
         title={readOnly ? 'Votre cabinet est en lecture seule.' : undefined}
-        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="shrink-0"
       >
-        <Plus className="h-4 w-4" />
+        <Plus />
         Nouveau salarié
-      </button>
+      </Button>
       {open && (
         <SalarieFormDialog
           target={{ mode: 'create', entrepriseId }}

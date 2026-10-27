@@ -14,6 +14,7 @@ const SIZES = {
   md: 'sm:max-w-md',
   lg: 'sm:max-w-lg',
   xl: 'sm:max-w-2xl',
+  '2xl': 'sm:max-w-3xl',
 } as const;
 
 // Boîte de dialogue d'un formulaire : icône, titre, description, puis le corps (`children`, le
