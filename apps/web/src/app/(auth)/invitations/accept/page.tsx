@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { AcceptInvitationForm } from '@/components/invitations/accept-invitation-form';
+import { buttonVariants } from '@/components/ui/button';
 import { buildThemeCss } from '@/lib/branding/branding-rules';
 import { getInvitationPreview, type InvitationPreview } from '@/lib/invitations/invitation-preview';
 
@@ -133,10 +134,7 @@ export default async function AcceptInvitationPage({
                 Ce lien d&apos;invitation n&apos;est plus valable. Contactez la personne qui vous a
                 invité pour en recevoir un nouveau.
               </p>
-              <Link
-                href="/login"
-                className="mt-6 inline-block font-semibold text-primary hover:underline"
-              >
+              <Link href="/login" className={buttonVariants({ variant: 'link', className: 'mt-6' })}>
                 Retour à la connexion
               </Link>
             </div>
