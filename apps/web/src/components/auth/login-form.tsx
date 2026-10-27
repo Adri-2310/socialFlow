@@ -3,11 +3,17 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { signIn, twoFactor } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
-import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
 import { PasswordlessLogin } from '@/components/auth/passwordless-login';
+import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
+import { TwoFactorChallenge } from '@/components/auth/two-factor-challenge';
+import { CheckField, FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { PORTAL_COOKIE, PORTAL_HEADER, portalPath } from '@/lib/portal/portal-slug';
 
 // `portal` : connexion par le portail d'un cabinet (D76). Le serveur y reconnait le
@@ -152,80 +158,24 @@ export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
 
   if (needsTwoFactor) {
     return (
-      <div className="space-y-6">
-        <button
-          type="button"
-          onClick={() => {
-            setNeedsTwoFactor(false);
-            setError(null);
-            setTwoFactorCode('');
-          }}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" /> Retour
-        </button>
-
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <ShieldCheck className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Vérification en deux étapes</p>
-            <p className="text-xs text-muted-foreground">
-              {useBackupCode
-                ? 'Saisissez un de vos codes de secours.'
-                : "Saisissez le code de votre application d'authentification."}
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="twoFactorCode"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              {useBackupCode ? 'Code de secours' : 'Code à 6 chiffres'}
-            </label>
-            <input
-              id="twoFactorCode"
-              type="text"
-              inputMode={useBackupCode ? 'text' : 'numeric'}
-              autoComplete="one-time-code"
-              required
-              value={twoFactorCode}
-              onChange={(e) => setTwoFactorCode(e.target.value)}
-              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder={useBackupCode ? 'xxxxxxxx' : '123456'}
-            />
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Vérifier
-          </button>
-        </form>
-
-        <button
-          type="button"
-          onClick={() => {
-            setUseBackupCode((v) => !v);
-            setError(null);
-            setTwoFactorCode('');
-          }}
-          className="w-full text-center text-sm font-medium text-primary hover:underline"
-        >
-          {useBackupCode
-            ? "Utiliser l'application d'authentification"
-            : 'Utiliser un code de secours'}
-        </button>
-      </div>
+      <TwoFactorChallenge
+        useBackupCode={useBackupCode}
+        code={twoFactorCode}
+        error={error}
+        loading={loading}
+        onCodeChange={setTwoFactorCode}
+        onSubmit={handleTwoFactorSubmit}
+        onBack={() => {
+          setNeedsTwoFactor(false);
+          setError(null);
+          setTwoFactorCode('');
+        }}
+        onToggleBackupCode={() => {
+          setUseBackupCode((v) => !v);
+          setError(null);
+          setTwoFactorCode('');
+        }}
+      />
     );
   }
 
@@ -233,42 +183,13 @@ export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
     <div className="space-y-6">
       {mode === 'password' && (
         <>
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {googleLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <GoogleIcon className="h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">Google</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleMicrosoftSignIn}
-              disabled={microsoftLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {microsoftLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MicrosoftIcon className="h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">Microsoft</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('passwordless')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
-            >
-              <Mail className="h-4 w-4" />
-              <span className="hidden sm:inline">Email</span>
-            </button>
-          </div>
+          <SocialLoginButtons
+            googleLoading={googleLoading}
+            microsoftLoading={microsoftLoading}
+            onGoogle={handleGoogleSignIn}
+            onMicrosoft={handleMicrosoftSignIn}
+            onEmail={() => setMode('passwordless')}
+          />
 
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
@@ -283,30 +204,31 @@ export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
       ) : (
         <>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
-                Adresse email
-              </label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="prenom@cabinet.be"
-                />
-              </div>
-            </div>
+            <FormField id="email" label="Adresse email" required>
+              {(control) => (
+                <div className="relative">
+                  <Mail
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <Input
+                    {...control}
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    placeholder="prenom@cabinet.be"
+                  />
+                </div>
+              )}
+            </FormField>
 
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-foreground">
-                  Mot de passe
-                </label>
+            {/* Le lien « Oublié ? » partage la ligne du libellé : FormField ne le permet pas. */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
                 <Link
                   href={portal ? `${portalPath(portal.slug)}/mot-de-passe-oublie` : '/mot-de-passe-oublie'}
                   className="text-xs font-medium text-primary hover:underline"
@@ -315,53 +237,51 @@ export function LoginForm({ portal }: { portal?: { slug: string } } = {}) {
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
+                <Lock
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
+                  aria-required="true"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="pl-10 pr-10"
                   placeholder="••••••••"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-input accent-primary"
-              />
-              Rester connecté
-            </label>
+            <CheckField label="Rester connecté" checked={rememberMe} onCheckedChange={setRememberMe} />
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-destructive-text">
+                {error}
+              </p>
+            )}
             {portalLink && (
               <Link href={portalLink} className="block text-sm font-semibold text-primary hover:underline">
                 Ouvrir le portail de mon cabinet
               </Link>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading && <Spinner />}
               Se connecter
-            </button>
+            </Button>
           </form>
 
           {/* Un compte de cabinet client ne se cree pas ici (D76). */}
