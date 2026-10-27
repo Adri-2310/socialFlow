@@ -90,7 +90,7 @@ export function SalariePortail({
           {etat.etat === 'COMPTE_ACTIF' ? (
             <UserCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           ) : etat.etat === 'EXPIREE' ? (
-            <MailX className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <MailX className="mt-0.5 h-4 w-4 shrink-0 text-amber-800 dark:text-amber-300" />
           ) : (
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           )}
