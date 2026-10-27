@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import type { BillingPeriod, Plan, PlanId } from '@/lib/billing/plans';
 import { PlanSelect } from '@/components/auth/plan-select';
 import { RegisterForm } from '@/components/auth/register-form';
+import { Button } from '@/components/ui/button';
 
 export function RegisterFlow({
   plans,
@@ -53,13 +54,16 @@ export function RegisterFlow({
           </>
         ) : (
           <>
-            <button
+            {/* Lien discret qui prend la couleur du cabinet au survol (D65). */}
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setPlanId(null)}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
+              className="-ml-3 text-muted-foreground hover:bg-transparent hover:text-primary"
             >
-              <ArrowLeft className="h-4 w-4" /> Changer de formule
-            </button>
+              <ArrowLeft aria-hidden="true" /> Changer de formule
+            </Button>
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">

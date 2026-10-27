@@ -4,6 +4,31 @@ import { useState } from 'react';
 import { Check } from 'lucide-react';
 import type { BillingPeriod, Plan, PlanId } from '@/lib/billing/plans';
 import { planPriceDisplay } from '@/lib/billing/plan-price-display';
+import { Button } from '@/components/ui/button';
+
+// Bascule Mensuel/Annuel : deux boutons dont `aria-pressed` dit lequel est actif.
+function PeriodButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant={active ? 'default' : 'ghost'}
+      size="xs"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`rounded-full px-3 font-semibold ${active ? '' : 'text-muted-foreground'}`}
+    >
+      {children}
+    </Button>
+  );
+}
 
 export function PlanSelect({
   plans,
@@ -18,37 +43,29 @@ export function PlanSelect({
     <div>
       <div className="flex justify-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 p-1 shadow-sm backdrop-blur-sm">
-          <button
-            type="button"
-            onClick={() => setBilling('monthly')}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-              billing === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-            }`}
-          >
+          <PeriodButton active={billing === 'monthly'} onClick={() => setBilling('monthly')}>
             Mensuel
-          </button>
-          <button
-            type="button"
-            onClick={() => setBilling('yearly')}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-              billing === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-            }`}
-          >
-            Annuel <span className="text-secondary">−20%</span>
-          </button>
+          </PeriodButton>
+          <PeriodButton active={billing === 'yearly'} onClick={() => setBilling('yearly')}>
+            {/* D62 : le teal `secondary` n'est pas lisible en texte ; l'émeraude l'est, sauf sur l'aplat actif. */}
+            Annuel{' '}
+            <span className={billing === 'yearly' ? '' : 'text-emerald-800 dark:text-emerald-300'}>−20%</span>
+          </PeriodButton>
         </div>
       </div>
 
       <div className="mt-5 space-y-4">
         {plans.map((plan) => (
-          <button
+          // Une carte est un bouton : choisir une formule fait passer à l'étape suivante.
+          <Button
             key={plan.id}
             type="button"
+            variant="outline"
             onClick={() => onSelect(plan.id, billing)}
-            className={`relative flex w-full items-start justify-between gap-4 rounded-2xl p-5 text-left transition ${
+            className={`relative h-auto w-full items-start justify-between gap-4 whitespace-normal rounded-2xl p-5 text-left font-normal ${
               plan.highlighted
                 ? 'border-2 border-primary/60 bg-gradient-to-b from-primary/10 via-card to-card shadow-lg shadow-primary/10'
-                : 'border border-border/60 bg-card/60 hover:-translate-y-0.5 hover:shadow-md'
+                : 'border-border/60 bg-card/60 hover:-translate-y-0.5 hover:bg-card/60 hover:shadow-md dark:bg-card/60 dark:hover:bg-card/60'
             }`}
           >
             <div>
@@ -67,7 +84,7 @@ export function PlanSelect({
                     key={feature}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground"
                   >
-                    <Check className="h-3.5 w-3.5 shrink-0 text-secondary" />
+                    <Check aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-primary" />
                     {feature}
                   </li>
                 ))}
@@ -86,7 +103,7 @@ export function PlanSelect({
                 </p>
               )}
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </div>
