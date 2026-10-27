@@ -2,10 +2,14 @@
 
 import { useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Mail, MailCheck } from 'lucide-react';
+import { ArrowLeft, Mail, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
 import { portalPath } from '@/lib/portal/portal-slug';
+import { FormField } from '@/components/shared/form-field';
+import { buttonVariants, Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 // `portal` (D76, D77) : demande faite depuis le portail d'un cabinet - le lien de l'email ramene
 // sur une page de CE portail, et « Retour » y retourne, sans page SocialFlow.
@@ -40,7 +44,7 @@ export function ForgotPasswordForm({ portal }: { portal?: { slug: string } } = {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
         <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
-          <MailCheck className="h-6 w-6" />
+          <MailCheck aria-hidden="true" className="h-6 w-6" />
         </span>
         <div>
           <p className="text-sm font-semibold text-foreground">Vérifiez votre boîte mail</p>
@@ -49,11 +53,8 @@ export function ForgotPasswordForm({ portal }: { portal?: { slug: string } } = {
             un lien de réinitialisation vient d&apos;être envoyé. Il est valable 1 heure.
           </p>
         </div>
-        <Link
-          href={backHref}
-          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-        >
-          <ArrowLeft className="h-4 w-4" /> Retour à la connexion
+        <Link href={backHref} className={buttonVariants({ variant: 'link' })}>
+          <ArrowLeft aria-hidden="true" /> Retour à la connexion
         </Link>
       </div>
     );
@@ -61,41 +62,48 @@ export function ForgotPasswordForm({ portal }: { portal?: { slug: string } } = {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
-          Adresse email
-        </label>
-        <div className="relative">
-          <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="prenom@cabinet.be"
-          />
-        </div>
-      </div>
+      <FormField id="email" label="Adresse email" required>
+        {(control) => (
+          <div className="relative">
+            <Mail
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              {...control}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-10"
+              placeholder="prenom@cabinet.be"
+            />
+          </div>
+        )}
+      </FormField>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive-text">
+          {error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading && <Spinner />}
         Envoyer le lien de réinitialisation
-      </button>
+      </Button>
 
+      {/* Lien discret qui prend la couleur du cabinet au survol (D65, D76). */}
       <Link
         href={backHref}
-        className="flex items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
+        className={buttonVariants({
+          variant: 'ghost',
+          size: 'sm',
+          className: 'w-full text-muted-foreground hover:bg-transparent hover:text-primary',
+        })}
       >
-        <ArrowLeft className="h-4 w-4" /> Retour à la connexion
+        <ArrowLeft aria-hidden="true" /> Retour à la connexion
       </Link>
     </form>
   );
