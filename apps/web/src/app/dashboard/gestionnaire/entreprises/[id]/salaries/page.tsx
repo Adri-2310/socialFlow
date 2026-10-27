@@ -4,10 +4,10 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Eye, Users } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
-import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
 import { SalarieCreate } from '@/components/gestionnaire/salarie-create';
 import { SalarieImport } from '@/components/gestionnaire/salarie-import';
-import { SortieBadge } from '@/components/gestionnaire/sortie-badge';
+import { SalariesOnglets } from '@/components/gestionnaire/salaries-onglets';
+import { SalariesTable } from '@/components/gestionnaire/salaries-table';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
 import { countryOptions } from '@/lib/countries';
 import { prisma } from '@/lib/prisma';
@@ -17,15 +17,6 @@ export const metadata: Metadata = {
   title: 'Salariés',
   description: 'Les dossiers des salariés de l’entreprise.',
 };
-
-const STATUT_LABELS: Record<string, string> = { EMPLOYE: 'Employé', OUVRIER: 'Ouvrier' };
-
-// Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
-const formatDate = (date: Date) => date.toLocaleDateString('fr-BE', { timeZone: 'UTC' });
-
-const ONGLET_ACTIF = 'rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary';
-const ONGLET =
-  'rounded-lg px-3 py-1.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground';
 
 export default async function SalariesEntreprisePage({
   params,
@@ -90,22 +81,7 @@ export default async function SalariesEntreprisePage({
         )}
       </div>
 
-      <nav aria-label="Dossiers" className="flex gap-1">
-        <Link
-          href={base}
-          aria-current={archives ? undefined : 'page'}
-          className={archives ? ONGLET : ONGLET_ACTIF}
-        >
-          Actifs
-        </Link>
-        <Link
-          href={`${base}?archives=1`}
-          aria-current={archives ? 'page' : undefined}
-          className={archives ? ONGLET_ACTIF : ONGLET}
-        >
-          Archivés ({data.nbArchives})
-        </Link>
-      </nav>
+      <SalariesOnglets base={base} archives={archives} nbArchives={data.nbArchives} />
 
       {data.salaries.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
@@ -120,70 +96,12 @@ export default async function SalariesEntreprisePage({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Salarié</th>
-                <th className="px-4 py-3 font-semibold">NISS</th>
-                <th className="px-4 py-3 font-semibold">Fonction</th>
-                <th className="px-4 py-3 font-semibold">Statut</th>
-                <th className="px-4 py-3 font-semibold">Entrée</th>
-                <th className="px-4 py-3 font-semibold">Situation</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.salaries.map((s) => (
-                <tr key={s.id}>
-                  <td className="px-4 py-3 font-semibold text-foreground">
-                    <Link
-                      href={`/dashboard/gestionnaire/salaries/${s.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {s.prenom} {s.nom}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                    {s.nissMasque}
-                  </td>
-                  <td className="px-4 py-3 text-foreground/80">{s.fonction ?? '—'}</td>
-                  <td className="px-4 py-3 text-foreground/80">
-                    {s.statut ? (STATUT_LABELS[s.statut] ?? s.statut) : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-foreground/80">{formatDate(s.dateEntree)}</td>
-                  <td className="px-4 py-3">
-                    <SortieBadge
-                      dateEntree={s.dateEntree}
-                      dateSortie={s.dateSortie}
-                      at={maintenant}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <Link
-                        href={`/dashboard/gestionnaire/salaries/${s.id}`}
-                        aria-label={`Voir le dossier de ${s.prenom} ${s.nom}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Voir
-                      </Link>
-                      {archives && (
-                        <SalarieArchiveActions
-                          salarieId={s.id}
-                          nom={`${s.prenom} ${s.nom}`}
-                          archive
-                          readOnly={readOnly}
-                          compact
-                        />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SalariesTable
+          salaries={data.salaries}
+          archives={archives}
+          readOnly={readOnly}
+          at={maintenant}
+        />
       )}
     </section>
   );

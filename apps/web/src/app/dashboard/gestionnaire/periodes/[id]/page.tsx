@@ -4,15 +4,10 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Lock, Users } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
-import { PrestationEncoder } from '@/components/gestionnaire/prestation-encoder';
+import { PrestationsTable } from '@/components/gestionnaire/prestations-table';
 import { ReadOnlyNotice } from '@/components/gestionnaire/read-only-notice';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
-import {
-  dateIsoEnFrancais,
-  libelleMois,
-  resumePrestation,
-  ROLE_LABELS,
-} from '@/lib/periode/periode-format';
+import { dateIsoEnFrancais, libelleMois } from '@/lib/periode/periode-format';
 import { getPrestationsPeriode } from '@/lib/periode/prestation-data';
 import { prisma } from '@/lib/prisma';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -90,61 +85,7 @@ export default async function PrestationsPeriodePage({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Salarié</th>
-                <th className="px-4 py-3 font-semibold">Écarts du mois</th>
-                <th className="px-4 py-3 font-semibold">Dernière saisie</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.salaries.map((s) => {
-                const lignes = s.prestation ? resumePrestation(s.prestation) : [];
-                return (
-                  <tr key={s.id}>
-                    <td className="px-4 py-3 font-semibold text-foreground">
-                      {s.prenom} {s.nom}
-                    </td>
-                    <td className="px-4 py-3 text-foreground/80">
-                      {lignes.length === 0 ? (
-                        <span className="text-muted-foreground">Mois complet</span>
-                      ) : (
-                        <ul className="space-y-0.5">
-                          {lignes.map((ligne) => (
-                            <li key={ligne}>{ligne}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {s.prestation?.modifiePar
-                        ? `${s.prestation.modifiePar.name} (${ROLE_LABELS[s.prestation.modifiePar.role ?? ''] ?? 'compte'})`
-                        : s.prestation
-                          ? 'Compte supprimé'
-                          : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <PrestationEncoder
-                          periodeId={periode.id}
-                          annee={periode.annee}
-                          mois={periode.mois}
-                          salarieId={s.id}
-                          salarieNom={`${s.prenom} ${s.nom}`}
-                          initial={s.prestation}
-                          bloque={bloque}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <PrestationsTable salaries={data.salaries} periode={periode} bloque={bloque} />
       )}
     </section>
   );

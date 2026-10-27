@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+
+// Cellule d'un tableau de données : même rembourrage que l'en-tête, et le texte peut passer à la
+// ligne (le `whitespace-nowrap` de shadcn ferait déborder les libellés longs).
+export function DataCell({ className, ...props }: ComponentProps<typeof TableCell>) {
+  return <TableCell className={cn('px-4 py-3 whitespace-normal', className)} {...props} />;
+}
 
 export type SortDirection = 'asc' | 'desc';
 

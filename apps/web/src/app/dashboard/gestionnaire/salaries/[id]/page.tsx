@@ -4,7 +4,12 @@ import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Archive, ArrowLeft } from 'lucide-react';
 import { ConditionAdd } from '@/components/gestionnaire/condition-add';
-import { ConditionRowActions } from '@/components/gestionnaire/condition-row-actions';
+import {
+  ConditionsTable,
+  regimeLabel,
+  remuneration,
+  STATUTS,
+} from '@/components/gestionnaire/conditions-table';
 import { SalarieArchiveActions } from '@/components/gestionnaire/salarie-archive-actions';
 import { SalarieEdit } from '@/components/gestionnaire/salarie-edit';
 import { SalariePortail } from '@/components/gestionnaire/salarie-portail';
@@ -30,11 +35,6 @@ export const metadata: Metadata = {
   description: 'Le dossier d’un salarié.',
 };
 
-const STATUTS: Record<string, string> = { EMPLOYE: 'Employé', OUVRIER: 'Ouvrier' };
-const REGIMES: Record<string, string> = {
-  TEMPS_PLEIN: 'Temps plein',
-  TEMPS_PARTIEL: 'Temps partiel',
-};
 const SITUATIONS: Record<string, string> = {
   ISOLE: 'Isolé',
   MARIE_OU_COHABITANT_LEGAL: 'Marié ou cohabitant légal',
@@ -42,25 +42,6 @@ const SITUATIONS: Record<string, string> = {
 
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
 const formatDate = (date: Date) => date.toLocaleDateString('fr-BE', { timeZone: 'UTC' });
-
-function regimeLabel(c: ConditionRow): string {
-  const label = REGIMES[c.regime] ?? c.regime;
-  // Heures du salarié sur celles de la personne de référence ; la fraction exacte est
-  // l'affaire du moteur de paie.
-  return c.regime === 'TEMPS_PARTIEL' && c.heuresSemaineMinutes && c.heuresReferenceMinutes
-    ? `${label} (${minutesEnLibelle(c.heuresSemaineMinutes)} sur ${minutesEnLibelle(c.heuresReferenceMinutes)})`
-    : label;
-}
-
-function remuneration(c: ConditionRow): string {
-  if (c.salaireMensuelBrutCents !== null) {
-    return `${formatCents(c.salaireMensuelBrutCents)} brut par mois`;
-  }
-  if (c.salaireHoraireBrutCents !== null) {
-    return `${formatCents(c.salaireHoraireBrutCents)} brut par heure`;
-  }
-  return '—';
-}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -105,8 +86,6 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
   const courante =
     salarie.conditions.find((c) => c.etat === 'EN_VIGUEUR') ??
     [...salarie.conditions].reverse().find((c) => c.etat === 'A_VENIR');
-
-  const estPremiere = (c: ConditionRow) => c.dateEffet.getTime() === salarie.dateEntree.getTime();
 
   const adresse = [salarie.adresse, [salarie.codePostal, salarie.ville].filter(Boolean).join(' ')]
     .filter(Boolean)
@@ -277,47 +256,13 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
             />
           )}
         </div>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y border-border text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-5 py-2.5 font-semibold">Dès le</th>
-                <th className="px-4 py-2.5 font-semibold">Statut</th>
-                <th className="px-4 py-2.5 font-semibold">Fonction</th>
-                <th className="px-4 py-2.5 font-semibold">Régime</th>
-                <th className="px-4 py-2.5 font-semibold">Rémunération</th>
-                <th className="px-4 py-2.5 font-semibold">État</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {salarie.conditions.map((c) => (
-                <tr key={c.id}>
-                  <td className="px-5 py-3 text-foreground">{formatDate(c.dateEffet)}</td>
-                  <td className="px-4 py-3 text-foreground/80">{STATUTS[c.statut] ?? c.statut}</td>
-                  <td className="px-4 py-3 text-foreground/80">{c.fonction}</td>
-                  <td className="px-4 py-3 text-foreground/80">{regimeLabel(c)}</td>
-                  <td className="px-4 py-3 text-foreground/80">{remuneration(c)}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge domain="condition" status={c.etat} />
-                  </td>
-                  <td className="px-4 py-3">
-                    {!salarie.archive && (
-                      <ConditionRowActions
-                        salarieId={salarie.id}
-                        conditionId={c.id}
-                        initial={toConditionFormValues(c, { avecDate: true })}
-                        // Seul un changement à venir s'annule, jamais la première ligne (l'entrée).
-                        removable={c.etat === 'A_VENIR' && !estPremiere(c)}
-                        readOnly={readOnly}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ConditionsTable
+          conditions={salarie.conditions}
+          salarieId={salarie.id}
+          dateEntree={salarie.dateEntree}
+          archive={salarie.archive}
+          readOnly={readOnly}
+        />
       </section>
     </div>
   );

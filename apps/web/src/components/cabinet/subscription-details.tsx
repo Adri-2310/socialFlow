@@ -10,7 +10,9 @@ import type { CabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
 import type { BillingExtras } from '@/lib/billing/cabinet-subscription';
 import type { PlanChangeOptions } from '@/lib/billing/plan-change';
 import { Notice } from '@/components/shared/notice';
+import { DataCell, DataTable } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { TableRow } from '@/components/ui/table';
 
 // Retour de la saisie de carte chez Stripe (voir la page Mon abonnement).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;
@@ -225,48 +227,41 @@ export function SubscriptionDetails({
             Aucune facture pour le moment. La première est émise à la fin de l’essai.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Date</th>
-                  <th className="py-2 pr-4 font-medium">Numéro</th>
-                  <th className="py-2 pr-4 font-medium">Montant</th>
-                  <th className="py-2 pr-4 font-medium">Statut</th>
-                  <th className="py-2 font-medium">
-                    <span className="sr-only">Télécharger</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {extras.invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-t border-border">
-                    <td className="whitespace-nowrap py-2 pr-4">{formatDate(invoice.date)}</td>
-                    <td className="py-2 pr-4">{invoice.number ?? '—'}</td>
-                    <td className="whitespace-nowrap py-2 pr-4 font-medium">
-                      {formatEuros(invoice.amountCents)}
-                    </td>
-                    <td className="py-2 pr-4">
-                      {INVOICE_STATUS[invoice.status] ?? invoice.status}
-                    </td>
-                    <td className="py-2 text-right">
-                      {invoice.pdfUrl && (
-                        <a
-                          href={invoice.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          PDF
-                        </a>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            caption="Factures"
+            className="mt-3"
+            columns={[
+              { key: 'date', header: 'Date' },
+              { key: 'numero', header: 'Numéro' },
+              { key: 'montant', header: 'Montant' },
+              { key: 'statut', header: 'Statut' },
+              { key: 'pdf', header: 'Télécharger', srOnlyHeader: true },
+            ]}
+          >
+            {extras.invoices.map((invoice) => (
+              <TableRow key={invoice.id}>
+                <DataCell className="whitespace-nowrap">{formatDate(invoice.date)}</DataCell>
+                <DataCell>{invoice.number ?? '—'}</DataCell>
+                <DataCell className="font-medium whitespace-nowrap">
+                  {formatEuros(invoice.amountCents)}
+                </DataCell>
+                <DataCell>{INVOICE_STATUS[invoice.status] ?? invoice.status}</DataCell>
+                <DataCell className="text-right">
+                  {invoice.pdfUrl && (
+                    <a
+                      href={invoice.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      PDF
+                    </a>
+                  )}
+                </DataCell>
+              </TableRow>
+            ))}
+          </DataTable>
         )}
       </section>
 

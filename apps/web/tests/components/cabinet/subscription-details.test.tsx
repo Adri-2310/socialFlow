@@ -147,6 +147,14 @@ describe('SubscriptionDetails', () => {
     );
   });
 
+  it('nomme les colonnes du tableau des factures, dont la colonne de téléchargement', () => {
+    render(<SubscriptionDetails data={base} extras={extras} planChange={planChange} />);
+
+    for (const nom of ['Date', 'Numéro', 'Montant', 'Statut', 'Télécharger']) {
+      expect(screen.getByRole('columnheader', { name: nom })).toBeInTheDocument();
+    }
+  });
+
   it('indique quand il n y a aucune facture ou que Stripe est injoignable', () => {
     const { rerender } = render(
       <SubscriptionDetails data={base} extras={{ ...extras, invoices: [] }} planChange={planChange} />,

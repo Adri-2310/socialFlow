@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Lock } from 'lucide-react';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
-import { PeriodeActions } from '@/components/gestionnaire/periode-actions';
+import { PeriodesTable } from '@/components/gestionnaire/periodes-table';
 import { PeriodeOuvrir } from '@/components/gestionnaire/periode-ouvrir';
 import { ReadOnlyNotice } from '@/components/gestionnaire/read-only-notice';
 import { isCabinetReadOnly } from '@/lib/cabinet/cabinet-suspension';
@@ -85,58 +85,7 @@ export default async function PeriodesEntreprisePage({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Période</th>
-                <th className="px-4 py-3 font-semibold">Date limite</th>
-                <th className="px-4 py-3 font-semibold">Prestations</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.periodes.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-4 py-3 font-semibold capitalize text-foreground">
-                    <Link
-                      href={`/dashboard/gestionnaire/periodes/${p.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {libelleMois(p.annee, p.mois)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-foreground/80">
-                    {dateIsoEnFrancais(p.dateLimite)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge
-                      domain="periode"
-                      status={p.statut}
-                      icon={p.statut === 'VERROUILLEE' ? <Lock aria-hidden="true" /> : undefined}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <Link
-                        href={`/dashboard/gestionnaire/periodes/${p.id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-                      >
-                        Prestations
-                      </Link>
-                      <PeriodeActions
-                        periodeId={p.id}
-                        verrouillee={p.statut === 'VERROUILLEE'}
-                        dateLimite={p.dateLimite}
-                        readOnly={readOnly}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PeriodesTable periodes={data.periodes} readOnly={readOnly} />
       )}
     </section>
   );
