@@ -3,11 +3,20 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Loader2, ChevronUp, ChevronDown, Archive } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { SuspendCabinetDialog } from '@/components/admin/suspend-cabinet-dialog';
+import { CabinetDialogs, CabinetRowActions } from '@/components/admin/cabinet-actions';
+import {
+  DataCell,
+  DataTable,
+  type DataTableColumn,
+  type SortDirection,
+} from '@/components/shared/data-table';
+import { ListFilters } from '@/components/shared/list-filters';
+import { Notice } from '@/components/shared/notice';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TablePagination } from '@/components/shared/table-pagination';
+import { Badge } from '@/components/ui/badge';
+import { TableRow } from '@/components/ui/table';
 import type { SuspensionType } from '@/lib/cabinet/cabinet-suspension';
-import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet/cabinet-retention';
 
 export type CabinetRow = {
   id: string;
@@ -22,24 +31,11 @@ export type CabinetRow = {
 };
 
 type SortKey = 'name' | 'plan' | 'gestionnaireCount' | 'createdAt' | 'status';
-type SortDirection = 'asc' | 'desc';
 
 const PLAN_LABELS: Record<string, string> = {
   starter: 'Starter',
   pro: 'Pro',
   enterprise: 'Enterprise',
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  actif: 'bg-secondary/10 text-secondary',
-  suspendu: 'bg-destructive/10 text-destructive',
-  archive: 'bg-muted text-muted-foreground',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  actif: 'Actif',
-  suspendu: 'Suspendu',
-  archive: 'Archivé',
 };
 
 // Statut affiche : l'archivage (deletedAt) est un etat terminal qui prime
@@ -50,19 +46,11 @@ function displayStatus(c: CabinetRow): string {
 }
 
 // Libelle du badge : une suspension precise sa nature (D71).
-function statusLabel(c: CabinetRow): string {
-  const status = displayStatus(c);
-  if (status === 'suspendu') {
-    if (c.suspensionType === 'READ_ONLY') return 'Suspendu · lecture seule';
-    if (c.suspensionType === 'BLOCKED') return 'Suspendu · bloqué';
-  }
-  return STATUS_LABEL[status] ?? status;
-}
-
-function purgeDate(deletedAt: string): Date {
-  return new Date(
-    new Date(deletedAt).getTime() + CABINET_DELETION_RETENTION_DAYS * 24 * 60 * 60 * 1000,
-  );
+function statusLabel(c: CabinetRow): string | undefined {
+  if (displayStatus(c) !== 'suspendu') return undefined;
+  if (c.suspensionType === 'READ_ONLY') return 'Suspendu · lecture seule';
+  if (c.suspensionType === 'BLOCKED') return 'Suspendu · bloqué';
+  return undefined;
 }
 
 // Tri : direction par defaut differente selon la colonne (nom/plan/statut ->
@@ -84,35 +72,14 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-BE', {
 
 const PAGE_SIZE = 25;
 
-function SortableHeader({
-  label,
-  active,
-  direction,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  direction: SortDirection;
-  onClick: () => void;
-}) {
-  return (
-    <th className="px-5 py-3 font-semibold">
-      <button
-        type="button"
-        onClick={onClick}
-        className={`inline-flex items-center gap-1 transition hover:text-foreground ${active ? 'text-foreground' : ''}`}
-      >
-        {label}
-        {active &&
-          (direction === 'asc' ? (
-            <ChevronUp className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ))}
-      </button>
-    </th>
-  );
-}
+const STATUS_FILTERS = [
+  { value: 'all', label: 'Tous les statuts' },
+  { value: 'actif', label: 'Actif' },
+  { value: 'suspendu', label: 'Suspendu' },
+  { value: 'archive', label: 'Archivé' },
+];
+
+const ERROR_MESSAGE = 'Une erreur est survenue. Réessayez.';
 
 // `limit` + `manageHref` : mode apercu utilise sur la vue d'ensemble (pas de
 // recherche/filtre/tri/pagination, juste les N premiers + un lien vers la
@@ -137,9 +104,9 @@ export function CabinetsTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [page, setPage] = useState(1);
   const [pendingCabinet, setPendingCabinet] = useState<CabinetRow | null>(null);
-  // Escalade d'une lecture seule vers un blocage total : meme dialogue, type impose.
-  const [pendingBlockCabinet, setPendingBlockCabinet] = useState<CabinetRow | null>(null);
+  // Motif refusé par le serveur : la modale reste ouverte pour le corriger.
   const [suspendError, setSuspendError] = useState<string | null>(null);
+  const [pendingBlockCabinet, setPendingBlockCabinet] = useState<CabinetRow | null>(null);
   const [pendingArchiveCabinet, setPendingArchiveCabinet] = useState<CabinetRow | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -232,7 +199,7 @@ export function CabinetsTable({
       setPendingBlockCabinet(null);
       router.refresh();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
       setPendingCabinet(null);
       setPendingBlockCabinet(null);
     } finally {
@@ -248,7 +215,7 @@ export function CabinetsTable({
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setLoadingId(null);
       setPendingArchiveCabinet(null);
@@ -263,11 +230,30 @@ export function CabinetsTable({
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setLoadingId(null);
     }
   }
+
+  function sortOf(key: SortKey): DataTableColumn['sort'] {
+    return { direction: sortKey === key ? sortDirection : null, onToggle: () => toggleSort(key) };
+  }
+
+  const columns: DataTableColumn[] = isPreview
+    ? [
+        { key: 'name', header: 'Cabinet' },
+        { key: 'plan', header: 'Plan' },
+        { key: 'status', header: 'Statut' },
+      ]
+    : [
+        { key: 'name', header: 'Cabinet', sort: sortOf('name') },
+        { key: 'plan', header: 'Plan', sort: sortOf('plan') },
+        { key: 'gestionnaires', header: 'Gestionnaires', sort: sortOf('gestionnaireCount') },
+        { key: 'createdAt', header: 'Créé le', sort: sortOf('createdAt') },
+        { key: 'status', header: 'Statut', sort: sortOf('status') },
+        { key: 'actions', header: 'Actions', align: 'right' },
+      ];
 
   return (
     <section className="rounded-2xl border border-border bg-card">
@@ -283,258 +269,107 @@ export function CabinetsTable({
             </Link>
           )
         ) : (
-          <div className="flex gap-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => updateSearch(e.target.value)}
-                placeholder="Rechercher un cabinet…"
-                className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 sm:w-56"
-              />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => updateStatusFilter(e.target.value)}
-              className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="actif">Actif</option>
-              <option value="suspendu">Suspendu</option>
-              <option value="archive">Archivé</option>
-            </select>
-          </div>
+          <ListFilters
+            search={{
+              value: search,
+              onChange: updateSearch,
+              label: 'Rechercher un cabinet',
+              placeholder: 'Rechercher un cabinet…',
+            }}
+            filters={[
+              {
+                label: 'Filtrer par statut',
+                value: statusFilter,
+                onChange: updateStatusFilter,
+                options: STATUS_FILTERS,
+              },
+            ]}
+          />
         )}
       </div>
 
-      {error && <p className="px-5 pt-3 text-sm text-destructive">{error}</p>}
+      {error && (
+        <Notice tone="danger" role="alert" className="mx-5 mt-3">
+          {error}
+        </Notice>
+      )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              {isPreview ? (
-                <>
-                  <th className="px-5 py-3 font-semibold">Cabinet</th>
-                  <th className="px-5 py-3 font-semibold">Plan</th>
-                  <th className="px-5 py-3 font-semibold">Statut</th>
-                </>
-              ) : (
-                <>
-                  <SortableHeader
-                    label="Cabinet"
-                    active={sortKey === 'name'}
-                    direction={sortDirection}
-                    onClick={() => toggleSort('name')}
-                  />
-                  <SortableHeader
-                    label="Plan"
-                    active={sortKey === 'plan'}
-                    direction={sortDirection}
-                    onClick={() => toggleSort('plan')}
-                  />
-                  <SortableHeader
-                    label="Gestionnaires"
-                    active={sortKey === 'gestionnaireCount'}
-                    direction={sortDirection}
-                    onClick={() => toggleSort('gestionnaireCount')}
-                  />
-                  <SortableHeader
-                    label="Créé le"
-                    active={sortKey === 'createdAt'}
-                    direction={sortDirection}
-                    onClick={() => toggleSort('createdAt')}
-                  />
-                  <SortableHeader
-                    label="Statut"
-                    active={sortKey === 'status'}
-                    direction={sortDirection}
-                    onClick={() => toggleSort('status')}
-                  />
-                </>
-              )}
-              {!isPreview && <th className="px-5 py-3 text-right font-semibold">Actions</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {paginated.map((c) => (
-              <tr key={c.id} className="hover:bg-muted/40">
-                <td className="px-5 py-3 font-medium text-foreground">{c.name}</td>
-                <td className="px-5 py-3">
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                    {c.plan ? (PLAN_LABELS[c.plan] ?? c.plan) : '—'}
-                  </span>
-                </td>
-                {!isPreview && (
-                  <>
-                    <td className="px-5 py-3 text-foreground">{c.gestionnaireCount}</td>
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {DATE_FORMATTER.format(new Date(c.createdAt))}
-                    </td>
-                  </>
-                )}
-                <td className="px-5 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      STATUS_BADGE[displayStatus(c)] ?? ''
-                    }`}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                    {statusLabel(c)}
-                  </span>
-                </td>
-                {!isPreview && (
-                  <td className="px-5 py-3 text-right">
-                    {c.deletedAt ? (
-                      <div className="flex items-center justify-end gap-3">
-                        <span className="text-xs text-muted-foreground">
-                          Purge le {DATE_FORMATTER.format(purgeDate(c.deletedAt))}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => restoreCabinet(c.id)}
-                          disabled={loadingId === c.id}
-                          className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {loadingId === c.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            'Restaurer'
-                          )}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex justify-end gap-2">
-                        {c.status === 'suspendu' && c.suspensionType === 'READ_ONLY' && (
-                          <button
-                            type="button"
-                            onClick={() => setPendingBlockCabinet(c)}
-                            disabled={loadingId === c.id}
-                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Bloquer
-                          </button>
-                        )}
-                        {c.status === 'suspendu' ? (
-                          <button
-                            type="button"
-                            onClick={() => updateStatus(c.id, 'actif')}
-                            disabled={loadingId === c.id}
-                            className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {loadingId === c.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              'Réactiver'
-                            )}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setPendingCabinet(c)}
-                            disabled={loadingId === c.id}
-                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Suspendre
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setPendingArchiveCabinet(c)}
-                          disabled={loadingId === c.id}
-                          title="Archiver"
-                          aria-label={`Archiver ${c.name}`}
-                          className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={isPreview ? 3 : 6}
-                  className="px-5 py-8 text-center text-sm text-muted-foreground"
-                >
-                  {isPreview
-                    ? 'Aucun cabinet pour le moment.'
-                    : 'Aucun cabinet ne correspond à cette recherche.'}
-                </td>
-              </tr>
+      <DataTable
+        caption="Cabinets clients"
+        columns={columns}
+        isEmpty={filtered.length === 0}
+        emptyMessage={
+          isPreview
+            ? 'Aucun cabinet pour le moment.'
+            : 'Aucun cabinet ne correspond à cette recherche.'
+        }
+        className="rounded-none border-0 bg-transparent"
+      >
+        {paginated.map((c) => (
+          <TableRow key={c.id}>
+            <DataCell className="font-medium text-foreground">{c.name}</DataCell>
+            <DataCell>
+              <Badge variant="secondary" className="h-auto rounded-md px-2 py-0.5">
+                {c.plan ? (PLAN_LABELS[c.plan] ?? c.plan) : '—'}
+              </Badge>
+            </DataCell>
+            {!isPreview && (
+              <>
+                <DataCell className="text-foreground">{c.gestionnaireCount}</DataCell>
+                <DataCell className="text-muted-foreground">
+                  {DATE_FORMATTER.format(new Date(c.createdAt))}
+                </DataCell>
+              </>
             )}
-          </tbody>
-        </table>
-      </div>
+            <DataCell>
+              <StatusBadge domain="compte" status={displayStatus(c)} label={statusLabel(c)} dot />
+            </DataCell>
+            {!isPreview && (
+              <DataCell className="text-right">
+                <CabinetRowActions
+                  cabinet={c}
+                  loading={loadingId === c.id}
+                  onSuspend={() => setPendingCabinet(c)}
+                  onBlock={() => setPendingBlockCabinet(c)}
+                  onReactivate={() => updateStatus(c.id, 'actif')}
+                  onArchive={() => setPendingArchiveCabinet(c)}
+                  onRestore={() => restoreCabinet(c.id)}
+                />
+              </DataCell>
+            )}
+          </TableRow>
+        ))}
+      </DataTable>
 
-      <div className="flex items-center justify-between border-t border-border px-5 py-3 text-sm text-muted-foreground">
-        <span>
-          {isPreview
-            ? `${paginated.length} sur ${cabinets.length} cabinet${cabinets.length > 1 ? 's' : ''}`
-            : `${filtered.length} cabinet${filtered.length > 1 ? 's' : ''}${pageCount > 1 ? ` — page ${currentPage} sur ${pageCount}` : ''}`}
-        </span>
-        {!isPreview && pageCount > 1 && (
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-border px-3 py-1 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Précédent
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              disabled={currentPage === pageCount}
-              className="rounded-lg border border-border px-3 py-1 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Suivant
-            </button>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        page={currentPage}
+        pageCount={isPreview ? 1 : pageCount}
+        onPageChange={setPage}
+        className="px-5 py-3"
+      >
+        {isPreview
+          ? `${paginated.length} sur ${cabinets.length} cabinet${cabinets.length > 1 ? 's' : ''}`
+          : `${filtered.length} cabinet${filtered.length > 1 ? 's' : ''}${pageCount > 1 ? ` — page ${currentPage} sur ${pageCount}` : ''}`}
+      </TablePagination>
 
-      {pendingCabinet && (
-        <SuspendCabinetDialog
-          cabinetName={pendingCabinet.name}
-          loading={loadingId === pendingCabinet.id}
-          error={suspendError}
-          onCancel={() => {
-            setPendingCabinet(null);
-            setSuspendError(null);
-          }}
-          onConfirm={(input) => updateStatus(pendingCabinet.id, 'suspendu', input)}
-        />
-      )}
-
-      {pendingBlockCabinet && (
-        <SuspendCabinetDialog
-          cabinetName={pendingBlockCabinet.name}
-          initialMode="BLOCKED"
-          loading={loadingId === pendingBlockCabinet.id}
-          error={suspendError}
-          onCancel={() => {
-            setPendingBlockCabinet(null);
-            setSuspendError(null);
-          }}
-          onConfirm={(input) => updateStatus(pendingBlockCabinet.id, 'suspendu', input)}
-        />
-      )}
-
-      {pendingArchiveCabinet && (
-        <ConfirmDialog
-          title="Archiver ce cabinet ?"
-          description={`Le cabinet « ${pendingArchiveCabinet.name} » et ses utilisateurs perdront l'accès immédiatement. Les données seront définitivement supprimées dans ${CABINET_DELETION_RETENTION_DAYS} jours (restauration possible avant cette échéance).`}
-          confirmLabel="Archiver"
-          loading={loadingId === pendingArchiveCabinet.id}
-          onCancel={() => setPendingArchiveCabinet(null)}
-          onConfirm={() => archiveCabinet(pendingArchiveCabinet.id)}
-        />
-      )}
+      <CabinetDialogs
+        pendingSuspend={pendingCabinet}
+        pendingBlock={pendingBlockCabinet}
+        pendingArchive={pendingArchiveCabinet}
+        loadingId={loadingId}
+        suspendError={suspendError}
+        onCancelSuspend={() => {
+          setPendingCabinet(null);
+          setSuspendError(null);
+        }}
+        onCancelBlock={() => {
+          setPendingBlockCabinet(null);
+          setSuspendError(null);
+        }}
+        onCancelArchive={() => setPendingArchiveCabinet(null)}
+        onConfirmSuspension={(id, input) => updateStatus(id, 'suspendu', input)}
+        onConfirmArchive={archiveCabinet}
+      />
     </section>
   );
 }
