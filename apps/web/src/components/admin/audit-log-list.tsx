@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { UserPlus, PauseCircle, PlayCircle, Archive, ArchiveRestore, Tag, LogOut, KeyRound, ShieldCheck } from 'lucide-react';
 import { CABINET_DELETION_RETENTION_DAYS } from '@/lib/cabinet/cabinet-retention';
 import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
+import { TablePagination } from '@/components/shared/table-pagination';
 
 export type AuditLogEntry = {
   id: string;
@@ -173,29 +174,14 @@ export function AuditLogList({
           </ul>
 
           {!isPreview && pageCount > 1 && (
-            <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
-              <span>
-                Page {currentPage} sur {pageCount}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-lg border border-border px-3 py-1 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Précédent
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                  disabled={currentPage === pageCount}
-                  className="rounded-lg border border-border px-3 py-1 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Suivant
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              page={currentPage}
+              pageCount={pageCount}
+              onPageChange={setPage}
+              className="mt-4 pt-3"
+            >
+              Page {currentPage} sur {pageCount}
+            </TablePagination>
           )}
         </>
       )}
