@@ -53,4 +53,34 @@ describe('registre des statuts', () => {
   it('ne partage aucun objet entre statuts (un changement local ne se propage pas)', () => {
     expect(statusEntry('compte', 'inconnu-1')).not.toBe(statusEntry('compte', 'inconnu-1'));
   });
+
+  it('garde les libellés et les tons des invitations du cabinet', () => {
+    expect(statusEntry('invitation', 'pending')).toEqual({ label: 'En attente', tone: 'info' });
+    expect(statusEntry('invitation', 'accepted')).toEqual({ label: 'Acceptée', tone: 'success' });
+    expect(statusEntry('invitation', 'expired')).toEqual({ label: 'Expirée', tone: 'neutral' });
+    expect(statusEntry('invitation', 'revoked')).toEqual({ label: 'Révoquée', tone: 'neutral' });
+  });
+
+  it('garde les libellés des lignes de l’historique des conditions', () => {
+    expect(statusEntry('condition', 'EN_VIGUEUR')).toEqual({ label: 'En vigueur', tone: 'info' });
+    expect(statusEntry('condition', 'A_VENIR').label).toBe('À venir');
+    expect(statusEntry('condition', 'PASSEE').label).toBe('Passée');
+  });
+
+  it('associe la situation d’un salarié à un ton (la sortie proche est un avertissement)', () => {
+    expect(statusEntry('situation', 'PAS_ENCORE_ENTRE').tone).toBe('info');
+    expect(statusEntry('situation', 'SORT_BIENTOT').tone).toBe('warning');
+    expect(statusEntry('situation', 'SORTI').tone).toBe('neutral');
+  });
+
+  it('associe l’échéance de la période du mois à un ton (le retard est un danger)', () => {
+    expect(statusEntry('echeance', 'NON_OUVERTE').tone).toBe('neutral');
+    expect(statusEntry('echeance', 'EN_ATTENTE').tone).toBe('info');
+    expect(statusEntry('echeance', 'EN_RETARD').tone).toBe('danger');
+    expect(statusEntry('echeance', 'VERROUILLEE').label).toBe('Prestations verrouillées');
+  });
+
+  it('marque le plan actuel d’un cabinet', () => {
+    expect(statusEntry('plan', 'actuel')).toEqual({ label: 'Plan actuel', tone: 'info' });
+  });
 });

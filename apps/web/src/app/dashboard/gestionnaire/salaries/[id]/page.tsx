@@ -23,6 +23,7 @@ import { getSalarieDetail, type ConditionRow } from '@/lib/salarie/salarie-data'
 import { formatCents } from '@/lib/salarie/montant';
 import { lignesSituationFiscale, type DossierFiscal } from '@/lib/salarie/situation-fiscale';
 import { Notice } from '@/components/shared/notice';
+import { StatusBadge } from '@/components/shared/status-badge';
 
 export const metadata: Metadata = {
   title: 'Dossier salarié',
@@ -37,11 +38,6 @@ const REGIMES: Record<string, string> = {
 const SITUATIONS: Record<string, string> = {
   ISOLE: 'Isolé',
   MARIE_OU_COHABITANT_LEGAL: 'Marié ou cohabitant légal',
-};
-const ETATS: Record<ConditionRow['etat'], string> = {
-  EN_VIGUEUR: 'En vigueur',
-  A_VENIR: 'À venir',
-  PASSEE: 'Passée',
 };
 
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
@@ -303,15 +299,7 @@ export default async function SalarieDetailPage({ params }: { params: Promise<{ 
                   <td className="px-4 py-3 text-foreground/80">{regimeLabel(c)}</td>
                   <td className="px-4 py-3 text-foreground/80">{remuneration(c)}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        c.etat === 'EN_VIGUEUR'
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {ETATS[c.etat]}
-                    </span>
+                    <StatusBadge domain="condition" status={c.etat} />
                   </td>
                   <td className="px-4 py-3">
                     {!salarie.archive && (

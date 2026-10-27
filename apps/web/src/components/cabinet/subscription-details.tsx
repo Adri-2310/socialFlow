@@ -5,11 +5,12 @@ import {
   ResumeSubscriptionButton,
 } from '@/components/cabinet/subscription-actions';
 import { PlanChange } from '@/components/cabinet/plan-change';
-import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing/billing';
+import { trialDaysLeft } from '@/lib/billing/billing';
 import type { CabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
 import type { BillingExtras } from '@/lib/billing/cabinet-subscription';
 import type { PlanChangeOptions } from '@/lib/billing/plan-change';
 import { Notice } from '@/components/shared/notice';
+import { StatusBadge } from '@/components/shared/status-badge';
 
 // Retour de la saisie de carte chez Stripe (voir la page Mon abonnement).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;
@@ -83,14 +84,6 @@ function statusMessage(data: CabinetSubscriptionDetails): string {
   }
 }
 
-const STATUS_TONE: Record<string, string> = {
-  ACTIF: 'bg-secondary/15 text-secondary',
-  ESSAI: 'bg-primary/10 text-primary',
-  DELAI_GRACE: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  IMPAYE: 'bg-destructive/10 text-destructive-text',
-  RESILIE: 'bg-muted text-muted-foreground',
-};
-
 // Page "Mon abonnement" du Cabinet RH : la gestion se fait dans SocialFlow, sans
 // portail Stripe (D59). Seule la saisie d'une carte passe par une page Stripe.
 // Les actions (carte, resiliation, reprise) sont dans subscription-actions.
@@ -152,13 +145,7 @@ export function SubscriptionDetails({
               )}
             </div>
           </div>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              STATUS_TONE[data.status] ?? 'bg-muted text-muted-foreground'
-            }`}
-          >
-            {BILLING_STATUS_LABELS[data.status]}
-          </span>
+          <StatusBadge domain="abonnement" status={data.status} />
         </div>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">

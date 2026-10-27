@@ -15,6 +15,7 @@ import {
 } from '@/lib/periode/periode-format';
 import { getPrestationsPeriode } from '@/lib/periode/prestation-data';
 import { prisma } from '@/lib/prisma';
+import { StatusBadge } from '@/components/shared/status-badge';
 
 export const metadata: Metadata = {
   title: 'Prestations',
@@ -68,9 +69,11 @@ export default async function PrestationsPeriodePage({
         <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           Date limite : {dateIsoEnFrancais(periode.dateLimite)}
           {verrouillee && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
-              <Lock className="h-3 w-3" /> Prestations verrouillées
-            </span>
+            <StatusBadge
+              domain="echeance"
+              status="VERROUILLEE"
+              icon={<Lock aria-hidden="true" />}
+            />
           )}
         </p>
       </div>

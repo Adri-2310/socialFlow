@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2, CalendarDays, ChevronRight, Lock } from 'lucide-react';
+import { Building2, ChevronRight } from 'lucide-react';
+import { EtatPeriodeBadge } from '@/components/gestionnaire/etat-periode-badge';
 import { requireAuthorized } from '@/lib/authz/authz-page';
 import { resolveScope } from '@/lib/authz/authz';
-import { dateIsoEnFrancais, libelleMois } from '@/lib/periode/periode-format';
-import { getTableauDeBord, type EtatPeriodeMois } from '@/lib/periode/tableau-de-bord';
+import { libelleMois } from '@/lib/periode/periode-format';
+import { getTableauDeBord } from '@/lib/periode/tableau-de-bord';
 
 export const metadata: Metadata = {
   title: 'Mes entreprises',
@@ -74,7 +75,7 @@ export default async function GestionnaireHomePage() {
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </Link>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3">
-              <EtatBadge etat={e.etat} />
+              <EtatPeriodeBadge etat={e.etat} />
               <Link
                 href={
                   e.etat.kind === 'NON_OUVERTE'
@@ -91,36 +92,4 @@ export default async function GestionnaireHomePage() {
       </ul>
     </section>
   );
-}
-
-function EtatBadge({ etat }: { etat: EtatPeriodeMois }) {
-  const base = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold';
-  switch (etat.kind) {
-    case 'NON_OUVERTE':
-      return (
-        <span className={`${base} bg-muted text-foreground`}>
-          <CalendarDays className="h-3 w-3" /> Période non ouverte
-        </span>
-      );
-    case 'EN_ATTENTE':
-      return (
-        <span className={`${base} bg-primary/10 text-primary`}>
-          <CalendarDays className="h-3 w-3" /> Prestations avant le{' '}
-          {dateIsoEnFrancais(etat.dateLimite)}
-        </span>
-      );
-    case 'EN_RETARD':
-      return (
-        <span className={`${base} bg-muted text-destructive-text`}>
-          <CalendarDays className="h-3 w-3" /> Date limite dépassée (
-          {dateIsoEnFrancais(etat.dateLimite)})
-        </span>
-      );
-    case 'VERROUILLEE':
-      return (
-        <span className={`${base} bg-muted text-foreground`}>
-          <Lock className="h-3 w-3" /> Prestations verrouillées
-        </span>
-      );
-  }
 }

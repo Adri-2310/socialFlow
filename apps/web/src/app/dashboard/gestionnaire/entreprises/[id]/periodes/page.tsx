@@ -12,6 +12,7 @@ import { getPeriodesEntreprise } from '@/lib/periode/periode-data';
 import { moisProposes } from '@/lib/periode/periode-dates';
 import { dateIsoEnFrancais, libelleMois } from '@/lib/periode/periode-format';
 import { prisma } from '@/lib/prisma';
+import { StatusBadge } from '@/components/shared/status-badge';
 
 export const metadata: Metadata = {
   title: 'Périodes de paie',
@@ -109,15 +110,11 @@ export default async function PeriodesEntreprisePage({
                     {dateIsoEnFrancais(p.dateLimite)}
                   </td>
                   <td className="px-4 py-3">
-                    {p.statut === 'VERROUILLEE' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
-                        <Lock className="h-3 w-3" /> Verrouillées
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                        Ouvertes
-                      </span>
-                    )}
+                    <StatusBadge
+                      domain="periode"
+                      status={p.statut}
+                      icon={p.statut === 'VERROUILLEE' ? <Lock aria-hidden="true" /> : undefined}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center justify-end gap-2">

@@ -1,6 +1,7 @@
 import { Users, MailPlus, Building2, CreditCard } from 'lucide-react';
 import type { CabinetOverview } from '@/lib/cabinet/cabinet-data';
 import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing/billing';
+import { Badge } from '@/components/ui/badge';
 
 const PERIOD_LABELS = { monthly: 'Facturation mensuelle', yearly: 'Facturation annuelle' } as const;
 
@@ -43,9 +44,7 @@ export function OverviewCards({ data }: { data: CabinetOverview }) {
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-muted-foreground">
             <Building2 className="h-5 w-5" />
           </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-            Bientôt disponible
-          </span>
+          <Badge variant="secondary">Bientôt disponible</Badge>
         </div>
         <p className="mt-4 text-2xl font-bold text-muted-foreground">—</p>
         <p className="text-sm text-muted-foreground">Entreprises clientes</p>
