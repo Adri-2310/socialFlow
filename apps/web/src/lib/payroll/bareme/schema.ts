@@ -33,12 +33,58 @@ export const categorieEmployeurSchema = z.string().regex(/^[A-Z][A-Z0-9_]*$/);
 // légaux et doivent citer leur source.
 const CLES_METADONNEES = ['version', 'categorieEmployeur'] as const;
 
+// BLOC `onss` (étape 4) : la cotisation personnelle de sécurité sociale du travailleur.
+// Source : Instructions administratives ONSS 2026/3, pages 175 (13,07 %) et 176 (base à 108 %).
+export const onssSchema = z.strictObject({
+  // Part du brut retenue au travailleur. 13,07 % s'écrit 130 700 (100 % = 1 000 000).
+  tauxPersonnel: tauxSchema,
+  // Majoration de la base des ouvriers (qui reçoivent leur pécule de vacances d'une caisse et
+  // non de l'employeur) : 108 % s'écrit 1 080 000. Les employés ont une base à 100 %.
+  coefficientOuvrier: tauxSchema,
+});
+export type ParametresOnss = z.infer<typeof onssSchema>;
+
+// Un VOLET du bonus à l'emploi : un montant de base qui reste plein jusqu'à un premier plafond de
+// salaire, puis diminue d'une fraction du salaire en trop, jusqu'à s'annuler au second plafond.
+// Exemple (employé, volet B, depuis le 1er septembre 2026) : 171,99 € jusqu'à 2 300,62 €, puis
+// 171,99 - 0,2699 x (S - 2 300,62), et 0 € à partir de 2 937,93 €.
+export const voletBonusSchema = z
+  .strictObject({
+    montantMax: montantCentimesSchema, // R quand S <= plafondPlein
+    plafondPlein: montantCentimesSchema, // S jusqu'auquel le montant reste plein
+    // Réduction par euro de salaire au-dessus de plafondPlein : 0,2699 s'écrit 269 900.
+    coefficient: tauxSchema,
+    plafondNul: montantCentimesSchema, // S à partir duquel le montant est nul
+  })
+  .refine((v) => v.plafondNul >= v.plafondPlein, {
+    message: 'Le plafond à partir duquel la réduction est nulle précède le plafond plein.',
+  });
+
+const voletsBonusSchema = z.strictObject({
+  voletA: voletBonusSchema, // volet A : bas salaires
+  voletB: voletBonusSchema, // volet B : très bas salaires
+});
+
+// BLOC `bonusEmploi` (étape 4). Source : Instructions administratives ONSS 2026/3, pages
+// 448 à 453. Les montants des employés (déclarés à 100 %) et des ouvriers (déclarés à 108 %) diffèrent.
+export const bonusEmploiSchema = z.strictObject({
+  employe: voletsBonusSchema,
+  ouvrier: voletsBonusSchema,
+  // Plafond du total du bonus par travailleur et par année civile (3 594,36 € depuis le 1er juillet 2026).
+  plafondAnnuel: montantCentimesSchema,
+});
+export type ParametresBonusEmploi = z.infer<typeof bonusEmploiSchema>;
+
 // `strictObject` refuse toute clé inconnue : une faute de frappe dans un nom de paramètre
 // (« onsss ») est une erreur, pas un paramètre ignoré en silence.
+// Les blocs légaux sont FACULTATIFS dans la forme (un barème de l'étape 2 n'en a aucun) mais
+// OBLIGATOIRES au calcul : `exigerBloc` (bloc.ts) lève une erreur s'il manque, jamais de valeur par défaut.
 export const parametresBaremeSchema = z.strictObject({
   // Version de la FORME des paramètres, pour pouvoir la faire évoluer sans casser les anciens barèmes.
   version: z.literal(1),
   categorieEmployeur: categorieEmployeurSchema,
+  onss: onssSchema.optional(),
+  bonusEmploi: bonusEmploiSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;
 

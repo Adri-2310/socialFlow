@@ -55,3 +55,7 @@ export interface VersionBareme {
   statut: StatutBareme;
   categorieEmployeur: string; // D98 : une version ne vaut que pour une catégorie
 }
+
+// Statut du salarié (D39, colonne `statut` du dossier) : il décide de la base de la cotisation
+// personnelle (ouvrier : brut majoré de 8 %) et du tableau du bonus à l'emploi.
+export type CategorieSalarie = 'EMPLOYE' | 'OUVRIER';
