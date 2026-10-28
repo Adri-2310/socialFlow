@@ -59,7 +59,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`text-sm font-medium transition ${
-                  active ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+                  active ? 'text-primary dark:text-indigo-300' : 'text-muted-foreground hover:text-primary'
                 }`}
               >
                 {link.label}
@@ -77,7 +77,7 @@ export function Navbar() {
                   variant="ghost"
                   className={`h-auto gap-1 rounded-none p-0 text-sm font-medium hover:bg-transparent ${
                     isCompanyActive
-                      ? 'text-primary hover:text-primary'
+                      ? 'text-primary hover:text-primary dark:text-indigo-300 dark:hover:text-indigo-300'
                       : 'text-muted-foreground hover:text-primary'
                   }`}
                 />
@@ -94,7 +94,7 @@ export function Navbar() {
                     key={link.href}
                     render={<Link href={link.href} aria-current={active ? 'page' : undefined} />}
                     className={`px-3 py-2 text-sm font-medium ${
-                      active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary'
+                      active ? 'bg-primary/10 text-primary dark:text-indigo-300' : 'text-muted-foreground hover:text-primary'
                     }`}
                   >
                     {link.label}
@@ -142,7 +142,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`block rounded-lg px-3 py-2 text-sm font-medium ${
-                  active ? 'bg-muted text-primary' : 'hover:bg-muted'
+                  active ? 'bg-muted text-primary dark:text-indigo-300' : 'hover:bg-muted'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -158,7 +158,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`block rounded-lg px-3 py-2 text-sm font-medium ${
-                    active ? 'bg-muted text-primary' : 'hover:bg-muted'
+                    active ? 'bg-muted text-primary dark:text-indigo-300' : 'hover:bg-muted'
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >

@@ -24,7 +24,7 @@ export function PageHero({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <span className="text-sm font-semibold uppercase tracking-wider text-primary">
+          <span className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-indigo-300">
             {eyebrow}
           </span>
           <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">

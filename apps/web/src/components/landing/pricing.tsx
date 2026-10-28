@@ -56,7 +56,7 @@ export function Pricing({ plans }: { plans: Plan[] }) {
                   {plan.badge}
                 </span>
               )}
-              <h3 className="font-semibold text-foreground">{plan.name}</h3>
+              <h2 className="font-semibold text-foreground">{plan.name}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
               <p className="mt-6">
                 <span className="text-4xl font-extrabold text-foreground">
