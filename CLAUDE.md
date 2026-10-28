@@ -29,6 +29,7 @@ SaaS multi-tenant de gestion de la paie belge (TFE d'Adrien Mertens). Next.js 16
 - Respecter la « définition de terminé » de `doc/CONVENTIONS.md` § 8, y compris la mise à jour de la fiche concernée et de `doc/JOURNAL.md`.
 - Commentaires en français, qui expliquent le pourquoi et renvoient à la décision (`// D27 : …`).
 - Préférer de petits changements relisibles : Adrien relit et doit pouvoir expliquer chaque fichier.
+- Interface : **aucun `<button>`, `<input>`, `<select>`, `<textarea>` ni `<table>` écrit à la main** hors de `components/ui/` ; on utilise shadcn/ui et les composants partagés de `components/shared/` (`doc/CONVENTIONS.md` § 5). Ne pas modifier `components/ui/` sans nécessité expliquée ; couleurs de texte conformes à D62 (`text-destructive-text`, jamais `text-secondary`).
 
 ## Commandes
 
