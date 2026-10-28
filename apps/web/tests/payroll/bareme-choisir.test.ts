@@ -4,7 +4,12 @@ import { choisirBareme, verifierPasDeChevauchement } from '@/lib/payroll/bareme/
 import { ErreurMoteur } from '@/lib/payroll/erreurs';
 import type { VersionBareme } from '@/lib/payroll/types';
 
-const v = (code: string, depuis: string, jusqua: string | null, extra: Partial<VersionBareme> = {}) =>
+const v = (
+  code: string,
+  depuis: string,
+  jusqua: string | null,
+  extra: Partial<VersionBareme> = {},
+) =>
   ({
     code,
     valideDepuis: depuis,
@@ -21,7 +26,7 @@ const codeErreur = (fn: () => unknown) => {
     expect(e).toBeInstanceOf(ErreurMoteur);
     return (e as ErreurMoteur).code;
   }
-  throw new Error("Aucune erreur levée");
+  throw new Error('Aucune erreur levée');
 };
 
 describe('choisirBareme', () => {
@@ -54,7 +59,7 @@ describe('choisirBareme', () => {
     );
   });
 
-  it('ignore une autre catégorie d\'employeur', () => {
+  it("ignore une autre catégorie d'employeur", () => {
     const a = v('A', '2026-01-01', null, { categorieEmployeur: 'NON_MARCHAND' });
     expect(codeErreur(() => choisirBareme([a], 2026, 3, 'PRIVE_MARCHAND'))).toBe(
       'BAREME_INTROUVABLE',
@@ -71,7 +76,7 @@ describe('choisirBareme', () => {
     );
   });
 
-  it('refuse une version qui ne couvre qu\'une partie du mois', () => {
+  it("refuse une version qui ne couvre qu'une partie du mois", () => {
     const debutTardif = v('A', '2026-03-15', null);
     expect(codeErreur(() => choisirBareme([debutTardif], 2026, 3, 'PRIVE_MARCHAND'))).toBe(
       'BAREME_PARTIEL',
@@ -94,7 +99,9 @@ describe('choisirBareme', () => {
     expect(codeErreur(() => choisirBareme([], 2026, 13, 'PRIVE_MARCHAND'))).toBe('ENTREE_INVALIDE');
     expect(codeErreur(() => choisirBareme([], 2026, 0, 'PRIVE_MARCHAND'))).toBe('ENTREE_INVALIDE');
     expect(codeErreur(() => choisirBareme([], 1999, 1, 'PRIVE_MARCHAND'))).toBe('ENTREE_INVALIDE');
-    expect(codeErreur(() => choisirBareme([], 2026.5, 1, 'PRIVE_MARCHAND'))).toBe('ENTREE_INVALIDE');
+    expect(codeErreur(() => choisirBareme([], 2026.5, 1, 'PRIVE_MARCHAND'))).toBe(
+      'ENTREE_INVALIDE',
+    );
   });
 });
 
@@ -105,7 +112,7 @@ describe('verifierPasDeChevauchement', () => {
     ).not.toThrow();
   });
 
-  it('refuse un chevauchement d\'un jour', () => {
+  it("refuse un chevauchement d'un jour", () => {
     expect(
       codeErreur(() =>
         verifierPasDeChevauchement([

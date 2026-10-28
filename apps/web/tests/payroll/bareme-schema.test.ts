@@ -43,9 +43,9 @@ describe('versionBaremeCompleteSchema', () => {
   });
 
   it('refuse un statut inconnu et une catégorie mal formée', () => {
-    expect(versionBaremeCompleteSchema.safeParse({ ...valide(), statut: 'BROUILLON' }).success).toBe(
-      false,
-    );
+    expect(
+      versionBaremeCompleteSchema.safeParse({ ...valide(), statut: 'BROUILLON' }).success,
+    ).toBe(false);
     expect(
       versionBaremeCompleteSchema.safeParse({ ...valide(), categorieEmployeur: 'prive marchand' })
         .success,
@@ -58,8 +58,9 @@ describe('versionBaremeCompleteSchema', () => {
   });
 
   it('refuse une date impossible', () => {
-    expect(versionBaremeCompleteSchema.safeParse({ ...valide(), valideDepuis: '2026-02-30' }).success)
-      .toBe(false);
+    expect(
+      versionBaremeCompleteSchema.safeParse({ ...valide(), valideDepuis: '2026-02-30' }).success,
+    ).toBe(false);
   });
 
   it('refuse une source sans bloc de paramètres', () => {
