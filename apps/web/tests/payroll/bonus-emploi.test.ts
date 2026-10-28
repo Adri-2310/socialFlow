@@ -55,6 +55,7 @@ describe('calculerBonusEmploi : employé à temps plein', () => {
     expect(montant(r, 'BONUS_EMPLOI_A')).toBe(12_754);
     expect(montant(r, 'BONUS_EMPLOI_B')).toBe(11_818);
     expect(r.bonus).toBe(24_572);
+    expect([r.voletA, r.voletB]).toEqual([12_754, 11_818]);
     expect(r.salaireReference).toBe(250_000);
   });
 
@@ -173,7 +174,7 @@ describe('calculerBonusEmploi : prestations incomplètes', () => {
       },
       BAREME,
     );
-    expect(r).toEqual({ bonus: 0, salaireReference: 0, lignes: [] });
+    expect(r).toEqual({ bonus: 0, voletA: 0, voletB: 0, salaireReference: 0, lignes: [] });
   });
 });
 

@@ -1,4 +1,8 @@
-import type { ParametresBonusEmploi, ParametresOnss } from '@/lib/payroll/bareme/schema';
+import type {
+  ParametresBonusEmploi,
+  ParametresOnss,
+  ParametresPrecompte,
+} from '@/lib/payroll/bareme/schema';
 
 // Paramètres de TEST, recopiés à la main du document officiel (pas calculés par le moteur) :
 // Instructions administratives ONSS, édition 2026/3.
@@ -42,4 +46,30 @@ export const BONUS_EMPLOI_2026_09: ParametresBonusEmploi = {
     },
   },
   plafondAnnuel: 359_436,
+};
+
+// Annexe III à l'AR/CIR 92 (revenus payés à partir du 01/01/2026) :
+// n° 28 (frais), 31 (barème), 32 (quotité), 34 (quotient conjugal), 38 à 41 (réductions), 46 (bonus).
+export const PRECOMPTE_2026: ParametresPrecompte = {
+  fraisProfessionnels: { taux: 300_000, maximum: 607_000 }, // 30 %, 6 070 €
+  bareme: [
+    { auDela: 0, impotFixe: 0, taux: 267_500 }, // 26,75 %
+    { auDela: 1_671_000, impotFixe: 446_993, taux: 428_000 }, // 16 710 € : 4 469,93 + 42,80 %
+    { auDela: 2_950_000, impotFixe: 994_405, taux: 481_500 }, // 29 500 € : 9 944,05 + 48,15 %
+    { auDela: 5_105_000, impotFixe: 2_032_038, taux: 535_000 }, // 51 050 € : 20 320,38 + 53,50 %
+  ],
+  impotQuotiteExemptee: 298_798, // 2 987,98 €
+  quotientConjugal: { taux: 300_000, maximum: 1_379_000 }, // 30 %, 13 790 €
+  reductions: {
+    enfants: [62_400, 165_600, 440_400, 762_000, 1_110_000, 1_459_200, 1_812_000, 2_199_600],
+    parEnfantAuDela8: 386_400,
+    beneficiaireHandicape: 62_400,
+    dependant66: 199_200,
+    autreCharge: 62_400,
+    parentIsole: 62_400,
+    conjointRevenuLimite: 174_000,
+    conjointPensionLimitee: 347_400,
+    conjointHandicape: 62_400,
+  },
+  bonusEmploiFiscal: { tauxVoletA: 331_400, tauxVoletB: 525_400 }, // 33,14 %, 52,54 %
 };

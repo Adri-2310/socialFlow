@@ -31,6 +31,9 @@ export const BORNES = {
   minutesDansUnMoisMax: JOURS_MOIS_MAX * MINUTES_PAR_JOUR,
   // D96 : une durée hebdomadaire ne dépasse pas 60 heures (3 600 minutes).
   minutesSemaineMax: 60 * 60,
+  // Nombre de personnes d'une même catégorie à charge (enfants, autres personnes) : même plafond
+  // que le formulaire du dossier (lib/schemas/salarie.ts). Au-delà, c'est une faute de saisie.
+  personnesAChargeMax: 20,
 } as const;
 
 // Vérifie qu'une valeur est un nombre ENTIER compris entre `min` et `max` (bornes incluses) et la

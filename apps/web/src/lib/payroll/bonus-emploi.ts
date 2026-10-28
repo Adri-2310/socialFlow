@@ -51,6 +51,10 @@ export interface EntreeBonusEmploi {
 
 export interface ResultatBonusEmploi {
   bonus: Centimes; // total accordé, positif (somme des lignes)
+  // Les deux volets réellement accordés (après plafonds) : le précompte en reprend une part
+  // différente pour chacun (Annexe III n° 46, D102). `bonus` = voletA + voletB.
+  voletA: Centimes;
+  voletB: Centimes;
   salaireReference: Centimes; // S, pour l'afficher et l'expliquer
   lignes: LigneCalcul[];
 }
@@ -143,7 +147,7 @@ export function calculerBonusEmploi(
   // Aucune prestation : la loi ne permet pas de déterminer un salaire de référence (p. 453,
   // « codes MRT ») ; il n'y a donc pas de bonus : résultat 0, sans ligne.
   if (realisees === 0) {
-    return { bonus: 0, salaireReference: 0, lignes: [] };
+    return { bonus: 0, voletA: 0, voletB: 0, salaireReference: 0, lignes: [] };
   }
 
   const s = calculerSalaireReference(brut, entree.prestations);
@@ -188,5 +192,5 @@ export function calculerBonusEmploi(
       montant: pB,
     });
   }
-  return { bonus: pA + pB, salaireReference: s, lignes };
+  return { bonus: pA + pB, voletA: pA, voletB: pB, salaireReference: s, lignes };
 }

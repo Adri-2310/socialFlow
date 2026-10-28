@@ -75,6 +75,56 @@ export const bonusEmploiSchema = z.strictObject({
 });
 export type ParametresBonusEmploi = z.infer<typeof bonusEmploiSchema>;
 
+// BLOC `precompte` (étape 5) : précompte professionnel sur les rémunérations mensuelles des
+// travailleurs. Source : Annexe III à l'arrêté royal d'exécution du CIR 92 (AR du 11/12/2025,
+// revenus payés à partir du 1er janvier 2026), `doc/reference/precompte/annexe-iii-2026.pdf`.
+// Chaque champ cite son numéro (n°) dans le commentaire.
+
+// Une tranche du barème, écrite COMME LE DOCUMENT : « impôt fixe + taux sur ce qui dépasse
+// `auDela` ». Exemple (n° 31) : au-delà de 16 710 €, 4 469,93 € + 42,80 % de l'excédent.
+const trancheBaremeSchema = z.strictObject({
+  auDela: montantCentimesSchema,
+  impotFixe: montantCentimesSchema,
+  taux: tauxSchema,
+});
+
+export const precompteSchema = z.strictObject({
+  // n° 28 : frais professionnels forfaitaires des travailleurs : 30 %, au maximum 6 070 €
+  // (maximum atteint dès 20 233,33 € de base annuelle).
+  fraisProfessionnels: z.strictObject({ taux: tauxSchema, maximum: montantCentimesSchema }),
+  // n° 31 : barème de base, tranches classées. La première commence à 0 et chaque `auDela`
+  // dépasse le précédent.
+  bareme: z
+    .array(trancheBaremeSchema)
+    .min(1)
+    .refine((t) => t[0]?.auDela === 0 && t.every((x, i) => i === 0 || x.auDela > t[i - 1].auDela), {
+      message: 'Les tranches doivent commencer à 0 et être strictement croissantes.',
+    }),
+  // n° 32 : impôt sur la quotité du revenu exemptée d'impôt (11 170 €) : 2 987,98 €. Le quotient
+  // conjugal (n° 34.2) en retire le DOUBLE (5 975,96 €) ; le moteur le calcule, on ne le stocke pas.
+  impotQuotiteExemptee: montantCentimesSchema,
+  // n° 34.1.1 : revenu imputé au conjoint sans revenus : 30 % du net, au maximum 13 790 €.
+  quotientConjugal: z.strictObject({ taux: tauxSchema, maximum: montantCentimesSchema }),
+  // Réductions annuelles de l'impôt de base (n° 38 à 41).
+  reductions: z.strictObject({
+    // n° 38 : de 1 à 8 enfants à charge (un enfant handicapé compte pour deux, n° 8).
+    enfants: z.array(montantCentimesSchema).length(8),
+    // n° 38 : par enfant au-delà du huitième.
+    parEnfantAuDela8: montantCentimesSchema,
+    beneficiaireHandicape: montantCentimesSchema, // n° 39.1
+    dependant66: montantCentimesSchema, // n° 39.2 : par personne dépendante de 66 ans ou plus
+    autreCharge: montantCentimesSchema, // n° 39.3 : par autre personne à charge
+    parentIsole: montantCentimesSchema, // n° 40.1
+    conjointRevenuLimite: montantCentimesSchema, // n° 40.2 (revenus <= 290 € nets par mois)
+    conjointPensionLimitee: montantCentimesSchema, // n° 40.3 (pensions <= 579 € nets par mois)
+    conjointHandicape: montantCentimesSchema, // n° 41
+  }),
+  // n° 46 : le bonus à l'emploi donne aussi droit à une réduction de précompte : une part du
+  // volet A (33,14 %) et une part du volet B (52,54 %) du bonus réellement accordé.
+  bonusEmploiFiscal: z.strictObject({ tauxVoletA: tauxSchema, tauxVoletB: tauxSchema }),
+});
+export type ParametresPrecompte = z.infer<typeof precompteSchema>;
+
 // `strictObject` refuse toute clé inconnue : une faute de frappe dans un nom de paramètre
 // (« onsss ») est une erreur, pas un paramètre ignoré en silence.
 // Les blocs légaux sont FACULTATIFS dans la forme (un barème de l'étape 2 n'en a aucun) mais
@@ -85,6 +135,7 @@ export const parametresBaremeSchema = z.strictObject({
   categorieEmployeur: categorieEmployeurSchema,
   onss: onssSchema.optional(),
   bonusEmploi: bonusEmploiSchema.optional(),
+  precompte: precompteSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;
 
