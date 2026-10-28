@@ -241,7 +241,7 @@
 
 ## 2026-10-28 — Migration de toute l'interface vers shadcn/ui
 
-> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part. Les chiffres de tests complets sont à renseigner.
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
 
 **Objectif** : passer toute l'interface (espaces Cabinet RH, Gestionnaire RH, Entreprise, console SuperAdmin, compte, authentification, site public) sur shadcn/ui (style `base-nova`, Base UI), **sans changer le comportement**, sans aucun `<button>`, `<input>`, `<select>`, `<textarea>` ni `<table>` écrit à la main, avec une accessibilité vérifiable (libellé par champ, erreur reliée à son champ, clavier, focus) et des couleurs de texte conformes à D62.
 
@@ -275,7 +275,7 @@
 
 **Écrit à la main** : ?
 
-**Tests** : **55 fichiers de tests ajoutés et 65 touchés** sur la branche (environ 8 560 lignes ajoutées), dont les tests de caractérisation de chaque écran migré et un test de convention qui parcourt `src` à la recherche d'éléments artisanaux. Aucune assertion supprimée ; les rares adaptations sont expliquées dans les commits concernés (menu du compte et tiroir mobile devenus asynchrones, cases à cocher Base UI annoncées par `aria-disabled`, nom accessible du bouton « Email », noms des boutons « Modifier », liens du menu « Entreprise » désormais dans un menu ouvert). Lint et type-check propres à chaque commit. **Suite complète : à renseigner** (fichiers, tests, durée, tests instables éventuels). Mesure Lighthouse en mode développement sur `/`, `/tarifs` et `/faq` : accessibilité 100, bonnes pratiques 100, SEO 100 (94 à 96 en accessibilité avant les corrections de contraste).
+**Tests** : **55 fichiers de tests ajoutés et 65 touchés** sur la branche (environ 8 560 lignes ajoutées), dont les tests de caractérisation de chaque écran migré et un test de convention qui parcourt `src` à la recherche d'éléments artisanaux. Aucune assertion supprimée ; les rares adaptations sont expliquées dans les commits concernés (menu du compte et tiroir mobile devenus asynchrones, cases à cocher Base UI annoncées par `aria-disabled`, nom accessible du bouton « Email », noms des boutons « Modifier », liens du menu « Entreprise » désormais dans un menu ouvert). Lint et type-check propres à chaque commit. **Suite complète le 28/10/2026 : 193 fichiers et 3 491 tests, tous verts, en 54 min 12 s** (base Neon de dev, fichiers en série), sans test instable observé ; seuls quatre avertissements de jsdom (« navigation to another Document ») apparaissent, sans effet sur le résultat. Mesure Lighthouse en mode développement sur `/`, `/tarifs` et `/faq` : accessibilité 100, bonnes pratiques 100, SEO 100 (94 à 96 en accessibilité avant les corrections de contraste).
 
 **Difficultés et apprentissages**
 - Les composants Base UI ne se comportent pas comme les éléments natifs : une case à cocher est un `span` avec `role="checkbox"` (désactivée par `aria-disabled`), les menus s'ouvrent et se ferment de façon asynchrone (il faut `findBy` et `waitFor` dans les tests), les entrées de menu ont le rôle `menuitem`.
@@ -285,4 +285,4 @@
 - Le navigateur de l'assistant ne se redimensionne pas : le mobile (tiroir, menu du site) n'a pas été vu, d'où la liste de contrôle manuelle.
 - Les contrastes se règlent par teinte et par thème : une même couleur peut passer en clair et échouer en sombre (lien actif de la navigation à 3,7:1 avant correction).
 
-**Reste à faire** : passer `VERIFICATION-INTERFACE.md` à la main (tiroir mobile, menu mobile du site, écrans SuperAdmin en priorité) ; mesurer Lighthouse sur `next build` + `next start` ; renseigner les chiffres de la suite complète ci-dessus ; fusionner dans `dev` ; dettes restantes dans `AMELIORATIONS.md` § 6 (modale de suspension sans ton, `cabinets-table` à 375 lignes, `DataTable` sans en-tête collant, libellé du MRR, barre de défilement de l'import CSV).
+**Reste à faire** : passer `VERIFICATION-INTERFACE.md` à la main (tiroir mobile, menu mobile du site, écrans SuperAdmin en priorité) ; mesurer Lighthouse sur `next build` + `next start` ; fusionner dans `dev` ; dettes restantes dans `AMELIORATIONS.md` § 6 (modale de suspension sans ton, `cabinets-table` à 375 lignes, `DataTable` sans en-tête collant, libellé du MRR, barre de défilement de l'import CSV).
