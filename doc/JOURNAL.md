@@ -235,3 +235,54 @@
 - Une série de tests lancée en arrière-plan survit à la fermeture de l'éditeur : il faut l'arrêter avant d'en relancer une, sinon le nettoyage de fin de l'une efface les comptes de test de l'autre.
 
 **Reste à faire** : la conversion `npm run db:reencrypt` est faite sur `dev` (24 valeurs, contrôlé) ; la production a été vérifiée par un `--dry-run` (0 dossier, rien à convertir) ; appliquer sur la production les trois migrations de cette branche ; fusionner dans `dev` ; le point ouvert n° 6 est tranché (D98) et le n° 5 en partie (une fiche réelle anonymisée comme base, côté salarié) : il reste à compléter les cas de référence avant ou pendant le moteur de paie (`feature/moteur-paie`). Plus tard : rotation de `ENCRYPTION_KEY`, déclaration de la situation fiscale par le salarié, texte de l'article 136. Dettes et idées : voir `AMELIORATIONS.md`.
+
+
+---
+
+## 2026-10-28 — Migration de toute l'interface vers shadcn/ui
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part. Les chiffres de tests complets sont à renseigner.
+
+**Objectif** : passer toute l'interface (espaces Cabinet RH, Gestionnaire RH, Entreprise, console SuperAdmin, compte, authentification, site public) sur shadcn/ui (style `base-nova`, Base UI), **sans changer le comportement**, sans aucun `<button>`, `<input>`, `<select>`, `<textarea>` ni `<table>` écrit à la main, avec une accessibilité vérifiable (libellé par champ, erreur reliée à son champ, clavier, focus) et des couleurs de texte conformes à D62.
+
+**Décisions prises** : aucune nouvelle décision numérotée dans `DECISIONS.md` (choix de ma part : la règle vit dans `CONVENTIONS.md` § 5 et dans `CLAUDE.md`). D62, D65 et D76 (contraste, couleurs du cabinet, portail) restent la référence et ont été respectées. Choix de conception, chacun présenté avant d'être codé :
+- des composants partagés plutôt que du shadcn brut à chaque écran : `FormField` (champ + libellé + aide + erreur), `CheckField`, `FormDialog` et `ConfirmDialog`, `DataTable` avec `TablePagination` et `ListFilters`, `StatusBadge` alimenté par un registre unique, `Notice`, `Spinner` ;
+- **un test de caractérisation écrit et vert sur l'ancienne version avant chaque migration**, puis la migration, puis les mêmes tests sans modification ; tout test adapté est expliqué dans son commit ;
+- les bascules (Mensuel/Annuel) restent des boutons avec `aria-pressed`, pas un composant d'onglets, pour ne pas changer la structure ;
+- la FAQ garde `framer-motion` (animation inchangée) avec `aria-expanded` et `aria-controls`, plutôt que l'accordéon shadcn ;
+- le menu « Entreprise » du site public passe en `DropdownMenu` : il n'était atteignable ni au clavier ni au tactile ;
+- les erreurs de connexion d'un portail passent en `Notice` ;
+- pas de ton `danger` ajouté à `FormDialog` pour une seule modale (noté dans `AMELIORATIONS.md`) ;
+- `app/global-error.tsx` garde son bouton écrit à la main : il remplace le layout racine, sans `globals.css` garanti ; c'est la seule exception, imposée par un test.
+
+**Réalisé** : branche `feature/ui-shadcn` depuis `dev`, **44 commits** en français entre le 26 et le 28 octobre 2026, un par sous-étape présentée puis validée avant d'être codée.
+- Socle : installation des composants de base, thème Tailwind aligné, branding du cabinet relié aux composants (le bouton par défaut prend la couleur du cabinet), composants partagés, `color-scheme` sombre pour les contrôles natifs.
+- Lot 1 : formulaires du cabinet et du gestionnaire, encodage des prestations, dossier salarié, import CSV, bandeaux (`Notice`), pastilles (`StatusBadge`), tableaux et onglets.
+- Lot 6 bis : coque (barre latérale, tiroir mobile en `Sheet`), menu du compte, double authentification, comptes liés, informations du compte, suppression du compte, accueil Entreprise.
+- Lot 6 ter : console SuperAdmin (facturation, suspension, cabinets, utilisateurs, plans, journal d'audit).
+- Lot 6 quater : connexion et ses sous-composants, connexion sans mot de passe, mot de passe oublié et réinitialisation, inscription, invitation, pages d'erreur.
+- Lot 6 quinquies : tarifs, FAQ, barre de navigation.
+- Étape 7 : règles dans `CONVENTIONS.md` et `CLAUDE.md`, test `tests/conventions/elements-artisanaux.test.ts`, mise à jour d'`AMELIORATIONS.md` § 6.
+- Étape 8 : liste de contrôle manuelle `VERIFICATION-INTERFACE.md`.
+- Au total, **196 fichiers** de `src` et `tests` touchés.
+
+**Contrôlé / corrigé par moi**
+- J'ai validé chaque plan avant le code et autorisé chaque commit un par un. ?
+- J'ai tranché : `Notice` pour les erreurs de connexion, menu « Entreprise » en `DropdownMenu`, `aria-pressed` pour les bascules, `framer-motion` conservé dans la FAQ, pas de ton `danger` dans `FormDialog`, pas de D-numéro, un test qui interdit les éléments artisanaux, et un commit séparé pour les derniers défauts de contraste. ?
+- J'ai relu visuellement les écrans que j'ai pu voir (j'ai envoyé une capture de la facturation SuperAdmin pour contrôler le rendu). ?
+- Écarts relevés à la relecture (par l'assistant, à confirmer) : liens « Retour » et boutons d'icône sans nom accessible, boutons Google / Microsoft / Email sans nom sous `sm`, trois boutons « Modifier » identiques, menu « Entreprise » inaccessible au clavier, texte en `text-destructive`, `text-secondary` et ambre trop pâles pour D62, ordre des titres de `/tarifs`. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Écrit à la main** : ?
+
+**Tests** : **55 fichiers de tests ajoutés et 65 touchés** sur la branche (environ 8 560 lignes ajoutées), dont les tests de caractérisation de chaque écran migré et un test de convention qui parcourt `src` à la recherche d'éléments artisanaux. Aucune assertion supprimée ; les rares adaptations sont expliquées dans les commits concernés (menu du compte et tiroir mobile devenus asynchrones, cases à cocher Base UI annoncées par `aria-disabled`, nom accessible du bouton « Email », noms des boutons « Modifier », liens du menu « Entreprise » désormais dans un menu ouvert). Lint et type-check propres à chaque commit. **Suite complète : à renseigner** (fichiers, tests, durée, tests instables éventuels). Mesure Lighthouse en mode développement sur `/`, `/tarifs` et `/faq` : accessibilité 100, bonnes pratiques 100, SEO 100 (94 à 96 en accessibilité avant les corrections de contraste).
+
+**Difficultés et apprentissages**
+- Les composants Base UI ne se comportent pas comme les éléments natifs : une case à cocher est un `span` avec `role="checkbox"` (désactivée par `aria-disabled`), les menus s'ouvrent et se ferment de façon asynchrone (il faut `findBy` et `waitFor` dans les tests), les entrées de menu ont le rôle `menuitem`.
+- Une recherche d'éléments artisanaux par `grep` qui oublie une balise suivie d'un retour à la ligne donne un faux « zéro » : le test de convention vérifie ce cas explicitement.
+- Un texte masqué en CSS (`hidden sm:inline`) ne compte pas dans le nom d'un bouton : les boutons à icône seule sous `sm` n'avaient plus de nom, d'où un `aria-label`.
+- Un test écrit sur l'ancienne version peut se tromper lui-même (apostrophes droites ou typographiques, position dans le DOM) : on le corrige avant de migrer, pas après, sinon il ne prouve rien.
+- Le navigateur de l'assistant ne se redimensionne pas : le mobile (tiroir, menu du site) n'a pas été vu, d'où la liste de contrôle manuelle.
+- Les contrastes se règlent par teinte et par thème : une même couleur peut passer en clair et échouer en sombre (lien actif de la navigation à 3,7:1 avant correction).
+
+**Reste à faire** : passer `VERIFICATION-INTERFACE.md` à la main (tiroir mobile, menu mobile du site, écrans SuperAdmin en priorité) ; mesurer Lighthouse sur `next build` + `next start` ; renseigner les chiffres de la suite complète ci-dessus ; fusionner dans `dev` ; dettes restantes dans `AMELIORATIONS.md` § 6 (modale de suspension sans ton, `cabinets-table` à 375 lignes, `DataTable` sans en-tête collant, libellé du MRR, barre de défilement de l'import CSV).
