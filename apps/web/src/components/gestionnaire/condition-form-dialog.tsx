@@ -2,8 +2,13 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, Loader2 } from 'lucide-react';
-import { Field, inputClass } from '@/components/gestionnaire/form-field';
+import { CalendarClock } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import { toConditionPayload, type ConditionFormValues } from '@/lib/salarie/condition-form';
 import { ERROR_MESSAGES, FALLBACK, FIELD_ERRORS } from '@/lib/salarie/form-messages';
 import { conditionTravailSchema, invalidFields } from '@/lib/schemas/salarie';
@@ -87,33 +92,19 @@ export function ConditionFormDialog({
   const partiel = form.regime === 'TEMPS_PARTIEL';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="condition-form-title"
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
-      >
-        <div className="flex items-start gap-4">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-            <CalendarClock className="h-5 w-5" />
-          </span>
-          <div>
-            <h3 id="condition-form-title" className="text-lg font-semibold text-foreground">
-              {edit ? 'Corriger la condition' : 'Ajouter une condition de travail'}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {edit
-                ? 'Corrige une erreur de saisie sur cette ligne. Pour un vrai changement, ajoutez plutôt une nouvelle condition à sa date.'
-                : 'Un changement de statut, de fonction, de régime ou de rémunération s’ajoute à l’historique à partir de sa date d’effet : les anciennes lignes ne sont pas modifiées.'}
-            </p>
-          </div>
-        </div>
-
-        <fieldset disabled={loading} className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field
+    <FormDialog
+      size="xl"
+      icon={<CalendarClock />}
+      title={edit ? 'Corriger la condition' : 'Ajouter une condition de travail'}
+      description={
+        edit
+          ? 'Corrige une erreur de saisie sur cette ligne. Pour un vrai changement, ajoutez plutôt une nouvelle condition à sa date.'
+          : 'Un changement de statut, de fonction, de régime ou de rémunération s’ajoute à l’historique à partir de sa date d’effet : les anciennes lignes ne sont pas modifiées.'
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
+          <FormField
             id="cond-date"
             label="Valable à partir du"
             error={err('dateEffet')}
@@ -123,16 +114,17 @@ export function ConditionFormDialog({
                 : 'Peut être passée (rattrapage) ou future, mais pas avant l’entrée du salarié.'
             }
           >
-            <input
-              id="cond-date"
-              type="date"
-              value={form.dateEffet}
-              onChange={set('dateEffet')}
-              readOnly={edit}
-              className={inputClass}
-            />
-          </Field>
-          <Field
+            {(c) => (
+              <Input
+                {...c}
+                type="date"
+                value={form.dateEffet}
+                onChange={set('dateEffet')}
+                readOnly={edit}
+              />
+            )}
+          </FormField>
+          <FormField
             id="cond-statut"
             label="Statut"
             error={err('statut')}
@@ -140,71 +132,63 @@ export function ConditionFormDialog({
               form.statut === 'EMPLOYE' ? 'Commission paritaire 200' : 'Commission paritaire 100'
             }
           >
-            <select
-              id="cond-statut"
-              value={form.statut}
-              onChange={set('statut')}
-              className={inputClass}
-            >
-              <option value="EMPLOYE">Employé</option>
-              <option value="OUVRIER">Ouvrier</option>
-            </select>
-          </Field>
-          <Field id="cond-fonction" label="Fonction" error={err('fonction')}>
-            <input
-              id="cond-fonction"
-              value={form.fonction}
-              onChange={set('fonction')}
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
-          <Field id="cond-regime" label="Régime" error={err('regime')}>
-            <select
-              id="cond-regime"
-              value={form.regime}
-              onChange={set('regime')}
-              className={inputClass}
-            >
-              <option value="TEMPS_PLEIN">Temps plein</option>
-              <option value="TEMPS_PARTIEL">Temps partiel</option>
-            </select>
-          </Field>
+            {(c) => (
+              <NativeSelect {...c} value={form.statut} onChange={set('statut')}>
+                <NativeSelectOption value="EMPLOYE">Employé</NativeSelectOption>
+                <NativeSelectOption value="OUVRIER">Ouvrier</NativeSelectOption>
+              </NativeSelect>
+            )}
+          </FormField>
+          <FormField id="cond-fonction" label="Fonction" error={err('fonction')}>
+            {(c) => (
+              <Input {...c} value={form.fonction} onChange={set('fonction')} autoComplete="off" />
+            )}
+          </FormField>
+          <FormField id="cond-regime" label="Régime" error={err('regime')}>
+            {(c) => (
+              <NativeSelect {...c} value={form.regime} onChange={set('regime')}>
+                <NativeSelectOption value="TEMPS_PLEIN">Temps plein</NativeSelectOption>
+                <NativeSelectOption value="TEMPS_PARTIEL">Temps partiel</NativeSelectOption>
+              </NativeSelect>
+            )}
+          </FormField>
           {partiel && (
             <>
-              <Field
+              <FormField
                 id="cond-heures"
                 label="Heures par semaine du salarié"
                 error={err('heuresSemaineMinutes')}
                 hint="Par exemple 30,4 ou 30:24."
               >
-                <input
-                  id="cond-heures"
-                  value={form.heuresSemaine}
-                  onChange={set('heuresSemaine')}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  className={inputClass}
-                />
-              </Field>
-              <Field
+                {(c) => (
+                  <Input
+                    {...c}
+                    value={form.heuresSemaine}
+                    onChange={set('heuresSemaine')}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                )}
+              </FormField>
+              <FormField
                 id="cond-heures-ref"
                 label="Heures par semaine de la personne de référence"
                 error={err('heuresReferenceMinutes')}
                 hint="Par exemple 38."
               >
-                <input
-                  id="cond-heures-ref"
-                  value={form.heuresReference}
-                  onChange={set('heuresReference')}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  className={inputClass}
-                />
-              </Field>
+                {(c) => (
+                  <Input
+                    {...c}
+                    value={form.heuresReference}
+                    onChange={set('heuresReference')}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                )}
+              </FormField>
             </>
           )}
-          <Field
+          <FormField
             id="cond-salaire"
             label={
               form.statut === 'EMPLOYE' ? 'Salaire mensuel brut (€)' : 'Salaire horaire brut (€)'
@@ -212,15 +196,16 @@ export function ConditionFormDialog({
             error={salaireErr}
             hint={form.statut === 'EMPLOYE' ? 'Par exemple 2850,00' : 'Par exemple 17,25'}
           >
-            <input
-              id="cond-salaire"
-              value={form.salaire}
-              onChange={set('salaire')}
-              inputMode="decimal"
-              autoComplete="off"
-              className={inputClass}
-            />
-          </Field>
+            {(c) => (
+              <Input
+                {...c}
+                value={form.salaire}
+                onChange={set('salaire')}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+            )}
+          </FormField>
         </fieldset>
 
         {error && (
@@ -230,24 +215,15 @@ export function ConditionFormDialog({
         )}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Spinner />}
             {edit ? 'Enregistrer' : 'Ajouter la condition'}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </FormDialog>
   );
 }

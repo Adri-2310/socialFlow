@@ -1,6 +1,13 @@
 import Link from 'next/link';
 import { ScrollText } from 'lucide-react';
-import { CABINET_AUDIT_ACTIONS, CABINET_AUDIT_ACTION_LIST } from '@/lib/cabinet/cabinet-audit-labels';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  CABINET_AUDIT_ACTIONS,
+  CABINET_AUDIT_ACTION_LIST,
+} from '@/lib/cabinet/cabinet-audit-labels';
 import type {
   AuditUserOption,
   CabinetAuditFilters,
@@ -36,9 +43,6 @@ function pageHref(basePath: string, filters: CabinetAuditFilters, page: number):
   return query ? `${basePath}?${query}` : basePath;
 }
 
-const fieldClass =
-  'mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring sm:py-2 sm:text-sm';
-
 // Presentation pure du journal d'audit du cabinet (D31) : le filtrage est un
 // formulaire GET traite par le serveur (aucun JavaScript necessaire, URL
 // partageable), la pagination des liens.
@@ -62,52 +66,44 @@ export function CabinetAuditLog({
         action={basePath}
         className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4"
       >
-        <label className="block text-sm font-medium text-foreground">
-          Action
-          <select name="action" defaultValue={filters.action ?? ''} className={fieldClass}>
-            <option value="">Toutes les actions</option>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-action">Action</Label>
+          <NativeSelect id="audit-action" name="action" defaultValue={filters.action ?? ''}>
+            <NativeSelectOption value="">Toutes les actions</NativeSelectOption>
             {CABINET_AUDIT_ACTION_LIST.map((action) => (
-              <option key={action} value={action}>
+              <NativeSelectOption key={action} value={action}>
                 {CABINET_AUDIT_ACTIONS[action]}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </div>
 
-        <label className="block text-sm font-medium text-foreground">
-          Personne
-          <select name="user" defaultValue={filters.userId ?? ''} className={fieldClass}>
-            <option value="">Toutes les personnes</option>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-user">Personne</Label>
+          <NativeSelect id="audit-user" name="user" defaultValue={filters.userId ?? ''}>
+            <NativeSelectOption value="">Toutes les personnes</NativeSelectOption>
             {users.map((u) => (
-              <option key={u.id} value={u.id}>
+              <NativeSelectOption key={u.id} value={u.id}>
                 {u.name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </div>
 
-        <label className="block text-sm font-medium text-foreground">
-          Du
-          <input type="date" name="from" defaultValue={filters.from ?? ''} className={fieldClass} />
-        </label>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-from">Du</Label>
+          <Input id="audit-from" type="date" name="from" defaultValue={filters.from ?? ''} />
+        </div>
 
-        <label className="block text-sm font-medium text-foreground">
-          Au
-          <input type="date" name="to" defaultValue={filters.to ?? ''} className={fieldClass} />
-        </label>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-to">Au</Label>
+          <Input id="audit-to" type="date" name="to" defaultValue={filters.to ?? ''} />
+        </div>
 
         <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row lg:col-span-4">
-          <button
-            type="submit"
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"
-          >
-            Filtrer
-          </button>
+          <Button type="submit">Filtrer</Button>
           {hasFilters && (
-            <Link
-              href={basePath}
-              className="rounded-xl border border-input px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-muted"
-            >
+            <Link href={basePath} className={buttonVariants({ variant: 'outline' })}>
               Réinitialiser
             </Link>
           )}
@@ -128,7 +124,7 @@ export function CabinetAuditLog({
             <p className="text-sm text-muted-foreground">
               {hasFilters
                 ? 'Aucun événement ne correspond à ces filtres.'
-                : "Aucun événement pour le moment."}
+                : 'Aucun événement pour le moment.'}
             </p>
           </div>
         ) : (

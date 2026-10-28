@@ -2,9 +2,19 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, ChevronUp, ChevronDown, Archive, LogOut, KeyRound } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
+import { UserDialogs, UserRowActions } from '@/components/admin/user-actions';
+import {
+  DataCell,
+  DataTable,
+  type DataTableColumn,
+  type SortDirection,
+} from '@/components/shared/data-table';
+import { ListFilters } from '@/components/shared/list-filters';
+import { Notice } from '@/components/shared/notice';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TablePagination } from '@/components/shared/table-pagination';
+import { Badge } from '@/components/ui/badge';
+import { TableRow } from '@/components/ui/table';
 
 export type UserRow = {
   id: string;
@@ -18,7 +28,6 @@ export type UserRow = {
 };
 
 type SortKey = 'name' | 'email' | 'role' | 'cabinetName' | 'createdAt' | 'status';
-type SortDirection = 'asc' | 'desc';
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'SuperAdmin',
@@ -28,29 +37,11 @@ const ROLE_LABELS: Record<string, string> = {
   COLLABORATEUR: 'Collaborateur',
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  actif: 'bg-secondary/10 text-secondary',
-  suspendu: 'bg-destructive/10 text-destructive',
-  archive: 'bg-muted text-muted-foreground',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  actif: 'Actif',
-  suspendu: 'Suspendu',
-  archive: 'Archivé',
-};
-
 // Statut affiche : l'archivage (deletedAt) est un etat terminal qui prime sur
 // le statut actif/suspendu sous-jacent (inchange en base, voir
 // api/admin/users/[id]/route.ts) - meme convention que cabinets-table.tsx.
 function displayStatus(u: UserRow): string {
   return u.deletedAt ? 'archive' : u.status;
-}
-
-function purgeDate(deletedAt: string): Date {
-  return new Date(
-    new Date(deletedAt).getTime() + ACCOUNT_DELETION_RETENTION_DAYS * 24 * 60 * 60 * 1000,
-  );
 }
 
 const DEFAULT_SORT_DIRECTION: Record<SortKey, SortDirection> = {
@@ -70,35 +61,19 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-BE', {
 
 const PAGE_SIZE = 25;
 
-function SortableHeader({
-  label,
-  active,
-  direction,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  direction: SortDirection;
-  onClick: () => void;
-}) {
-  return (
-    <th className="px-5 py-3 font-semibold">
-      <button
-        type="button"
-        onClick={onClick}
-        className={`inline-flex items-center gap-1 transition hover:text-foreground ${active ? 'text-foreground' : ''}`}
-      >
-        {label}
-        {active &&
-          (direction === 'asc' ? (
-            <ChevronUp className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ))}
-      </button>
-    </th>
-  );
-}
+const ROLE_FILTERS = [
+  { value: 'all', label: 'Tous les rôles' },
+  ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+];
+
+const STATUS_FILTERS = [
+  { value: 'all', label: 'Tous les statuts' },
+  { value: 'actif', label: 'Actif' },
+  { value: 'suspendu', label: 'Suspendu' },
+  { value: 'archive', label: 'Archivé' },
+];
+
+const ERROR_MESSAGE = 'Une erreur est survenue. Réessayez.';
 
 export function UsersTable({ users }: { users: UserRow[] }) {
   const router = useRouter();
@@ -191,7 +166,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setLoadingId(null);
       setPendingSuspendUser(null);
@@ -206,7 +181,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setLoadingId(null);
       setPendingArchiveUser(null);
@@ -227,7 +202,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
           : `Lien de réinitialisation demandé pour « ${user.name} » (${user.email}).`,
       );
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setLoadingId(null);
       setPendingRevokeUser(null);
@@ -243,11 +218,25 @@ export function UsersTable({ users }: { users: UserRow[] }) {
       if (!res.ok) throw new Error('request_failed');
       router.refresh();
     } catch {
-      setError('Une erreur est survenue. Réessayez.');
+      setError(ERROR_MESSAGE);
     } finally {
       setLoadingId(null);
     }
   }
+
+  function sortOf(key: SortKey): DataTableColumn['sort'] {
+    return { direction: sortKey === key ? sortDirection : null, onToggle: () => toggleSort(key) };
+  }
+
+  const columns: DataTableColumn[] = [
+    { key: 'name', header: 'Nom', sort: sortOf('name') },
+    { key: 'email', header: 'Email', sort: sortOf('email') },
+    { key: 'role', header: 'Rôle', sort: sortOf('role') },
+    { key: 'cabinet', header: 'Cabinet', sort: sortOf('cabinetName') },
+    { key: 'createdAt', header: 'Créé le', sort: sortOf('createdAt') },
+    { key: 'status', header: 'Statut', sort: sortOf('status') },
+    { key: 'actions', header: 'Actions', align: 'right' },
+  ];
 
   return (
     <section className="rounded-2xl border border-border bg-card">
@@ -258,277 +247,106 @@ export function UsersTable({ users }: { users: UserRow[] }) {
             Tous les comptes de la plateforme, tous cabinets confondus.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(e) => updateSearch(e.target.value)}
-              placeholder="Rechercher un nom ou un email…"
-              className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 sm:w-64"
-            />
-          </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => updateRoleFilter(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
-          >
-            <option value="all">Tous les rôles</option>
-            {Object.entries(ROLE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => updateStatusFilter(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="actif">Actif</option>
-            <option value="suspendu">Suspendu</option>
-            <option value="archive">Archivé</option>
-          </select>
-        </div>
+        <ListFilters
+          search={{
+            value: search,
+            onChange: updateSearch,
+            label: 'Rechercher un utilisateur',
+            placeholder: 'Rechercher un nom ou un email…',
+            className: 'sm:w-64',
+          }}
+          filters={[
+            {
+              label: 'Filtrer par rôle',
+              value: roleFilter,
+              onChange: updateRoleFilter,
+              options: ROLE_FILTERS,
+            },
+            {
+              label: 'Filtrer par statut',
+              value: statusFilter,
+              onChange: updateStatusFilter,
+              options: STATUS_FILTERS,
+            },
+          ]}
+        />
       </div>
 
-      {error && <p className="px-5 pt-3 text-sm text-destructive">{error}</p>}
+      {error && (
+        <Notice tone="danger" role="alert" className="mx-5 mt-3">
+          {error}
+        </Notice>
+      )}
       {notice && (
-        <p role="status" className="px-5 pt-3 text-sm text-secondary">
+        <Notice tone="success" className="mx-5 mt-3">
           {notice}
-        </p>
+        </Notice>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <SortableHeader
-                label="Nom"
-                active={sortKey === 'name'}
-                direction={sortDirection}
-                onClick={() => toggleSort('name')}
+      <DataTable
+        caption="Utilisateurs de la plateforme"
+        columns={columns}
+        isEmpty={filtered.length === 0}
+        emptyMessage="Aucun utilisateur ne correspond à cette recherche."
+        className="rounded-none border-0 bg-transparent"
+      >
+        {paginated.map((u) => (
+          <TableRow key={u.id}>
+            <DataCell className="font-medium text-foreground">{u.name}</DataCell>
+            <DataCell className="text-muted-foreground">{u.email}</DataCell>
+            <DataCell>
+              <Badge variant="secondary" className="h-auto rounded-md px-2 py-0.5">
+                {ROLE_LABELS[u.role] ?? u.role}
+              </Badge>
+            </DataCell>
+            <DataCell className="text-muted-foreground">{u.cabinetName ?? '—'}</DataCell>
+            <DataCell className="text-muted-foreground">
+              {DATE_FORMATTER.format(new Date(u.createdAt))}
+            </DataCell>
+            <DataCell>
+              <StatusBadge domain="compte" status={displayStatus(u)} dot />
+            </DataCell>
+            <DataCell className="text-right">
+              <UserRowActions
+                user={u}
+                loading={loadingId === u.id}
+                onSuspend={() => setPendingSuspendUser(u)}
+                onReactivate={() => updateStatus(u.id, 'actif')}
+                onRevoke={() => setPendingRevokeUser(u)}
+                onReset={() => setPendingResetUser(u)}
+                onArchive={() => setPendingArchiveUser(u)}
+                onRestore={() => restoreUser(u.id)}
               />
-              <SortableHeader
-                label="Email"
-                active={sortKey === 'email'}
-                direction={sortDirection}
-                onClick={() => toggleSort('email')}
-              />
-              <SortableHeader
-                label="Rôle"
-                active={sortKey === 'role'}
-                direction={sortDirection}
-                onClick={() => toggleSort('role')}
-              />
-              <SortableHeader
-                label="Cabinet"
-                active={sortKey === 'cabinetName'}
-                direction={sortDirection}
-                onClick={() => toggleSort('cabinetName')}
-              />
-              <SortableHeader
-                label="Créé le"
-                active={sortKey === 'createdAt'}
-                direction={sortDirection}
-                onClick={() => toggleSort('createdAt')}
-              />
-              <SortableHeader
-                label="Statut"
-                active={sortKey === 'status'}
-                direction={sortDirection}
-                onClick={() => toggleSort('status')}
-              />
-              <th className="px-5 py-3 text-right font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {paginated.map((u) => (
-              <tr key={u.id} className="hover:bg-muted/40">
-                <td className="px-5 py-3 font-medium text-foreground">{u.name}</td>
-                <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
-                <td className="px-5 py-3">
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                    {ROLE_LABELS[u.role] ?? u.role}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">{u.cabinetName ?? '—'}</td>
-                <td className="px-5 py-3 text-muted-foreground">
-                  {DATE_FORMATTER.format(new Date(u.createdAt))}
-                </td>
-                <td className="px-5 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      STATUS_BADGE[displayStatus(u)] ?? ''
-                    }`}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                    {STATUS_LABEL[displayStatus(u)] ?? displayStatus(u)}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-right">
-                  {u.role === 'SUPER_ADMIN' ? (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  ) : u.deletedAt ? (
-                    <div className="flex items-center justify-end gap-3">
-                      <span className="text-xs text-muted-foreground">
-                        Purge le {DATE_FORMATTER.format(purgeDate(u.deletedAt))}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => restoreUser(u.id)}
-                        disabled={loadingId === u.id}
-                        className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {loadingId === u.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          'Restaurer'
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-end gap-2">
-                      {u.status === 'suspendu' ? (
-                        <button
-                          type="button"
-                          onClick={() => updateStatus(u.id, 'actif')}
-                          disabled={loadingId === u.id}
-                          className="rounded-lg border border-secondary/40 px-3 py-1.5 text-xs font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {loadingId === u.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            'Réactiver'
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setPendingSuspendUser(u)}
-                          disabled={loadingId === u.id}
-                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          Suspendre
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setPendingRevokeUser(u)}
-                        disabled={loadingId === u.id}
-                        title="Révoquer les sessions"
-                        aria-label={`Révoquer les sessions de ${u.name}`}
-                        className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <LogOut className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingResetUser(u)}
-                        disabled={loadingId === u.id}
-                        title="Envoyer un lien de réinitialisation"
-                        aria-label={`Envoyer un lien de réinitialisation à ${u.name}`}
-                        className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <KeyRound className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingArchiveUser(u)}
-                        disabled={loadingId === u.id}
-                        title="Archiver"
-                        aria-label={`Archiver ${u.name}`}
-                        className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <Archive className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                  Aucun utilisateur ne correspond à cette recherche.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </DataCell>
+          </TableRow>
+        ))}
+      </DataTable>
 
-      <div className="flex items-center justify-between border-t border-border px-5 py-3 text-sm text-muted-foreground">
-        <span>
-          {filtered.length} utilisateur{filtered.length > 1 ? 's' : ''}
-          {pageCount > 1 ? ` — page ${currentPage} sur ${pageCount}` : ''}
-        </span>
-        {pageCount > 1 && (
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-border px-3 py-1 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Précédent
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              disabled={currentPage === pageCount}
-              className="rounded-lg border border-border px-3 py-1 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Suivant
-            </button>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        page={currentPage}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        className="px-5 py-3"
+      >
+        {filtered.length} utilisateur{filtered.length > 1 ? 's' : ''}
+        {pageCount > 1 ? ` — page ${currentPage} sur ${pageCount}` : ''}
+      </TablePagination>
 
-      {pendingSuspendUser && (
-        <ConfirmDialog
-          title="Suspendre cet utilisateur ?"
-          description={`« ${pendingSuspendUser.name} » perdra l'accès immédiatement. Cette action est réversible.`}
-          confirmLabel="Suspendre"
-          loading={loadingId === pendingSuspendUser.id}
-          onCancel={() => setPendingSuspendUser(null)}
-          onConfirm={() => updateStatus(pendingSuspendUser.id, 'suspendu')}
-        />
-      )}
-
-      {pendingRevokeUser && (
-        <ConfirmDialog
-          title="Révoquer les sessions ?"
-          description={`« ${pendingRevokeUser.name} » sera déconnecté de tous ses appareils. Il pourra se reconnecter normalement.`}
-          confirmLabel="Révoquer"
-          loading={loadingId === pendingRevokeUser.id}
-          onCancel={() => setPendingRevokeUser(null)}
-          onConfirm={() => runSupportAction(pendingRevokeUser, 'revoke-sessions')}
-        />
-      )}
-
-      {pendingResetUser && (
-        <ConfirmDialog
-          title="Envoyer un lien de réinitialisation ?"
-          description={`Un email avec un lien valable 1 heure sera envoyé à ${pendingResetUser.email}. Vous ne voyez et ne définissez jamais son mot de passe.`}
-          confirmLabel="Envoyer"
-          loading={loadingId === pendingResetUser.id}
-          onCancel={() => setPendingResetUser(null)}
-          onConfirm={() => runSupportAction(pendingResetUser, 'reset-password')}
-        />
-      )}
-
-      {pendingArchiveUser && (
-        <ConfirmDialog
-          title="Archiver cet utilisateur ?"
-          description={`« ${pendingArchiveUser.name} » perdra l'accès immédiatement. Les données seront définitivement supprimées dans ${ACCOUNT_DELETION_RETENTION_DAYS} jours (restauration possible avant cette échéance).`}
-          confirmLabel="Archiver"
-          loading={loadingId === pendingArchiveUser.id}
-          onCancel={() => setPendingArchiveUser(null)}
-          onConfirm={() => archiveUser(pendingArchiveUser.id)}
-        />
-      )}
+      <UserDialogs
+        pendingSuspend={pendingSuspendUser}
+        pendingRevoke={pendingRevokeUser}
+        pendingReset={pendingResetUser}
+        pendingArchive={pendingArchiveUser}
+        loadingId={loadingId}
+        onCancelSuspend={() => setPendingSuspendUser(null)}
+        onCancelRevoke={() => setPendingRevokeUser(null)}
+        onCancelReset={() => setPendingResetUser(null)}
+        onCancelArchive={() => setPendingArchiveUser(null)}
+        onConfirmSuspend={(user) => updateStatus(user.id, 'suspendu')}
+        onConfirmRevoke={(user) => runSupportAction(user, 'revoke-sessions')}
+        onConfirmReset={(user) => runSupportAction(user, 'reset-password')}
+        onConfirmArchive={(user) => archiveUser(user.id)}
+      />
     </section>
   );
 }

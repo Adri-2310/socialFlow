@@ -2,7 +2,10 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import {
   DEFAULT_PRIMARY,
   DEFAULT_SECONDARY,
@@ -12,6 +15,7 @@ import {
   type CabinetBranding,
 } from '@/lib/branding/branding-rules';
 import { readableForeground } from '@/lib/branding/color';
+import { Notice } from '@/components/shared/notice';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -22,9 +26,6 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 const FALLBACK = 'Une erreur est survenue. Veuillez réessayer.';
-
-const inputClass =
-  'w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
 function describe(error: BrandingFieldError | undefined): string | null {
   if (!error) return null;
@@ -62,48 +63,51 @@ function ColorField({
   const shown = /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 
   return (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-      </label>
-      <div className="mt-1 flex items-center gap-2">
-        <input
-          type="color"
-          aria-label={`${label} (sélecteur)`}
-          value={shown}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border bg-background p-1 disabled:opacity-60"
-        />
-        <input
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={fallback}
-          disabled={disabled}
-          maxLength={7}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={inputClass}
-        />
-      </div>
-      {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-destructive-text">
-          {error}
-          {suggestion && !disabled && (
-            <>
-              {' '}
-              <button
-                type="button"
-                onClick={() => onChange(suggestion)}
-                className="font-semibold underline"
-              >
-                Utiliser cette teinte
-              </button>
-            </>
-          )}
-        </p>
+    <FormField
+      id={id}
+      label={label}
+      error={
+        error && (
+          <>
+            {error}
+            {suggestion && !disabled && (
+              <>
+                {' '}
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => onChange(suggestion)}
+                  className="h-auto p-0 text-xs font-semibold text-destructive-text underline"
+                >
+                  Utiliser cette teinte
+                </Button>
+              </>
+            )}
+          </>
+        )
+      }
+    >
+      {(c) => (
+        <div className="flex items-center gap-2">
+          <Input
+            type="color"
+            aria-label={`${label} (sélecteur)`}
+            value={shown}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className="h-10 w-12 shrink-0 cursor-pointer p-1"
+          />
+          <Input
+            {...c}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={fallback}
+            disabled={disabled}
+            maxLength={7}
+          />
+        </div>
       )}
-    </div>
+    </FormField>
   );
 }
 
@@ -131,11 +135,13 @@ export function BrandingForm({
   const draft = validateBranding({ displayName, primaryColor: primary, secondaryColor: secondary });
   const errors = draft.ok ? serverErrors : { ...draft.errors };
 
-  const touch = <T,>(setter: (value: T) => void) => (value: T) => {
-    setSaved(false);
-    setServerErrors({});
-    setter(value);
-  };
+  const touch =
+    <T,>(setter: (value: T) => void) =>
+    (value: T) => {
+      setSaved(false);
+      setServerErrors({});
+      setter(value);
+    };
 
   async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -175,7 +181,8 @@ export function BrandingForm({
     setSecondary('');
   }
 
-  const previewPrimary = draft.ok && draft.value.primaryColor ? draft.value.primaryColor : DEFAULT_PRIMARY;
+  const previewPrimary =
+    draft.ok && draft.value.primaryColor ? draft.value.primaryColor : DEFAULT_PRIMARY;
   const previewSecondary =
     draft.ok && draft.value.secondaryColor ? draft.value.secondaryColor : DEFAULT_SECONDARY;
   const previewName = (draft.ok && draft.value.displayName) || cabinetName;
@@ -194,25 +201,21 @@ export function BrandingForm({
 
       <fieldset disabled={readOnly || loading} className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label htmlFor="displayName" className="text-sm font-medium text-foreground">
-            Nom affiché
-          </label>
-          <input
+          <FormField
             id="displayName"
-            value={displayName}
-            onChange={(e) => touch(setDisplayName)(e.target.value)}
-            placeholder={cabinetName}
-            className={`${inputClass} mt-1`}
-          />
-          {errors.displayName ? (
-            <p role="alert" className="mt-1 text-xs text-destructive-text">
-              {describe(errors.displayName)}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Laissez vide pour afficher votre raison sociale.
-            </p>
-          )}
+            label="Nom affiché"
+            hint="Laissez vide pour afficher votre raison sociale."
+            error={describe(errors.displayName)}
+          >
+            {(c) => (
+              <Input
+                {...c}
+                value={displayName}
+                onChange={(e) => touch(setDisplayName)(e.target.value)}
+                placeholder={cabinetName}
+              />
+            )}
+          </FormField>
         </div>
 
         <ColorField
@@ -248,7 +251,10 @@ export function BrandingForm({
           </span>
           <span
             className="rounded-full px-3 py-1 text-xs font-semibold"
-            style={{ backgroundColor: previewSecondary, color: readableForeground(previewSecondary) }}
+            style={{
+              backgroundColor: previewSecondary,
+              color: readableForeground(previewSecondary),
+            }}
           >
             Accent
           </span>
@@ -267,29 +273,20 @@ export function BrandingForm({
         </p>
       )}
       {saved && (
-        <p role="status" className="mt-4 text-sm text-secondary">
+        <Notice tone="success" className="mt-4">
           Identité visuelle enregistrée.
-        </p>
+        </Notice>
       )}
 
       {!readOnly && (
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading || !draft.ok}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={loading || !draft.ok}>
+            {loading && <Spinner />}
             Enregistrer
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            disabled={loading}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-60"
-          >
+          </Button>
+          <Button type="button" variant="outline" onClick={reset} disabled={loading}>
             Rétablir les valeurs par défaut
-          </button>
+          </Button>
         </div>
       )}
     </form>

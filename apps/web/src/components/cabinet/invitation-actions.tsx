@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, RotateCw, Ban } from 'lucide-react';
+import { RotateCw, Ban } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { InvitationStatus } from '@/lib/cabinet/cabinet-data';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -64,34 +66,36 @@ export function InvitationActions({
   return (
     <div className="flex flex-col items-start gap-1 sm:shrink-0 sm:items-end">
       <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-1">
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => call('resend')}
           disabled={busy !== null}
           aria-label={`Renvoyer l'invitation à ${email}`}
-          className="flex items-center gap-1.5 rounded-lg border border-input min-h-10 px-3 py-2 sm:min-h-0 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-10 text-xs sm:h-8"
         >
-          {busy === 'resend' ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <RotateCw className="h-3.5 w-3.5" />
-          )}
+          {busy === 'resend' ? <Spinner /> : <RotateCw aria-hidden="true" />}
           Renvoyer
-        </button>
+        </Button>
         {status === 'pending' && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setConfirmRevoke(true)}
             disabled={busy !== null}
             aria-label={`Révoquer l'invitation de ${email}`}
-            className="flex items-center gap-1.5 rounded-lg border border-input min-h-10 px-3 py-2 sm:min-h-0 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-destructive-text transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 text-xs sm:h-8 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
           >
-            <Ban className="h-3.5 w-3.5" />
+            <Ban aria-hidden="true" />
             Révoquer
-          </button>
+          </Button>
         )}
       </div>
-      {error && <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>}
+      {error && (
+        <p className="max-w-xs text-left sm:text-right text-xs text-destructive-text">{error}</p>
+      )}
 
       {confirmRevoke && (
         <ConfirmDialog

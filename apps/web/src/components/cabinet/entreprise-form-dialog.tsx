@@ -2,7 +2,16 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormField } from '@/components/shared/form-field';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import { quotaAwareMessage } from '@/lib/billing/quota-messages';
 import type { CountryOption } from '@/lib/countries';
 
@@ -63,38 +72,6 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const FALLBACK = 'Une erreur est survenue. Veuillez réessayer.';
 
-const inputClass =
-  'mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
-
-function Field({
-  id,
-  label,
-  error,
-  hint,
-  children,
-}: {
-  id: string;
-  label: string;
-  error?: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-      </label>
-      {children}
-      {hint && !error && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-destructive-text">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 // Creation ou modification d'une entreprise cliente (D4, § 4.3). Le serveur
 // revalide tout ; les erreurs reviennent champ par champ. `entrepriseId`
 // absent = creation.
@@ -145,7 +122,10 @@ export function EntrepriseFormDialog({
           headers: { 'content-type': 'application/json' },
           // Le jour limite part en nombre ; un champ vide ou illisible devient NaN (null en JSON)
           // et le serveur le refuse avec son code.
-          body: JSON.stringify({ ...form, jourLimitePrestations: Number(form.jourLimitePrestations) }),
+          body: JSON.stringify({
+            ...form,
+            jourLimitePrestations: Number(form.jourLimitePrestations),
+          }),
         },
       );
       const body = await res.json().catch(() => null);
@@ -169,106 +149,125 @@ export function EntrepriseFormDialog({
     fieldErrors[field] ? (FIELD_ERRORS[fieldErrors[field]] ?? FALLBACK) : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="entreprise-form-title"
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
-      >
-        <div className="flex items-start gap-4">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-            <Building2 className="h-5 w-5" />
-          </span>
-          <div>
-            <h3 id="entreprise-form-title" className="text-lg font-semibold text-foreground">
-              {entrepriseId ? 'Modifier l’entreprise' : 'Nouvelle entreprise cliente'}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Assignez au moins un gestionnaire : seuls les gestionnaires assignés travaillent sur
-              cette entreprise.
-            </p>
-          </div>
-        </div>
-
-        <fieldset disabled={loading} className="mt-5 grid gap-4 sm:grid-cols-2">
+    <FormDialog
+      size="xl"
+      icon={<Building2 />}
+      title={entrepriseId ? 'Modifier l’entreprise' : 'Nouvelle entreprise cliente'}
+      description="Assignez au moins un gestionnaire : seuls les gestionnaires assignés travaillent sur cette entreprise."
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Field id="ent-name" label="Raison sociale" error={err('name')}>
-              <input id="ent-name" value={form.name} onChange={set('name')} required autoComplete="off" className={inputClass} />
-            </Field>
+            <FormField id="ent-name" label="Raison sociale" error={err('name')}>
+              {(c) => (
+                <Input
+                  {...c}
+                  value={form.name}
+                  onChange={set('name')}
+                  required
+                  autoComplete="off"
+                />
+              )}
+            </FormField>
           </div>
 
-          <Field id="ent-vat" label="N° d’entreprise / TVA" error={err('vatNumber')}>
-            <input
-              id="ent-vat"
-              value={form.vatNumber}
-              onChange={set('vatNumber')}
-              placeholder="BE0123.456.749"
-              autoComplete="off"
-              autoCapitalize="characters"
-              className={inputClass}
-            />
-          </Field>
+          <FormField id="ent-vat" label="N° d’entreprise / TVA" error={err('vatNumber')}>
+            {(c) => (
+              <Input
+                {...c}
+                value={form.vatNumber}
+                onChange={set('vatNumber')}
+                placeholder="BE0123.456.749"
+                autoComplete="off"
+                autoCapitalize="characters"
+              />
+            )}
+          </FormField>
 
-          <Field id="ent-country" label="Pays" error={err('country')}>
-            <select id="ent-country" value={form.country} onChange={set('country')} className={inputClass}>
-              {countries.map((country) => (
-                <option key={country.code} value={country.code}>
-                  {country.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <FormField id="ent-country" label="Pays" error={err('country')}>
+            {(c) => (
+              <NativeSelect {...c} value={form.country} onChange={set('country')}>
+                {countries.map((country) => (
+                  <NativeSelectOption key={country.code} value={country.code}>
+                    {country.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            )}
+          </FormField>
 
           <div className="sm:col-span-2">
-            <Field id="ent-address" label="Adresse" error={err('addressLine')}>
-              <input id="ent-address" value={form.addressLine} onChange={set('addressLine')} autoComplete="off" className={inputClass} />
-            </Field>
+            <FormField id="ent-address" label="Adresse" error={err('addressLine')}>
+              {(c) => (
+                <Input
+                  {...c}
+                  value={form.addressLine}
+                  onChange={set('addressLine')}
+                  autoComplete="off"
+                />
+              )}
+            </FormField>
           </div>
 
-          <Field id="ent-postal" label="Code postal" error={err('postalCode')}>
-            <input id="ent-postal" value={form.postalCode} onChange={set('postalCode')} autoComplete="off" className={inputClass} />
-          </Field>
+          <FormField id="ent-postal" label="Code postal" error={err('postalCode')}>
+            {(c) => (
+              <Input
+                {...c}
+                value={form.postalCode}
+                onChange={set('postalCode')}
+                autoComplete="off"
+              />
+            )}
+          </FormField>
 
-          <Field id="ent-city" label="Ville" error={err('city')}>
-            <input id="ent-city" value={form.city} onChange={set('city')} autoComplete="off" className={inputClass} />
-          </Field>
+          <FormField id="ent-city" label="Ville" error={err('city')}>
+            {(c) => <Input {...c} value={form.city} onChange={set('city')} autoComplete="off" />}
+          </FormField>
 
-          <Field id="ent-email" label="Email de contact" error={err('contactEmail')}>
-            <input
-              id="ent-email"
-              type="email"
-              inputMode="email"
-              autoComplete="off"
-              value={form.contactEmail}
-              onChange={set('contactEmail')}
-              className={inputClass}
-            />
-          </Field>
+          <FormField id="ent-email" label="Email de contact" error={err('contactEmail')}>
+            {(c) => (
+              <Input
+                {...c}
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                value={form.contactEmail}
+                onChange={set('contactEmail')}
+              />
+            )}
+          </FormField>
 
-          <Field
+          <FormField
             id="ent-jour-limite"
             label="Jour limite des prestations"
             error={err('jourLimitePrestations')}
             hint="Chaque mois, l’entreprise donne ses prestations avant ce jour (1 à 28). Le gestionnaire peut le décaler pour un mois précis."
           >
-            <input
-              id="ent-jour-limite"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={28}
-              value={form.jourLimitePrestations}
-              onChange={set('jourLimitePrestations')}
-              className={inputClass}
-            />
-          </Field>
+            {(c) => (
+              <Input
+                {...c}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={28}
+                value={form.jourLimitePrestations}
+                onChange={set('jourLimitePrestations')}
+              />
+            )}
+          </FormField>
 
-          <Field id="ent-phone" label="Téléphone" error={err('contactPhone')}>
-            <input id="ent-phone" type="tel" inputMode="tel" autoComplete="off" value={form.contactPhone} onChange={set('contactPhone')} className={inputClass} />
-          </Field>
+          <FormField id="ent-phone" label="Téléphone" error={err('contactPhone')}>
+            {(c) => (
+              <Input
+                {...c}
+                type="tel"
+                inputMode="tel"
+                autoComplete="off"
+                value={form.contactPhone}
+                onChange={set('contactPhone')}
+              />
+            )}
+          </FormField>
         </fieldset>
 
         <fieldset disabled={loading} className="mt-5">
@@ -281,20 +280,20 @@ export function EntrepriseFormDialog({
             <ul className="mt-2 divide-y divide-border rounded-xl border border-border">
               {gestionnaires.map((g) => (
                 <li key={g.id}>
-                  <label className="flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
+                  <Label
+                    htmlFor={`ent-gestionnaire-${g.id}`}
+                    className="min-h-11 cursor-pointer gap-3 px-3 py-2 font-normal text-foreground"
+                  >
+                    {/* Une case Base UI n'est pas un contrôle natif : le fieldset ne la désactive pas. */}
+                    <Checkbox
+                      id={`ent-gestionnaire-${g.id}`}
                       checked={form.gestionnaireIds.includes(g.id)}
-                      onChange={() => toggle(g.id)}
-                      className="h-4 w-4 accent-primary"
+                      onCheckedChange={() => toggle(g.id)}
+                      disabled={loading}
                     />
                     <span className="min-w-0 flex-1 truncate">{g.name}</span>
-                    {g.status === 'suspendu' && (
-                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive-text">
-                        Suspendu
-                      </span>
-                    )}
-                  </label>
+                    {g.status === 'suspendu' && <StatusBadge domain="compte" status="suspendu" />}
+                  </Label>
                 </li>
               ))}
             </ul>
@@ -313,24 +312,15 @@ export function EntrepriseFormDialog({
         )}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Spinner />}
             {entrepriseId ? 'Enregistrer' : 'Créer l’entreprise'}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </FormDialog>
   );
 }

@@ -11,7 +11,7 @@
 | Fusion | `feature/*` → `dev` par pull request quand les tests passent ; `dev` → `main` à chaque jalon stable |
 | Messages de commit | En français, au présent, verbe d'action en tête, sans point final : « Ajoute la page Gestionnaires », « Corrige la restauration d'un plan… » |
 | Taille | Un commit = un changement cohérent qu'on peut expliquer en une phrase |
-| Interdits | Commiter `.env*` (hors `.env.example`), des secrets ou des données réelles de salariés |
+| Interdits | Commiter `.env*` (hors `.env.example`), des secrets ; aucune donnée personnelle réelle (salariés, fiches de paie, y compris celles du développeur) dans le dépôt, qui est public : les cas de référence sont anonymisés |
 
 ## 2. Organisation du code (`apps/web/src`)
 
@@ -106,6 +106,34 @@ Codes existants à conserver tels quels : `CABINET_NOT_FOUND`, `CABINET_ARCHIVED
 - Textes de l'interface en **français** ; montants formatés `fr-BE` en euros ; dates `JJ/MM/AAAA`.
 - Accessibilité : labels sur chaque champ, navigation clavier, contraste AA (vérifié aussi pour le branding des cabinets).
 - Composants shadcn/ui et Base UI existants avant toute création.
+
+### Éléments d'interface (shadcn/ui, style `base-nova`, Base UI)
+
+**Aucun `<button>`, `<input>`, `<select>`, `<textarea>` ni `<table>` écrit à la main** hors de `components/ui/`. On utilise le composant correspondant ; les composants de `components/ui/` sont générés : ne les modifier que pour une nécessité expliquée dans le commit.
+
+| Besoin | Composant |
+|---|---|
+| Bouton, lien d'apparence bouton | `Button` ; pour un lien, `<Link className={buttonVariants({ … })}>` (jamais un `<button>` qui navigue) |
+| Champ avec libellé, aide et erreur | `FormField` (reçoit `id`, `aria-invalid`, `aria-describedby` dans `{...control}`) autour de `Input`, `Textarea`, `NativeSelect` |
+| Case à cocher avec libellé | `CheckField` |
+| Fenêtre de saisie, de confirmation | `FormDialog` (`components/shared`), `ConfirmDialog` (`components/ui`) |
+| Tableau de données | `DataTable` (colonnes triables, légende, état vide), `TablePagination`, `ListFilters` |
+| État d'un objet (compte, abonnement, fiche…) | `StatusBadge`, alimenté par le registre `lib/status/status-badges.ts` |
+| Message d'état, bandeau d'erreur ou de succès | `Notice` (tons `success`, `info`, `warning`, `danger`, `neutral`) |
+| Indicateur d'attente | `Spinner` (décoratif : le texte du bouton dit ce qui se passe) |
+
+- **Accessibilité** : un libellé par champ (`FormField`), une erreur reliée à son champ (`aria-describedby`), un nom accessible pour chaque bouton-icône (`aria-label`), un état annoncé pour les bascules et les repliables (`aria-pressed`, `aria-expanded`). Les composants Base UI gèrent Échap, le piège du focus et son retour.
+- **Couleurs de texte (D62, contraste AA)** : jamais `text-destructive` (illisible en sombre : `text-destructive-text`), jamais `text-secondary` ni la teinte teal pour du texte ; succès en `emerald-800` (clair) et `emerald-300` (sombre), avertissement en `amber-800` et `amber-300`. Sur une teinte de la couleur principale, le texte reste `text-foreground`.
+- **Marque du cabinet (D65, D76)** : les couleurs passent par les variables CSS (`--primary`) : un `Button` par défaut en hérite, ne pas écrire de couleur en dur.
+- **Boutons d'action d'une ligne de tableau** : `variant="outline"`, `h-10 text-xs sm:h-8` (`size-10 sm:size-8` pour une icône) ; action positive en `border-emerald-500/40 text-emerald-800 dark:text-emerald-300`, action restrictive en `text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive-text`.
+- **Migrer un écran existant** : d'abord un test de caractérisation, écrit et vert sur l'ancienne version (rôles et libellés : `getByRole`, `getByLabelText`) ; ensuite la migration ; les tests restent verts sans changement. Tout test adapté est expliqué dans le commit, aucune assertion n'est supprimée.
+- **Vérification** : la commande ci-dessous ne doit renvoyer que `app/global-error.tsx`, et le test `tests/conventions/elements-artisanaux.test.ts` l'impose.
+
+  ```bash
+  grep -rnE "<(button|input|select|textarea|table)([[:space:]>]|$)" apps/web/src --include=*.tsx | grep -v "components/ui/"
+  ```
+
+  **Exception unique** : `app/global-error.tsx` garde son bouton écrit à la main. Cet écran remplace le layout racine : `globals.css` et les variables CSS n'y sont pas garanties, il reste donc autonome. Toute autre exception se discute avec Adrien et s'ajoute à `AMELIORATIONS.md` § 6.
 
 ## 6. Style de code
 

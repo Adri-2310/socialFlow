@@ -12,20 +12,7 @@ import type {
   InvitationRow,
   InvitationStatus,
 } from '@/lib/cabinet/cabinet-data';
-
-const INVITATION_LABELS: Record<InvitationStatus, string> = {
-  pending: 'En attente',
-  accepted: 'Acceptée',
-  expired: 'Expirée',
-  revoked: 'Révoquée',
-};
-
-const INVITATION_BADGE: Record<InvitationStatus, string> = {
-  pending: 'bg-primary/10 text-primary',
-  accepted: 'bg-secondary/10 text-secondary',
-  expired: 'bg-muted text-muted-foreground',
-  revoked: 'bg-muted text-muted-foreground',
-};
+import { StatusBadge } from '@/components/shared/status-badge';
 
 const formatDate = (date: Date) => date.toLocaleDateString('fr-BE');
 
@@ -67,21 +54,16 @@ export function GestionnairesManager({
         ) : (
           <ul className="divide-y divide-border">
             {gestionnaires.map((g) => (
-              <li key={g.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <li
+                key={g.id}
+                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{g.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{g.email}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 sm:shrink-0 sm:justify-end">
-                  <span
-                    className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      g.status === 'actif'
-                        ? 'bg-secondary/10 text-secondary'
-                        : 'bg-destructive/10 text-destructive-text'
-                    }`}
-                  >
-                    {g.status === 'actif' ? 'Actif' : 'Suspendu'}
-                  </span>
+                  <StatusBadge domain="compte" status={g.status} className="whitespace-nowrap" />
                   <GestionnaireActions
                     gestionnaireId={g.id}
                     name={g.name}
@@ -107,7 +89,10 @@ export function GestionnairesManager({
         ) : (
           <ul className="divide-y divide-border">
             {invitations.map((inv) => (
-              <li key={inv.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <li
+                key={inv.id}
+                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{inv.email}</p>
                   <p className="text-xs text-muted-foreground">
@@ -117,11 +102,11 @@ export function GestionnairesManager({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 sm:shrink-0 sm:justify-end">
-                  <span
-                    className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${INVITATION_BADGE[inv.status]}`}
-                  >
-                    {INVITATION_LABELS[inv.status]}
-                  </span>
+                  <StatusBadge
+                    domain="invitation"
+                    status={inv.status}
+                    className="whitespace-nowrap"
+                  />
                   <InvitationActions invitationId={inv.id} email={inv.email} status={inv.status} />
                 </div>
               </li>
@@ -135,8 +120,9 @@ export function GestionnairesManager({
           <header className="border-b border-border px-4 py-4 sm:px-5">
             <h2 className="text-sm font-bold text-foreground">Comptes supprimés par la personne</h2>
             <p className="text-xs text-muted-foreground">
-              Ces gestionnaires ont supprimé eux-mêmes leur compte : vous ne pouvez pas le restaurer.
-              Seule l&apos;administration SocialFlow le peut, jusqu&apos;à la suppression définitive.
+              Ces gestionnaires ont supprimé eux-mêmes leur compte : vous ne pouvez pas le
+              restaurer. Seule l&apos;administration SocialFlow le peut, jusqu&apos;à la suppression
+              définitive.
             </p>
           </header>
           <ul className="divide-y divide-border">
@@ -168,7 +154,10 @@ export function GestionnairesManager({
           </header>
           <ul className="divide-y divide-border">
             {archived.map((a) => (
-              <li key={a.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <li
+                key={a.id}
+                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{a.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{a.email}</p>

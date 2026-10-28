@@ -27,16 +27,19 @@ const rendre = () =>
   );
 
 const champ = (nom: RegExp | string) => screen.queryByLabelText(nom);
+// Une case à cocher shadcn (Base UI) est un <span role="checkbox"> doublé d'un <input> caché : le
+// libellé désigne alors deux éléments, on la cherche donc par son rôle.
+const coche = (nom: RegExp | string) => screen.queryByRole('checkbox', { name: nom });
 
 describe('formulaire du dossier : situation fiscale', () => {
   it('un isolé sans charge ne voit que les questions de base', () => {
     rendre();
     expect(champ('Situation familiale')).toBeInTheDocument();
-    expect(champ('Le salarié est handicapé')).toBeInTheDocument();
+    expect(coche('Le salarié est handicapé')).toBeInTheDocument();
     expect(champ('Enfants à charge')).toBeInTheDocument();
     expect(champ(/Revenus professionnels du conjoint/)).not.toBeInTheDocument();
     expect(champ('dont enfants handicapés')).not.toBeInTheDocument();
-    expect(champ(/Parent isolé/)).not.toBeInTheDocument();
+    expect(coche(/Parent isolé/)).not.toBeInTheDocument();
     expect(champ(/Qui reçoit les réductions/)).not.toBeInTheDocument();
     expect(champ('Personnes dépendantes de 66 ans ou plus')).not.toBeInTheDocument();
   });
@@ -58,11 +61,11 @@ describe('formulaire du dossier : situation fiscale', () => {
     const revenus = screen.getByLabelText(/Revenus professionnels du conjoint/);
 
     await user.selectOptions(revenus, 'SANS_REVENUS');
-    expect(champ('Le conjoint ou cohabitant est handicapé')).toBeInTheDocument();
+    expect(coche('Le conjoint ou cohabitant est handicapé')).toBeInTheDocument();
     await user.selectOptions(revenus, 'PENSION_TRES_LIMITEE');
-    expect(champ('Le conjoint ou cohabitant est handicapé')).toBeInTheDocument();
+    expect(coche('Le conjoint ou cohabitant est handicapé')).toBeInTheDocument();
     await user.selectOptions(revenus, 'REVENUS');
-    expect(champ('Le conjoint ou cohabitant est handicapé')).not.toBeInTheDocument();
+    expect(coche('Le conjoint ou cohabitant est handicapé')).not.toBeInTheDocument();
   });
 
   it('les enfants handicapés et le parent isolé n’apparaissent qu’avec des enfants à charge', async () => {
@@ -73,11 +76,11 @@ describe('formulaire du dossier : situation fiscale', () => {
     await user.clear(enfants);
     await user.type(enfants, '2');
     expect(champ('dont enfants handicapés')).toBeInTheDocument();
-    expect(champ(/Parent isolé/)).toBeInTheDocument();
+    expect(coche(/Parent isolé/)).toBeInTheDocument();
 
     // Un marié n'est plus un parent isolé (n° 40.1).
     await user.selectOptions(screen.getByLabelText('Situation familiale'), 'MARIE_OU_COHABITANT_LEGAL');
-    expect(champ(/Parent isolé/)).not.toBeInTheDocument();
+    expect(coche(/Parent isolé/)).not.toBeInTheDocument();
     expect(champ('dont enfants handicapés')).toBeInTheDocument();
   });
 
@@ -104,7 +107,7 @@ describe('formulaire du dossier : situation fiscale', () => {
   it('les autres personnes à charge ouvrent trois compteurs', async () => {
     const user = userEvent.setup();
     rendre();
-    await user.click(screen.getByLabelText(/d’autres personnes à charge/));
+    await user.click(screen.getByRole('checkbox', { name: /d’autres personnes à charge/ }));
 
     expect(champ('Personnes dépendantes de 66 ans ou plus')).toBeInTheDocument();
     expect(champ('Autres personnes handicapées')).toBeInTheDocument();

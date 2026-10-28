@@ -2,8 +2,12 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarPlus, Loader2 } from 'lucide-react';
-import { Field, inputClass } from '@/components/gestionnaire/form-field';
+import { CalendarPlus } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import { libelleMois } from '@/lib/periode/periode-format';
 import {
   FALLBACK,
@@ -77,44 +81,26 @@ export function PeriodeOuvrir({
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
         disabled={readOnly || mois.length === 0}
         title={readOnly ? 'Votre cabinet est en lecture seule.' : undefined}
-        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="shrink-0"
       >
-        <CalendarPlus className="h-4 w-4" />
+        <CalendarPlus />
         Ouvrir une période
-      </button>
+      </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="periode-ouvrir-title"
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
-          >
-            <div className="flex items-start gap-4">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                <CalendarPlus className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 id="periode-ouvrir-title" className="text-lg font-semibold text-foreground">
-                  Ouvrir une période
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  L’entreprise donne ses prestations du mois avant le {jourLimite} de ce mois ; vous
-                  pourrez décaler cette date pour la période.
-                </p>
-              </div>
-            </div>
-
-            <fieldset disabled={loading} className="mt-5">
-              <Field
+        <FormDialog
+          icon={<CalendarPlus />}
+          title="Ouvrir une période"
+          description={`L’entreprise donne ses prestations du mois avant le ${jourLimite} de ce mois ; vous pourrez décaler cette date pour la période.`}
+        >
+          <form onSubmit={handleSubmit} noValidate>
+            <fieldset disabled={loading}>
+              <FormField
                 id="periode-mois"
                 label="Mois"
                 error={
@@ -122,19 +108,19 @@ export function PeriodeOuvrir({
                 }
                 hint="Un mois passé (rattrapage), le mois courant ou le mois suivant."
               >
-                <select
-                  id="periode-mois"
-                  value={choix}
-                  onChange={(e) => setChoix(e.target.value)}
-                  className={inputClass}
-                >
-                  {mois.map((m) => (
-                    <option key={`${m.annee}-${m.mois}`} value={`${m.annee}-${m.mois}`}>
-                      {libelleMois(m.annee, m.mois)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                {(c) => (
+                  <NativeSelect {...c} value={choix} onChange={(e) => setChoix(e.target.value)}>
+                    {mois.map((m) => (
+                      <NativeSelectOption
+                        key={`${m.annee}-${m.mois}`}
+                        value={`${m.annee}-${m.mois}`}
+                      >
+                        {libelleMois(m.annee, m.mois)}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                )}
+              </FormField>
             </fieldset>
 
             {error && (
@@ -144,25 +130,16 @@ export function PeriodeOuvrir({
             )}
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-              <button
-                type="button"
-                onClick={fermer}
-                disabled={loading}
-                className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-              >
+              <Button type="button" variant="outline" onClick={fermer} disabled={loading}>
                 Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Spinner />}
                 Ouvrir
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </FormDialog>
       )}
     </>
   );

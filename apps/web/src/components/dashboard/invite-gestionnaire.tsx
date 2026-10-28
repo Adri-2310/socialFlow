@@ -2,7 +2,10 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { Mail, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { pendingPlanQuotaMessage, quotaAwareMessage } from '@/lib/billing/quota-messages';
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -14,7 +17,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
   FORBIDDEN: "Vous n'êtes pas autorisé à inviter un gestionnaire.",
   QUOTA_EXCEEDED:
-    "Le quota de gestionnaires de votre plan est atteint. Passez à un plan supérieur pour inviter davantage.",
+    'Le quota de gestionnaires de votre plan est atteint. Passez à un plan supérieur pour inviter davantage.',
 };
 
 // `quota` (places utilisees / maximum du plan, D15) sert uniquement a
@@ -49,7 +52,12 @@ export function InviteGestionnaire({
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       setError(
-        quotaAwareMessage(body, ERROR_MESSAGES, 'gestionnaires', 'Une erreur est survenue. Veuillez réessayer.'),
+        quotaAwareMessage(
+          body,
+          ERROR_MESSAGES,
+          'gestionnaires',
+          'Une erreur est survenue. Veuillez réessayer.',
+        ),
       );
       return;
     }
@@ -85,7 +93,7 @@ export function InviteGestionnaire({
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             type="email"
             autoComplete="email"
             required
@@ -93,17 +101,14 @@ export function InviteGestionnaire({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="gestionnaire@cabinet.be"
-            className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-base text-foreground sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label="Adresse email du gestionnaire à inviter"
+            className="pl-10"
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading || reached}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={loading || reached} className="shrink-0">
+          {loading && <Spinner />}
           Inviter
-        </button>
+        </Button>
       </form>
 
       {reached && (

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserMinus } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Button } from '@/components/ui/button';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -50,16 +51,18 @@ export function EntrepriseAdminRemove({
 
   return (
     <div className="flex flex-col items-start gap-1 sm:items-end">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         disabled={readOnly || loading}
         onClick={() => setConfirm(true)}
         aria-label={`Retirer l'administrateur de ${entrepriseName}`}
-        className="flex min-h-10 items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-xs font-semibold text-destructive-text transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:px-2.5 sm:py-1.5"
+        className="h-10 text-xs sm:h-8 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
       >
-        <UserMinus className="h-3.5 w-3.5" />
+        <UserMinus aria-hidden="true" />
         Retirer
-      </button>
+      </Button>
       {error && <p className="max-w-xs text-xs text-destructive-text sm:text-right">{error}</p>}
 
       {confirm && (

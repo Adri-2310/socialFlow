@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthBrandPanel } from '@/components/auth/auth-brand-panel';
 import { LoginForm } from '@/components/auth/login-form';
+import { Notice } from '@/components/shared/notice';
 import { translateAuthError } from '@/lib/auth/auth-errors';
 import { buildThemeCss } from '@/lib/branding/branding-rules';
 import { getPortalCabinet } from '@/lib/portal/cabinet-portal';
@@ -70,9 +71,9 @@ export default async function CabinetPortalPage({
           </p>
 
           {error && (
-            <p role="alert" className="mt-4 text-sm text-destructive">
+            <Notice tone="danger" role="alert" className="mt-4">
               {translateAuthError(error)}
-            </p>
+            </Notice>
           )}
 
           <div className="mt-6">

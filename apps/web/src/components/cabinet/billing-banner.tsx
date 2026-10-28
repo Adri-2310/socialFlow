@@ -1,6 +1,8 @@
 import { AlertOctagon, AlertTriangle, Lock } from 'lucide-react';
 import type { BillingStatus } from '@/lib/billing/billing';
 import Link from 'next/link';
+import { Notice } from '@/components/shared/notice';
+import { buttonVariants } from '@/components/ui/button';
 
 type Props = {
   status: BillingStatus;
@@ -8,7 +10,8 @@ type Props = {
   graceEndsAt?: Date | null;
 };
 
-const formatDate = (date: Date) => date.toLocaleDateString('fr-BE', { timeZone: 'Europe/Brussels' });
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('fr-BE', { timeZone: 'Europe/Brussels' });
 
 // Bandeau permanent de l'espace Cabinet RH (PERMISSIONS.md "Etats bloquants",
 // D29, D57) : visible sur toutes les pages tant que l'abonnement n'est pas en
@@ -18,7 +21,7 @@ export function BillingBanner({ status, graceEndsAt }: Props) {
     return (
       <Banner
         tone="warning"
-        icon={<AlertTriangle className="h-5 w-5" />}
+        icon={<AlertTriangle aria-hidden="true" className="size-5" />}
         title="Paiement en échec"
         action
         description={
@@ -34,7 +37,7 @@ export function BillingBanner({ status, graceEndsAt }: Props) {
     return (
       <Banner
         tone="danger"
-        icon={<AlertOctagon className="h-5 w-5" />}
+        icon={<AlertOctagon aria-hidden="true" className="size-5" />}
         title="Cabinet en lecture seule pour impayé"
         action
         description="Vous pouvez consulter vos données, mais plus rien ne peut être modifié. Vos clients gardent l'accès à leurs fiches. Régularisez votre abonnement pour reprendre l'activité."
@@ -46,7 +49,7 @@ export function BillingBanner({ status, graceEndsAt }: Props) {
     return (
       <Banner
         tone="warning"
-        icon={<Lock className="h-5 w-5" />}
+        icon={<Lock aria-hidden="true" className="size-5" />}
         title="Abonnement résilié : cabinet en lecture seule"
         description="Vous pouvez consulter et exporter vos données, mais plus rien ne peut être modifié."
       />
@@ -70,26 +73,20 @@ function Banner({
   // Lien vers la page Mon abonnement, pour regulariser.
   action?: boolean;
 }) {
-  const styles =
-    tone === 'danger'
-      ? 'border-destructive/30 bg-destructive/10 text-destructive-text'
-      : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400';
-
   return (
-    <div role="status" className={`flex items-start gap-3 rounded-2xl border p-4 ${styles}`}>
-      <span className="mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold">{title}</p>
-        <p className="text-sm text-foreground/80">{description}</p>
-        {action && (
-          <Link
-            href="/dashboard/cabinet/facturation"
-            className="mt-2 inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
-          >
+    <Notice
+      tone={tone}
+      icon={icon}
+      title={title}
+      action={
+        action && (
+          <Link href="/dashboard/cabinet/facturation" className={buttonVariants({ size: 'sm' })}>
             Mettre à jour ma carte
           </Link>
-        )}
-      </div>
-    </div>
+        )
+      }
+    >
+      {description}
+    </Notice>
   );
 }

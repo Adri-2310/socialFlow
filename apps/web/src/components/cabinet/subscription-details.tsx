@@ -5,10 +5,14 @@ import {
   ResumeSubscriptionButton,
 } from '@/components/cabinet/subscription-actions';
 import { PlanChange } from '@/components/cabinet/plan-change';
-import { BILLING_STATUS_LABELS, trialDaysLeft } from '@/lib/billing/billing';
+import { trialDaysLeft } from '@/lib/billing/billing';
 import type { CabinetSubscriptionDetails } from '@/lib/billing/cabinet-billing';
 import type { BillingExtras } from '@/lib/billing/cabinet-subscription';
 import type { PlanChangeOptions } from '@/lib/billing/plan-change';
+import { Notice } from '@/components/shared/notice';
+import { DataCell, DataTable } from '@/components/shared/data-table';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TableRow } from '@/components/ui/table';
 
 // Retour de la saisie de carte chez Stripe (voir la page Mon abonnement).
 export type CardFlash = 'ok' | 'annulee' | 'erreur' | null;
@@ -82,14 +86,6 @@ function statusMessage(data: CabinetSubscriptionDetails): string {
   }
 }
 
-const STATUS_TONE: Record<string, string> = {
-  ACTIF: 'bg-secondary/15 text-secondary',
-  ESSAI: 'bg-primary/10 text-primary',
-  DELAI_GRACE: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  IMPAYE: 'bg-destructive/10 text-destructive-text',
-  RESILIE: 'bg-muted text-muted-foreground',
-};
-
 // Page "Mon abonnement" du Cabinet RH : la gestion se fait dans SocialFlow, sans
 // portail Stripe (D59). Seule la saisie d'une carte passe par une page Stripe.
 // Les actions (carte, resiliation, reprise) sont dans subscription-actions.
@@ -120,18 +116,17 @@ export function SubscriptionDetails({
   return (
     <div className="space-y-6">
       {flashMessage && (
-        <p
-          role="status"
-          className={`rounded-xl border p-3 text-sm ${
+        <Notice
+          tone={
             flashMessage.tone === 'ok'
-              ? 'border-secondary/30 bg-secondary/10 text-foreground'
+              ? 'success'
               : flashMessage.tone === 'error'
-                ? 'border-destructive/30 bg-destructive/10 text-destructive-text'
-                : 'border-border bg-muted/60 text-foreground'
-          }`}
+                ? 'danger'
+                : 'neutral'
+          }
         >
           {flashMessage.text}
-        </p>
+        </Notice>
       )}
 
       <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -152,13 +147,7 @@ export function SubscriptionDetails({
               )}
             </div>
           </div>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              STATUS_TONE[data.status] ?? 'bg-muted text-muted-foreground'
-            }`}
-          >
-            {BILLING_STATUS_LABELS[data.status]}
-          </span>
+          <StatusBadge domain="abonnement" status={data.status} />
         </div>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -238,46 +227,41 @@ export function SubscriptionDetails({
             Aucune facture pour le moment. La première est émise à la fin de l’essai.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Date</th>
-                  <th className="py-2 pr-4 font-medium">Numéro</th>
-                  <th className="py-2 pr-4 font-medium">Montant</th>
-                  <th className="py-2 pr-4 font-medium">Statut</th>
-                  <th className="py-2 font-medium">
-                    <span className="sr-only">Télécharger</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {extras.invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-t border-border">
-                    <td className="whitespace-nowrap py-2 pr-4">{formatDate(invoice.date)}</td>
-                    <td className="py-2 pr-4">{invoice.number ?? '—'}</td>
-                    <td className="whitespace-nowrap py-2 pr-4 font-medium">
-                      {formatEuros(invoice.amountCents)}
-                    </td>
-                    <td className="py-2 pr-4">{INVOICE_STATUS[invoice.status] ?? invoice.status}</td>
-                    <td className="py-2 text-right">
-                      {invoice.pdfUrl && (
-                        <a
-                          href={invoice.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          PDF
-                        </a>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            caption="Factures"
+            className="mt-3"
+            columns={[
+              { key: 'date', header: 'Date' },
+              { key: 'numero', header: 'Numéro' },
+              { key: 'montant', header: 'Montant' },
+              { key: 'statut', header: 'Statut' },
+              { key: 'pdf', header: 'Télécharger', srOnlyHeader: true },
+            ]}
+          >
+            {extras.invoices.map((invoice) => (
+              <TableRow key={invoice.id}>
+                <DataCell className="whitespace-nowrap">{formatDate(invoice.date)}</DataCell>
+                <DataCell>{invoice.number ?? '—'}</DataCell>
+                <DataCell className="font-medium whitespace-nowrap">
+                  {formatEuros(invoice.amountCents)}
+                </DataCell>
+                <DataCell>{INVOICE_STATUS[invoice.status] ?? invoice.status}</DataCell>
+                <DataCell className="text-right">
+                  {invoice.pdfUrl && (
+                    <a
+                      href={invoice.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      PDF
+                    </a>
+                  )}
+                </DataCell>
+              </TableRow>
+            ))}
+          </DataTable>
         )}
       </section>
 

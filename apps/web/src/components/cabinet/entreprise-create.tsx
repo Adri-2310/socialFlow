@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Building2, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { pendingPlanQuotaMessage } from '@/lib/billing/quota-messages';
 import {
   EMPTY_ENTREPRISE,
@@ -49,15 +50,15 @@ export function EntrepriseCreate({
             </p>
           </div>
         </div>
-        <button
+        <Button
           type="button"
           onClick={() => setOpen(true)}
           disabled={reached || readOnly}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="shrink-0"
         >
-          <Plus className="h-4 w-4" />
+          <Plus />
           Nouvelle entreprise
-        </button>
+        </Button>
       </div>
 
       {reached && (
@@ -66,8 +67,8 @@ export function EntrepriseCreate({
             pendingPlanQuotaMessage(quota.pendingPlan, 'entreprises')
           ) : (
             <>
-              Le quota d&apos;entreprises de votre plan est atteint : archivez-en une ou passez à un plan
-              supérieur.
+              Le quota d&apos;entreprises de votre plan est atteint : archivez-en une ou passez à un
+              plan supérieur.
             </>
           )}
         </p>

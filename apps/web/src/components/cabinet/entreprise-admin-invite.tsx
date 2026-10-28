@@ -2,12 +2,16 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { Mail, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_EMAIL: 'Adresse email invalide.',
   EMAIL_ALREADY_USED: 'Un compte existe déjà avec cette adresse email.',
-  INVITATION_ALREADY_PENDING: 'Une invitation est déjà en attente pour cette adresse ou cette entreprise.',
+  INVITATION_ALREADY_PENDING:
+    'Une invitation est déjà en attente pour cette adresse ou cette entreprise.',
   ENTREPRISE_ALREADY_HAS_ADMIN: 'Cette entreprise a déjà un administrateur.',
   ENTREPRISE_HAS_NO_ADMIN: 'Cette entreprise n’a pas d’administrateur à remplacer.',
   ENTREPRISE_NOT_FOUND: 'Cette entreprise est introuvable.',
@@ -66,16 +70,20 @@ export function EntrepriseAdminInvite({
 
   if (!open) {
     return (
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         disabled={readOnly}
         onClick={() => setOpen(true)}
-        aria-label={replace ? `Remplacer l'administrateur de ${name}` : `Inviter l'administrateur de ${name}`}
-        className="flex min-h-10 items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:px-2.5 sm:py-1.5"
+        aria-label={
+          replace ? `Remplacer l'administrateur de ${name}` : `Inviter l'administrateur de ${name}`
+        }
+        className="text-xs"
       >
-        <UserPlus className="h-3.5 w-3.5" />
+        <UserPlus />
         {replace ? 'Remplacer' : 'Inviter l’administrateur'}
-      </button>
+      </Button>
     );
   }
 
@@ -84,42 +92,44 @@ export function EntrepriseAdminInvite({
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             type="email"
             autoComplete="email"
             required
             autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            aria-label={replace ? `Email du remplaçant de l'administrateur de ${name}` : `Email de l'administrateur de ${name}`}
+            aria-label={
+              replace
+                ? `Email du remplaçant de l'administrateur de ${name}`
+                : `Email de l'administrateur de ${name}`
+            }
             placeholder="admin@entreprise.be"
-            className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm"
+            className="pl-10"
           />
         </div>
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={loading} className="flex-1 sm:flex-none">
+            {loading && <Spinner />}
             Envoyer l’invitation
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => {
               setOpen(false);
               setError(null);
             }}
-            className="rounded-xl px-3 py-2.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted"
+            className="text-muted-foreground"
           >
             Annuler
-          </button>
+          </Button>
         </div>
       </div>
       {replace && (
         <p className="text-xs text-muted-foreground">
-          L’administrateur actuel garde son accès jusqu’à ce que le remplaçant accepte l’invitation, puis il est désactivé.
+          L’administrateur actuel garde son accès jusqu’à ce que le remplaçant accepte l’invitation,
+          puis il est désactivé.
         </p>
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}

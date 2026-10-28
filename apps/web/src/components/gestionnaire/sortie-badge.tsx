@@ -1,3 +1,4 @@
+import { StatusBadge } from '@/components/shared/status-badge';
 import { situationSalarie } from '@/lib/salarie/sortie';
 
 // Les dates de dossier n'ont pas d'heure : on les lit en UTC pour ne pas les décaler d'un jour.
@@ -20,9 +21,11 @@ export function SortieBadge({
 
   if (situation === 'PAS_ENCORE_ENTRE' && dateEntree) {
     return (
-      <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-        Entre le {formatDate(dateEntree)}
-      </span>
+      <StatusBadge
+        domain="situation"
+        status={situation}
+        label={`Entre le ${formatDate(dateEntree)}`}
+      />
     );
   }
 
@@ -31,14 +34,10 @@ export function SortieBadge({
   }
 
   return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-        situation === 'SORTI'
-          ? 'bg-muted text-muted-foreground'
-          : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-      }`}
-    >
-      {situation === 'SORTI' ? 'Sorti le' : 'Sort le'} {formatDate(dateSortie)}
-    </span>
+    <StatusBadge
+      domain="situation"
+      status={situation}
+      label={`${situation === 'SORTI' ? 'Sorti le' : 'Sort le'} ${formatDate(dateSortie)}`}
+    />
   );
 }

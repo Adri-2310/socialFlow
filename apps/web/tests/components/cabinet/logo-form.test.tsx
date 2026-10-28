@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { LogoForm } from '@/components/cabinet/logo-form';
 
 const refresh = vi.fn();
@@ -27,6 +28,42 @@ describe('LogoForm', () => {
     expect(screen.getByAltText('Logo de Cabinet Dupont')).toHaveAttribute('src', 'https://blob.test/logo.png');
     expect(screen.getByText('Remplacer le logo')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retirer le logo' })).toBeInTheDocument();
+  });
+
+  it('ouvre le sélecteur de fichier depuis un vrai bouton, accessible au clavier', async () => {
+    const open = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+    render(<LogoForm logoUrl={null} cabinetName="Cabinet" readOnly={false} />);
+
+    const button = screen.getByRole('button', { name: 'Ajouter un logo' });
+    button.focus();
+    expect(button).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(open).toHaveBeenCalledTimes(1);
+    open.mockRestore();
+  });
+
+  it('cache le champ fichier natif aux lecteurs d ecran et au clavier', () => {
+    render(<LogoForm logoUrl={null} cabinetName="Cabinet" readOnly={false} />);
+
+    const input = document.getElementById('logo') as HTMLInputElement;
+    expect(input).toHaveAttribute('aria-hidden', 'true');
+    expect(input).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('désactive les boutons pendant l envoi', async () => {
+    let finish: (value: unknown) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise((resolve) => (finish = resolve))));
+    render(<LogoForm logoUrl="https://blob.test/logo.png" cabinetName="Cabinet" readOnly={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retirer le logo' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Remplacer le logo' })).toBeDisabled(),
+    );
+    expect(screen.getByRole('button', { name: 'Retirer le logo' })).toBeDisabled();
+    finish({ ok: true, json: async () => ({ success: true }) });
+    await screen.findByRole('status');
   });
 
   it('envoie le fichier choisi et confirme', async () => {

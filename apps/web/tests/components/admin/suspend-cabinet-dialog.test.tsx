@@ -51,7 +51,8 @@ describe('SuspendCabinetDialog (D71)', () => {
     expect(screen.getByText('Bloquer les connexions ?')).toBeInTheDocument();
     const box = screen.getByRole('checkbox');
     expect(box).toBeChecked();
-    expect(box).toBeDisabled();
+    // Case Base UI : un <span role="checkbox">, désactivé par aria-disabled.
+    expect(box).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('affiche l erreur renvoyee par le serveur et annule', () => {

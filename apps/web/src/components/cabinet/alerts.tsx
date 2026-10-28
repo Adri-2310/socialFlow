@@ -10,7 +10,7 @@ const STYLES: Record<AlertLevel, { icon: typeof Info; tone: string; ring: string
   },
   warning: {
     icon: AlertTriangle,
-    tone: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    tone: 'bg-amber-500/10 text-amber-800 dark:text-amber-300',
     ring: 'border-amber-500/30',
   },
   info: {

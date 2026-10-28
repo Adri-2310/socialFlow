@@ -2,8 +2,13 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { SLUG_MAX, SLUG_MIN, slugify } from '@/lib/portal/portal-slug';
+import { Notice } from '@/components/shared/notice';
 
 const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: 'Session expirée. Reconnectez-vous.',
@@ -13,9 +18,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   CABINET_READ_ONLY:
     'Votre cabinet est en lecture seule : régularisez votre abonnement pour reprendre les modifications.',
 };
-
-const inputClass =
-  'w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
 // Portail de connexion des clients du cabinet (D76) : son adresse, a donner a vos
 // gestionnaires, entreprises et collaborateurs, et l'identifiant modifiable. Le
@@ -87,66 +89,56 @@ export function PortalForm({
       </p>
 
       <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2">
-        <code className="min-w-0 flex-1 truncate text-sm text-foreground" aria-label="Adresse du portail">
+        <code
+          className="min-w-0 flex-1 truncate text-sm text-foreground"
+          aria-label="Adresse du portail"
+        >
           {url}
         </code>
-        <button
-          type="button"
-          onClick={copy}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-        >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        <Button type="button" variant="ghost" size="sm" onClick={copy} className="shrink-0 text-xs">
+          {copied ? <Check /> : <Copy />}
           {copied ? 'Copié' : 'Copier'}
-        </button>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-        <div>
-          <label htmlFor="portal-slug" className="text-sm font-medium text-foreground">
-            Identifiant du portail
-          </label>
-          <input
-            id="portal-slug"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              setDone(false);
-              setError(null);
-            }}
-            disabled={readOnly || loading}
-            autoCapitalize="none"
-            spellCheck={false}
-            className={`${inputClass} mt-1`}
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Changer l’identifiant fait cesser de fonctionner les liens déjà envoyés : renvoyez-les
-            à vos équipes et clients.
-          </p>
-        </div>
+        <FormField
+          id="portal-slug"
+          label="Identifiant du portail"
+          hint="Changer l’identifiant fait cesser de fonctionner les liens déjà envoyés : renvoyez-les à vos équipes et clients."
+        >
+          {(c) => (
+            <Input
+              {...c}
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setDone(false);
+                setError(null);
+              }}
+              disabled={readOnly || loading}
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          )}
+        </FormField>
 
         {error && (
           <p role="alert" className="text-sm text-destructive-text">
             {error}
           </p>
         )}
-        {done && (
-          <p role="status" className="text-sm text-secondary">
-            Identifiant enregistré.
-          </p>
-        )}
+        {done && <Notice tone="success">Identifiant enregistré.</Notice>}
         {readOnly ? (
           <p className="text-xs text-muted-foreground">
-            Votre cabinet est en lecture seule : régularisez votre abonnement pour modifier le portail.
+            Votre cabinet est en lecture seule : régularisez votre abonnement pour modifier le
+            portail.
           </p>
         ) : (
-          <button
-            type="submit"
-            disabled={loading || !changed}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={loading || !changed}>
+            {loading && <Spinner />}
             Enregistrer
-          </button>
+          </Button>
         )}
       </form>
     </section>

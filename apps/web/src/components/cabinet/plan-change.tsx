@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { formatStorageMb } from '@/lib/billing/quota-format';
 import type { QuotaKey } from '@/lib/billing/cabinet-quotas';
 import type { PendingPlanChange, PlanChangeOptions, PlanOption } from '@/lib/billing/plan-change';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 type Period = 'monthly' | 'yearly';
 
@@ -21,7 +24,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   PRICE_NOT_SET: "Ce plan n'a pas de prix pour cette périodicité.",
   QUOTA_EXCEEDED: "Votre consommation dépasse les limites de ce plan : réduisez-la d'abord.",
   NO_PENDING_CHANGE: "Aucun changement n'est programmé.",
-  STRIPE_FAILED: 'Le service de paiement est momentanément indisponible. Réessayez dans un instant.',
+  STRIPE_FAILED:
+    'Le service de paiement est momentanément indisponible. Réessayez dans un instant.',
 };
 
 const FALLBACK = 'Une erreur est survenue. Veuillez réessayer.';
@@ -51,7 +55,9 @@ function blockerMessage(blocker: PlanOption['blockers'][number]): string {
 
 function priceOf(plan: PlanOption, period: Period): { total: string; note: string | null } | null {
   if (period === 'monthly') {
-    return plan.monthlyCents === null ? null : { total: `${formatEuros(plan.monthlyCents)} / mois`, note: null };
+    return plan.monthlyCents === null
+      ? null
+      : { total: `${formatEuros(plan.monthlyCents)} / mois`, note: null };
   }
   if (plan.yearlyCents === null) return null;
   return {
@@ -64,7 +70,9 @@ async function post(url: string, body?: unknown) {
   try {
     const res = await fetch(url, {
       method: 'POST',
-      ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
+      ...(body
+        ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+        : {}),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) return { ok: false as const, message: ERROR_MESSAGES[data?.error] ?? FALLBACK };
@@ -121,15 +129,16 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
             : ''}
           . Vous gardez votre plan actuel jusqu’à cette date.
         </p>
-        <button
+        <Button
           type="button"
+          variant="outline"
           disabled={loading}
           onClick={() => run(() => post('/api/billing/plan-change/cancel'))}
-          className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-60"
+          className="mt-3"
         >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {loading && <Spinner />}
           Annuler le changement
-        </button>
+        </Button>
         {error && (
           <p role="alert" className="mt-2 text-xs text-destructive-text">
             {error}
@@ -160,22 +169,25 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
         plan actuel jusque-là ; il n’y a ni prorata ni remboursement.
       </p>
 
-      <div role="group" aria-label="Périodicité" className="mt-4 inline-flex rounded-xl border border-border p-1">
+      <div
+        role="group"
+        aria-label="Périodicité"
+        className="mt-4 inline-flex rounded-xl border border-border p-1"
+      >
         {(['monthly', 'yearly'] as const).map((value) => (
-          <button
+          <Button
             key={value}
             type="button"
+            size="sm"
+            variant={period === value ? 'default' : 'ghost'}
             aria-pressed={period === value}
             onClick={() => {
               setPeriod(value);
               setSelected(null);
             }}
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-              period === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
           >
             {PERIOD_LABELS[value]}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -194,10 +206,7 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold text-foreground">{plan.name}</p>
                 {isCurrent && (
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                    <Check className="mr-1 inline h-3 w-3" />
-                    Plan actuel
-                  </span>
+                  <StatusBadge domain="plan" status="actuel" icon={<Check aria-hidden="true" />} />
                 )}
               </div>
               <p className="mt-2 text-lg font-bold text-foreground">{price?.total ?? '—'}</p>
@@ -216,43 +225,52 @@ export function PlanChange({ options, pending, effectiveAtLabel }: Props) {
               {selected === plan.planId ? (
                 <div className="mt-3 rounded-lg bg-muted/60 p-3">
                   <p className="text-xs text-foreground">
-                    Passer à <span className="font-semibold">{plan.name}</span> ({PERIOD_LABELS[period].toLowerCase()}
+                    Passer à <span className="font-semibold">{plan.name}</span> (
+                    {PERIOD_LABELS[period].toLowerCase()}
                     {price ? `, ${price.total}` : ''}) à partir du {dateText}.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       disabled={loading}
                       onClick={() =>
-                        run(() => post('/api/billing/plan-change', { planId: plan.planId, billingPeriod: period }))
+                        run(() =>
+                          post('/api/billing/plan-change', {
+                            planId: plan.planId,
+                            billingPeriod: period,
+                          }),
+                        )
                       }
-                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
                     >
-                      {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {loading && <Spinner />}
                       Confirmer
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       disabled={loading}
                       onClick={() => setSelected(null)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
                     >
                       Annuler
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   disabled={disabled}
                   onClick={() => {
                     setError(null);
                     setSelected(plan.planId);
                   }}
-                  className="mt-3 w-full rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 w-full"
                 >
                   Choisir {plan.name}
-                </button>
+                </Button>
               )}
             </li>
           );

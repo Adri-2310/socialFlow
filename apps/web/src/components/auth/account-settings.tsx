@@ -2,22 +2,44 @@
 
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  AlertTriangle,
-  Check,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Loader2,
-  Mail,
-  Pencil,
-  User,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, Check, Eye, EyeOff, KeyRound, Mail, Pencil, User, X } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
+import { Notice } from '@/components/shared/notice';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 
 type Field = 'name' | 'email' | 'password' | null;
+
+// Bouton « Modifier » commun aux trois lignes : texte à la couleur du cabinet, sur fond neutre.
+// `cible` complète le nom accessible (« Modifier le nom ») : trois boutons « Modifier » identiques
+// ne se distinguent pas dans la liste des boutons d'un lecteur d'écran. Le texte visible reste
+// au début du nom (WCAG 2.5.3).
+function EditButton({ cible, onClick }: { cible: string; onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      aria-label={`Modifier ${cible}`}
+      className="text-xs text-primary hover:bg-primary/10 hover:text-primary"
+    >
+      <Pencil aria-hidden="true" className="size-3.5" /> Modifier
+    </Button>
+  );
+}
+
+// Message d'échec d'un champ : annoncé aux lecteurs d'écran et rattaché au champ par `id`.
+function FieldError({ id, children }: { id: string; children: string }) {
+  return (
+    <p id={id} role="alert" className="mt-1.5 text-sm text-destructive-text">
+      {children}
+    </p>
+  );
+}
 
 function NameRow({
   name,
@@ -56,38 +78,38 @@ function NameRow({
   if (editing) {
     return (
       <form onSubmit={handleSubmit} className="py-3">
-        <label htmlFor="account-name" className="block text-xs font-medium text-muted-foreground">
+        <Label htmlFor="account-name" className="text-xs font-medium text-muted-foreground">
           Nom
-        </label>
+        </Label>
         <div className="mt-1.5 flex gap-2">
-          <input
+          <Input
             id="account-name"
             type="text"
             required
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'account-name-error' : undefined}
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          </button>
-          <button
+          <Button type="submit" size="icon-lg" disabled={loading} aria-label="Enregistrer le nom">
+            {loading ? <Spinner /> : <Check />}
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="icon-lg"
+            aria-label="Annuler la modification du nom"
             onClick={() => {
               setValue(name);
               setError(null);
               onClose();
             }}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-input text-foreground transition hover:bg-muted"
           >
-            <X className="h-4 w-4" />
-          </button>
+            <X />
+          </Button>
         </div>
-        {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
+        {error && <FieldError id="account-name-error">{error}</FieldError>}
       </form>
     );
   }
@@ -103,13 +125,7 @@ function NameRow({
           <p className="text-sm font-medium text-foreground">{name}</p>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-      >
-        <Pencil className="h-3.5 w-3.5" /> Modifier
-      </button>
+      <EditButton cible="le nom" onClick={onEdit} />
     </div>
   );
 }
@@ -189,48 +205,49 @@ function EmailRow({
             (et/ou à votre adresse actuelle selon votre statut de vérification). Suivez le lien pour
             finaliser le changement.
           </p>
-          <button
-            type="button"
-            onClick={close}
-            className="mt-2 text-sm font-medium text-primary hover:underline"
-          >
+          <Button type="button" variant="link" size="sm" onClick={close} className="mt-2 px-0">
             Fermer
-          </button>
+          </Button>
         </div>
       );
     }
 
     return (
       <form onSubmit={handleSubmit} className="py-3">
-        <label htmlFor="account-email" className="block text-xs font-medium text-muted-foreground">
+        <Label htmlFor="account-email" className="text-xs font-medium text-muted-foreground">
           Nouvelle adresse email
-        </label>
+        </Label>
         <div className="mt-1.5 flex gap-2">
-          <input
+          <Input
             id="account-email"
             type="email"
             required
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={email}
-            className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'account-email-error' : undefined}
+            className="flex-1"
           />
-          <button
+          <Button
             type="submit"
+            size="icon-lg"
             disabled={loading}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Enregistrer la nouvelle adresse"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          </button>
-          <button
+            {loading ? <Spinner /> : <Check />}
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="icon-lg"
+            aria-label="Annuler le changement d'adresse"
             onClick={close}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-input text-foreground transition hover:bg-muted"
           >
-            <X className="h-4 w-4" />
-          </button>
+            <X />
+          </Button>
         </div>
-        {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
+        {error && <FieldError id="account-email-error">{error}</FieldError>}
       </form>
     );
   }
@@ -247,35 +264,34 @@ function EmailRow({
             <p className="text-sm font-medium text-foreground">{email}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-        >
-          <Pencil className="h-3.5 w-3.5" /> Modifier
-        </button>
+        <EditButton cible="l'adresse email" onClick={onEdit} />
       </div>
 
       {!emailVerified && (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-amber-500/10 px-3 py-2">
-          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            {resent ? 'Email de vérification renvoyé.' : 'Email non vérifié.'}
-          </p>
-          {!resent && (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resending}
-              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {resending && <Loader2 className="h-3 w-3 animate-spin" />}
-              Renvoyer
-            </button>
-          )}
-        </div>
+        <Notice
+          tone="warning"
+          icon={<AlertTriangle aria-hidden="true" className="size-4" />}
+          className="mt-3 rounded-lg px-3 py-2"
+          action={
+            !resent && (
+              <Button
+                type="button"
+                variant="link"
+                size="xs"
+                onClick={handleResend}
+                disabled={resending}
+                className="h-auto p-0"
+              >
+                {resending && <Spinner className="size-3" />}
+                Renvoyer
+              </Button>
+            )
+          }
+        >
+          {resent ? 'Email de vérification renvoyé.' : 'Email non vérifié.'}
+        </Notice>
       )}
-      {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
+      {error && <FieldError id="account-email-error">{error}</FieldError>}
     </div>
   );
 }
@@ -335,40 +351,36 @@ function PasswordRow({
     return (
       <form onSubmit={handleSubmit} className="space-y-3 py-3">
         <div>
-          <label
-            htmlFor="current-password"
-            className="block text-xs font-medium text-muted-foreground"
-          >
+          <Label htmlFor="current-password" className="text-xs font-medium text-muted-foreground">
             Mot de passe actuel
-          </label>
-          <input
+          </Label>
+          <Input
             id="current-password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             required
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="mt-1.5"
           />
         </div>
         <div>
           <div className="flex items-center justify-between">
-            <label
-              htmlFor="new-password"
-              className="block text-xs font-medium text-muted-foreground"
-            >
+            <Label htmlFor="new-password" className="text-xs font-medium text-muted-foreground">
               Nouveau mot de passe
-            </label>
-            <button
+            </Label>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setShowPassword((v) => !v)}
               className="text-muted-foreground hover:text-foreground"
               aria-label={showPassword ? 'Masquer les mots de passe' : 'Afficher les mots de passe'}
             >
-              {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            </button>
+              {showPassword ? <EyeOff /> : <Eye />}
+            </Button>
           </div>
-          <input
+          <Input
             id="new-password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
@@ -376,28 +388,22 @@ function PasswordRow({
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="8 caractères minimum"
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'password-error' : undefined}
+            className="mt-1.5"
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <FieldError id="password-error">{error}</FieldError>}
 
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={loading} className="flex-1">
+            {loading && <Spinner />}
             Mettre à jour
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-lg border border-input px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-          >
+          </Button>
+          <Button type="button" variant="outline" onClick={reset}>
             Annuler
-          </button>
+          </Button>
         </div>
       </form>
     );
@@ -414,13 +420,7 @@ function PasswordRow({
           <p className="text-sm font-medium text-foreground">••••••••</p>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-      >
-        <Pencil className="h-3.5 w-3.5" /> Modifier
-      </button>
+      <EditButton cible="le mot de passe" onClick={onEdit} />
     </div>
   );
 }

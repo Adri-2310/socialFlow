@@ -17,6 +17,9 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { isNavActive, pageTitle } from '@/components/layout/page-titles';
 import { UserMenu } from '@/components/layout/user-menu';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; href?: string };
 
@@ -71,6 +74,100 @@ const SHELL_CONFIG = {
 
 export type ShellRole = keyof typeof SHELL_CONFIG;
 
+// Contenu de la barre latérale (logo, menu, mention du cabinet), partagé entre la barre fixe des
+// grands écrans et le tiroir des petits. `onNavigate` referme le tiroir après un clic sur une entrée.
+function SidebarContent({
+  role,
+  pathname,
+  brandName,
+  logoUrl,
+  onNavigate,
+}: {
+  role: ShellRole;
+  pathname: string;
+  brandName?: string | null;
+  logoUrl?: string | null;
+  onNavigate?: () => void;
+}) {
+  const { consoleLabel, nav }: ShellConfig = SHELL_CONFIG[role];
+  return (
+    <>
+      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- URL externe (Blob), taille fixe
+          <img
+            src={logoUrl}
+            alt={brandName ?? 'Logo du cabinet'}
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-xl object-contain"
+          />
+        ) : (
+          <Image
+            src="/logo-simple.png"
+            alt="SocialFlow"
+            width={36}
+            height={36}
+            className="rounded-xl"
+          />
+        )}
+        <div>
+          {brandName ? (
+            <>
+              <p className="max-w-[9.5rem] truncate text-sm font-bold leading-none text-sidebar-foreground">
+                {brandName}
+              </p>
+              <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold leading-none text-sidebar-foreground">
+                Social<span className="text-primary dark:text-indigo-400">Flow</span>
+              </p>
+              <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
+            </>
+          )}
+        </div>
+      </div>
+      <nav aria-label="Navigation principale" className="space-y-1 p-3 text-sm">
+        {nav.map((item) => {
+          const actif = isNavActive(role, item.href, pathname);
+          return item.href ? (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={actif ? 'page' : undefined}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 font-semibold transition ${
+                actif
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/60'
+              }`}
+            >
+              <item.icon className="h-4 w-4" /> {item.label}
+            </Link>
+          ) : (
+            <span
+              key={item.label}
+              className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 font-medium text-muted-foreground"
+            >
+              <span className="flex items-center gap-3">
+                <item.icon className="h-4 w-4" /> {item.label}
+              </span>
+              <Badge variant="secondary">Bientôt</Badge>
+            </span>
+          );
+        })}
+      </nav>
+      {brandName && (
+        <p className="absolute inset-x-0 bottom-0 border-t border-sidebar-border px-5 py-3 text-[11px] text-muted-foreground">
+          Propulsé par SocialFlow
+        </p>
+      )}
+    </>
+  );
+}
+
 export function DashboardShell({
   role,
   userName,
@@ -92,107 +189,48 @@ export function DashboardShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const { consoleLabel, roleLabel, nav }: ShellConfig = SHELL_CONFIG[role];
+  const { roleLabel, nav }: ShellConfig = SHELL_CONFIG[role];
   const activeItem = nav.find((item) => isNavActive(role, item.href, pathname)) ?? nav[0];
   // Une page absente du menu (liste des salariés, fiche) donne son propre titre.
   const title = pageTitle(role, pathname) ?? activeItem.label;
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-sidebar-border bg-sidebar transition-transform lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- URL externe (Blob), taille fixe
-            <img
-              src={logoUrl}
-              alt={brandName ?? 'Logo du cabinet'}
-              width={36}
-              height={36}
-              className="h-9 w-9 rounded-xl object-contain"
-            />
-          ) : (
-            <Image
-              src="/logo-simple.png"
-              alt="SocialFlow"
-              width={36}
-              height={36}
-              className="rounded-xl"
-            />
-          )}
-          <div>
-            {brandName ? (
-              <>
-                <p className="max-w-[9.5rem] truncate text-sm font-bold leading-none text-sidebar-foreground">
-                  {brandName}
-                </p>
-                <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-bold leading-none text-sidebar-foreground">
-                  Social<span className="text-primary dark:text-indigo-400">Flow</span>
-                </p>
-                <p className="text-[11px] font-medium text-muted-foreground">{consoleLabel}</p>
-              </>
-            )}
-          </div>
-        </div>
-        <nav className="space-y-1 p-3 text-sm">
-          {nav.map((item) =>
-            item.href ? (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 font-semibold transition ${
-                  isNavActive(role, item.href, pathname)
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/60'
-                }`}
-              >
-                <item.icon className="h-4 w-4" /> {item.label}
-              </Link>
-            ) : (
-              <span
-                key={item.label}
-                className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 font-medium text-muted-foreground"
-              >
-                <span className="flex items-center gap-3">
-                  <item.icon className="h-4 w-4" /> {item.label}
-                </span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">
-                  Bientôt
-                </span>
-              </span>
-            ),
-          )}
-        </nav>
-        {brandName && (
-          <p className="absolute inset-x-0 bottom-0 border-t border-sidebar-border px-5 py-3 text-[11px] text-muted-foreground">
-            Propulsé par SocialFlow
-          </p>
-        )}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-sidebar-border bg-sidebar lg:block">
+        <SidebarContent role={role} pathname={pathname} brandName={brandName} logoUrl={logoUrl} />
       </aside>
-
-      {mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-        />
-      )}
 
       <div className="flex-1 lg:ml-64">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md sm:px-6">
-          <button
-            onClick={() => setMobileOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted lg:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          {/* Petits écrans : la barre latérale s'ouvre en tiroir (focus piégé, Échap, clic sur le fond). */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  aria-label="Ouvrir le menu"
+                  className="text-muted-foreground lg:hidden"
+                />
+              }
+            >
+              <Menu className="h-5 w-5" />
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              showCloseButton={false}
+              className="w-64 gap-0 border-sidebar-border bg-sidebar p-0 sm:max-w-64 lg:hidden"
+            >
+              <SheetTitle className="sr-only">Menu de navigation</SheetTitle>
+              <SidebarContent
+                role={role}
+                pathname={pathname}
+                brandName={brandName}
+                logoUrl={logoUrl}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
           <h1 className="truncate text-base font-bold text-foreground">{title}</h1>
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />

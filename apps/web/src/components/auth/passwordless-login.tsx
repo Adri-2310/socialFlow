@@ -2,12 +2,19 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, KeyRound, Link2, Loader2, Mail, MailCheck } from 'lucide-react';
+import { ArrowLeft, KeyRound, Link2, Mail, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
 import { PORTAL_HEADER, portalPath } from '@/lib/portal/portal-slug';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 type Step = 'email' | 'sent' | 'otp';
+
+// Lien « Retour » : texte discret qui prend la couleur du cabinet au survol (D65, D76).
+const BACK_BUTTON = 'text-muted-foreground hover:bg-transparent hover:text-primary';
 
 // `portal` : connexion par le portail d'un cabinet (D76), voir login-form.tsx.
 export function PasswordlessLogin({
@@ -100,24 +107,31 @@ export function PasswordlessLogin({
           </div>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="link"
           onClick={handleSendCode}
           disabled={loadingAction !== null}
-          className="w-full text-center text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full"
         >
           Recevoir un code à la place
-        </button>
+        </Button>
 
-        {error && <p className="text-center text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="text-center text-sm text-destructive-text">
+            {error}
+          </p>
+        )}
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setStep('email')}
-          className="inline-flex w-full items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
+          className={`w-full ${BACK_BUTTON}`}
         >
-          <ArrowLeft className="h-4 w-4" /> Retour
-        </button>
+          <ArrowLeft aria-hidden="true" /> Retour
+        </Button>
       </div>
     );
   }
@@ -125,13 +139,15 @@ export function PasswordlessLogin({
   if (step === 'otp') {
     return (
       <div className="space-y-6">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setStep('email')}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
+          className={`-ml-3 ${BACK_BUTTON}`}
         >
-          <ArrowLeft className="h-4 w-4" /> Retour
-        </button>
+          <ArrowLeft aria-hidden="true" /> Retour
+        </Button>
 
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -146,101 +162,95 @@ export function PasswordlessLogin({
         </div>
 
         <form onSubmit={handleVerifyCode} className="space-y-4">
-          <div>
-            <label htmlFor="otp-code" className="mb-1.5 block text-sm font-medium text-foreground">
-              Code à 6 chiffres
-            </label>
-            <input
-              id="otp-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="123456"
-            />
-          </div>
+          <FormField id="otp-code" label="Code à 6 chiffres" required error={error}>
+            {(control) => (
+              <Input
+                {...control}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="123456"
+              />
+            )}
+          </FormField>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loadingAction !== null}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loadingAction === 'verify' && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={loadingAction !== null} className="w-full">
+            {loadingAction === 'verify' && <Spinner />}
             Vérifier
-          </button>
+          </Button>
         </form>
 
-        <button
+        <Button
           type="button"
+          variant="link"
           onClick={handleSendCode}
           disabled={loadingAction !== null}
-          className="w-full text-center text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full"
         >
           Renvoyer le code
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
+        className={`-ml-3 ${BACK_BUTTON}`}
       >
-        <ArrowLeft className="h-4 w-4" /> Se connecter avec un mot de passe
-      </button>
+        <ArrowLeft aria-hidden="true" /> Se connecter avec un mot de passe
+      </Button>
 
       <form onSubmit={handleSendLink} className="space-y-4">
-        <div>
-          <label htmlFor="passwordless-email" className="mb-1.5 block text-sm font-medium text-foreground">
-            Adresse email
-          </label>
-          <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              id="passwordless-email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-input bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="prenom@cabinet.be"
-            />
-          </div>
-        </div>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loadingAction !== null}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loadingAction === 'link' ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Link2 className="h-4 w-4" />
+        <FormField id="passwordless-email" label="Adresse email" required>
+          {(control) => (
+            <div className="relative">
+              <Mail
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                {...control}
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                placeholder="prenom@cabinet.be"
+              />
+            </div>
           )}
+        </FormField>
+
+        {error && (
+          <p role="alert" className="text-sm text-destructive-text">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" disabled={loadingAction !== null} className="w-full">
+          {loadingAction === 'link' ? <Spinner /> : <Link2 aria-hidden="true" />}
           Recevoir un lien de connexion
-        </button>
+        </Button>
       </form>
 
-      <button
+      <Button
         type="button"
+        variant="link"
         onClick={handleSendCode}
         disabled={loadingAction !== null || !email}
-        className="w-full text-center text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full"
       >
         {loadingAction === 'code' ? 'Envoi du code…' : 'Recevoir un code à la place'}
-      </button>
+      </Button>
     </div>
   );
 }

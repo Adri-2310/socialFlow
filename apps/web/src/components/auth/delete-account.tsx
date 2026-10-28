@@ -2,10 +2,14 @@
 
 import { useEffect, useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Loader2, MailCheck } from 'lucide-react';
+import { AlertTriangle, MailCheck } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
 import { ACCOUNT_DELETION_RETENTION_DAYS } from '@/lib/auth/account-retention';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 // `blockedBySubscription` : le titulaire dont l'abonnement court ne peut pas
 // supprimer son compte (D67). Le serveur le refuse de toute facon ; on le dit
@@ -86,13 +90,15 @@ export function DeleteAccount({ blockedBySubscription = false }: { blockedBySubs
             supprimé.
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={reset}
-          className="mt-1 text-sm font-medium text-muted-foreground hover:text-primary"
+          className="mt-1 text-muted-foreground hover:text-primary"
         >
           Retour
-        </button>
+        </Button>
       </div>
     );
   }
@@ -103,7 +109,7 @@ export function DeleteAccount({ blockedBySubscription = false }: { blockedBySubs
         onSubmit={handleSubmit}
         className="rounded-xl border border-destructive/40 bg-destructive/5 p-5"
       >
-        <p className="text-sm font-semibold text-destructive">
+        <p className="text-sm font-semibold text-destructive-text">
           Confirmer la suppression de votre compte
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -113,49 +119,47 @@ export function DeleteAccount({ blockedBySubscription = false }: { blockedBySubs
         </p>
 
         {hasPassword ? (
-          <>
-            <label
-              htmlFor="delete-password"
-              className="mt-4 block text-sm font-medium text-foreground"
-            >
-              Confirmez votre mot de passe
-            </label>
-            <input
-              id="delete-password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="••••••••"
-            />
-          </>
+          <FormField
+            id="delete-password"
+            label="Confirmez votre mot de passe"
+            required
+            error={error}
+            className="mt-4"
+          >
+            {(control) => (
+              <Input
+                {...control}
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            )}
+          </FormField>
         ) : (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Votre compte n&apos;a pas de mot de passe (connexion via Google/Microsoft) : un email
-            de confirmation vous sera envoyé pour finaliser la suppression.
-          </p>
+          <>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Votre compte n&apos;a pas de mot de passe (connexion via Google/Microsoft) : un email
+              de confirmation vous sera envoyé pour finaliser la suppression.
+            </p>
+            {error && (
+              <p role="alert" className="mt-2 text-sm text-destructive-text">
+                {error}
+              </p>
+            )}
+          </>
         )}
 
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-
         <div className="mt-4 flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-lg shadow-destructive/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" variant="destructive" disabled={loading} className="flex-1">
+            {loading && <Spinner />}
             Recevoir l&apos;email de confirmation
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted"
-          >
+          </Button>
+          <Button type="button" variant="outline" onClick={reset}>
             Annuler
-          </button>
+          </Button>
         </div>
       </form>
     );
@@ -175,14 +179,15 @@ export function DeleteAccount({ blockedBySubscription = false }: { blockedBySubs
           </p>
         </div>
       </div>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => setConfirming(true)}
         disabled={hasPassword === null}
-        className="shrink-0 rounded-xl border border-destructive/40 px-4 py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
+        className="shrink-0 border-destructive/40 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
       >
         Supprimer
-      </button>
+      </Button>
     </div>
   );
 }

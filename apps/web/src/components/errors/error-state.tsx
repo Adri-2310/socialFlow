@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 type ErrorAction = {
   label: string;
@@ -70,9 +71,9 @@ export function ErrorState({
           <span
             className={`grid h-16 w-16 place-items-center rounded-2xl ${
               isDestructive
-                ? 'bg-destructive/10 text-destructive'
+                ? 'bg-destructive/10 text-destructive-text'
                 : isWarning
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300'
                   : 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg shadow-primary/20'
             }`}
           >
@@ -87,7 +88,7 @@ export function ErrorState({
 
           <p
             className={`${code ? 'mt-3' : 'mt-6'} text-sm font-semibold uppercase tracking-wider ${
-              isDestructive ? 'text-destructive' : isWarning ? 'text-amber-600 dark:text-amber-400' : 'text-primary'
+              isDestructive ? 'text-destructive-text' : isWarning ? 'text-amber-800 dark:text-amber-300' : 'text-primary'
             }`}
           >
             {eyebrow}
@@ -101,14 +102,20 @@ export function ErrorState({
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             {actions.map((action, index) => {
+              // Première action : dégradé de la marque ; les autres : bordure (même rendu qu'avant).
               const className =
                 index === 0
-                  ? 'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-secondary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90'
-                  : 'inline-flex items-center justify-center gap-2 rounded-xl border border-input px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-muted';
+                  ? 'rounded-xl bg-gradient-to-br from-primary to-secondary px-6 shadow-lg shadow-primary/20 hover:bg-transparent hover:opacity-90'
+                  : 'rounded-xl px-6';
+              const variant = index === 0 ? 'default' : 'outline';
 
               if (action.href) {
                 return (
-                  <Link key={action.label} href={action.href} className={className}>
+                  <Link
+                    key={action.label}
+                    href={action.href}
+                    className={buttonVariants({ variant, size: 'lg', className })}
+                  >
                     {action.icon}
                     {action.label}
                   </Link>
@@ -116,10 +123,17 @@ export function ErrorState({
               }
 
               return (
-                <button key={action.label} type="button" onClick={action.onClick} className={className}>
+                <Button
+                  key={action.label}
+                  type="button"
+                  variant={variant}
+                  size="lg"
+                  onClick={action.onClick}
+                  className={className}
+                >
                   {action.icon}
                   {action.label}
-                </button>
+                </Button>
               );
             })}
           </div>

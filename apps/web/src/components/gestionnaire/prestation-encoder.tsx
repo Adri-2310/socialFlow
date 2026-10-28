@@ -2,8 +2,12 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Pencil } from 'lucide-react';
-import { Field, inputClass } from '@/components/gestionnaire/form-field';
+import { Pencil } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import {
   FALLBACK,
   PERIODE_ERROR_MESSAGES,
@@ -100,127 +104,125 @@ export function PrestationEncoder({
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={ouvrir}
         disabled={bloque !== null}
         title={bloque ?? undefined}
         aria-label={`Encoder les prestations de ${salarieNom}`}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+        className="text-xs"
       >
-        <Pencil className="h-3.5 w-3.5" /> Encoder
-      </button>
+        <Pencil /> Encoder
+      </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="prestation-title"
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
-          >
-            <h3 id="prestation-title" className="text-lg font-semibold text-foreground">
-              Prestations de {salarieNom}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Saisissez seulement les écarts. Sans rien saisir, le salarié est payé pour un mois
-              complet selon son régime.
-            </p>
-
-            <fieldset disabled={loading} className="mt-5 grid gap-4 sm:grid-cols-2">
-              <Field
+        <FormDialog
+          size="lg"
+          title={`Prestations de ${salarieNom}`}
+          description="Saisissez seulement les écarts. Sans rien saisir, le salarié est payé pour un mois complet selon son régime."
+        >
+          <form onSubmit={handleSubmit} noValidate>
+            <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
+              <FormField
                 id="pre-conge"
                 label="Congé (jours)"
                 error={err('congeDemiJours')}
                 hint="Par pas de 0,5 (une demi-journée)."
               >
-                <input
-                  id="pre-conge"
-                  inputMode="decimal"
-                  value={form.conge}
-                  onChange={set('conge')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field id="pre-maladie" label="Maladie (jours)" error={err('maladieDemiJours')}>
-                <input
-                  id="pre-maladie"
-                  inputMode="decimal"
-                  value={form.maladie}
-                  onChange={set('maladie')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field id="pre-ferie" label="Jours fériés (jours)" error={err('ferieDemiJours')}>
-                <input
-                  id="pre-ferie"
-                  inputMode="decimal"
-                  value={form.ferie}
-                  onChange={set('ferie')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field
+                {(c) => (
+                  <Input {...c} inputMode="decimal" value={form.conge} onChange={set('conge')} />
+                )}
+              </FormField>
+              <FormField id="pre-maladie" label="Maladie (jours)" error={err('maladieDemiJours')}>
+                {(c) => (
+                  <Input
+                    {...c}
+                    inputMode="decimal"
+                    value={form.maladie}
+                    onChange={set('maladie')}
+                  />
+                )}
+              </FormField>
+              <FormField id="pre-ferie" label="Jours fériés (jours)" error={err('ferieDemiJours')}>
+                {(c) => (
+                  <Input {...c} inputMode="decimal" value={form.ferie} onChange={set('ferie')} />
+                )}
+              </FormField>
+              <FormField
                 id="pre-absence"
                 label="Absence non rémunérée (jours)"
                 error={err('absenceNonRemDemiJours')}
               >
-                <input
-                  id="pre-absence"
-                  inputMode="decimal"
-                  value={form.absenceNonRem}
-                  onChange={set('absenceNonRem')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field
+                {(c) => (
+                  <Input
+                    {...c}
+                    inputMode="decimal"
+                    value={form.absenceNonRem}
+                    onChange={set('absenceNonRem')}
+                  />
+                )}
+              </FormField>
+              <FormField
                 id="pre-heures"
                 label="Heures prestées"
                 error={err('heuresPresteesMinutes')}
                 hint="Facultatif, surtout pour les ouvriers. Ex. 152:30 ou 152,5."
               >
-                <input
-                  id="pre-heures"
-                  inputMode="decimal"
-                  value={form.heuresPrestees}
-                  onChange={set('heuresPrestees')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field
+                {(c) => (
+                  <Input
+                    {...c}
+                    inputMode="decimal"
+                    value={form.heuresPrestees}
+                    onChange={set('heuresPrestees')}
+                  />
+                )}
+              </FormField>
+              <FormField
                 id="pre-sup"
                 label="Heures supplémentaires"
                 error={err('heuresSupMinutes')}
                 hint="Ex. 1:30 ou 1,5."
               >
-                <input
-                  id="pre-sup"
-                  inputMode="decimal"
-                  value={form.heuresSup}
-                  onChange={set('heuresSup')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field id="pre-prime" label="Prime (€)" error={err('primeCents')} hint="Ex. 150,00.">
-                <input
-                  id="pre-prime"
-                  inputMode="decimal"
-                  value={form.primeMontant}
-                  onChange={set('primeMontant')}
-                  className={inputClass}
-                />
-              </Field>
-              <Field id="pre-prime-libelle" label="Libellé de la prime" error={err('primeLibelle')}>
-                <input
-                  id="pre-prime-libelle"
-                  maxLength={60}
-                  value={form.primeLibelle}
-                  onChange={set('primeLibelle')}
-                  className={inputClass}
-                />
-              </Field>
+                {(c) => (
+                  <Input
+                    {...c}
+                    inputMode="decimal"
+                    value={form.heuresSup}
+                    onChange={set('heuresSup')}
+                  />
+                )}
+              </FormField>
+              <FormField
+                id="pre-prime"
+                label="Prime (€)"
+                error={err('primeCents')}
+                hint="Ex. 150,00."
+              >
+                {(c) => (
+                  <Input
+                    {...c}
+                    inputMode="decimal"
+                    value={form.primeMontant}
+                    onChange={set('primeMontant')}
+                  />
+                )}
+              </FormField>
+              <FormField
+                id="pre-prime-libelle"
+                label="Libellé de la prime"
+                error={err('primeLibelle')}
+              >
+                {(c) => (
+                  <Input
+                    {...c}
+                    maxLength={60}
+                    value={form.primeLibelle}
+                    onChange={set('primeLibelle')}
+                  />
+                )}
+              </FormField>
             </fieldset>
 
             {error && (
@@ -231,34 +233,31 @@ export function PrestationEncoder({
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
               {initial && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => void envoyer('DELETE')}
                   disabled={loading}
-                  className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:mr-auto"
+                  className="sm:mr-auto"
                 >
                   Effacer les écarts
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={loading}
-                className="rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Spinner />}
                 Enregistrer
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </FormDialog>
       )}
     </>
   );

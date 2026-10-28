@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
 import { ConditionFormDialog } from '@/components/gestionnaire/condition-form-dialog';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { ConditionFormValues } from '@/lib/salarie/condition-form';
 import { ERROR_MESSAGES, FALLBACK } from '@/lib/salarie/form-messages';
@@ -53,30 +54,31 @@ export function ConditionRowActions({
     }
   }
 
-  const bouton =
-    'inline-flex items-center gap-1 rounded-lg border border-input px-2.5 py-1 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60';
-
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => setEditing(true)}
         disabled={readOnly}
         aria-label="Corriger cette condition"
-        className={bouton}
+        className="text-xs"
       >
-        <Pencil className="h-3 w-3" /> Corriger
-      </button>
+        <Pencil /> Corriger
+      </Button>
       {removable && (
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setConfirming(true)}
           disabled={readOnly}
           aria-label="Annuler ce changement à venir"
-          className={bouton}
+          className="text-xs"
         >
-          <Trash2 className="h-3 w-3" /> Annuler
-        </button>
+          <Trash2 /> Annuler
+        </Button>
       )}
       {error && (
         <p role="alert" className="basis-full text-right text-xs text-destructive-text">

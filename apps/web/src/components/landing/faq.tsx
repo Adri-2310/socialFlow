@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ShieldCheck, CreditCard, LifeBuoy } from 'lucide-react';
 import { FadeIn } from '@/components/motion/fade-in';
+import { Button } from '@/components/ui/button';
 
 const categories = [
   {
@@ -93,22 +94,34 @@ export function FAQ() {
                   return (
                     <FadeIn key={faq.question} delay={catIndex * 0.05 + i * 0.05}>
                       <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-sm backdrop-blur-sm">
-                        <button
-                          onClick={() => setOpenId(isOpen ? null : id)}
-                          className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-medium text-foreground"
-                        >
-                          {faq.question}
-                          <motion.span
-                            animate={{ rotate: isOpen ? 180 : 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="shrink-0"
+                        {/* Motif « accordéon » : le bouton annonce l'état (`aria-expanded`) et la réponse
+                            qu'il commande ; l'animation de hauteur reste celle de framer-motion. */}
+                        <h3>
+                          <Button
+                            type="button"
+                            id={`faq-trigger-${id}`}
+                            variant="ghost"
+                            aria-expanded={isOpen}
+                            aria-controls={isOpen ? `faq-panel-${id}` : undefined}
+                            onClick={() => setOpenId(isOpen ? null : id)}
+                            className="h-auto w-full justify-between gap-4 whitespace-normal rounded-none px-5 py-4 text-left text-base font-medium text-foreground"
                           >
-                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                          </motion.span>
-                        </button>
+                            {faq.question}
+                            <motion.span
+                              animate={{ rotate: isOpen ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="shrink-0"
+                            >
+                              <ChevronDown aria-hidden="true" className="size-5 text-muted-foreground" />
+                            </motion.span>
+                          </Button>
+                        </h3>
                         <AnimatePresence initial={false}>
                           {isOpen && (
                             <motion.div
+                              id={`faq-panel-${id}`}
+                              role="region"
+                              aria-labelledby={`faq-trigger-${id}`}
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}

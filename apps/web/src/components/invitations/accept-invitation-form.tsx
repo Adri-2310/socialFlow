@@ -2,7 +2,11 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff } from 'lucide-react';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_REQUEST: 'Formulaire incomplet.',
@@ -87,115 +91,112 @@ export function AcceptInvitationForm({ token, email }: { token: string; email: s
           <span aria-label="Adresse du portail" className="min-w-0 flex-1 break-all text-sm text-foreground">
             {portal}
           </span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={copyPortal}
-            className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
+            className="shrink-0 text-primary hover:text-primary"
           >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
             {copied ? 'Copié' : 'Copier'}
-          </button>
+          </Button>
         </div>
-        <button
+        <Button
           type="button"
+          size="lg"
+          className="w-full"
           onClick={() => {
             router.push('/dashboard');
             router.refresh();
           }}
-          className="flex w-full items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"
         >
           Accéder à mon espace
-        </button>
+        </Button>
       </div>
     );
   }
 
+  // Une seule erreur pour tout le formulaire (règles locales, serveur) : elle est reliée aux deux
+  // champs mot de passe, les seuls que les règles locales mettent en cause.
+  const errorProps = error
+    ? ({ 'aria-invalid': true, 'aria-describedby': 'invite-error' } as const)
+    : {};
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label htmlFor="invite-email" className="block text-sm font-medium text-foreground">
-          Email
-        </label>
-        <input
-          id="invite-email"
-          type="email"
-          value={email}
-          disabled
-          className="mt-1.5 w-full rounded-lg border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
-        />
-      </div>
+      <FormField id="invite-email" label="Email">
+        {(control) => <Input {...control} type="email" value={email} disabled />}
+      </FormField>
 
-      <div>
-        <label htmlFor="invite-name" className="block text-sm font-medium text-foreground">
-          Nom complet
-        </label>
-        <input
-          id="invite-name"
-          type="text"
-          autoComplete="name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          placeholder="Jean Dupont"
-        />
-      </div>
+      <FormField id="invite-name" label="Nom complet" required>
+        {(control) => (
+          <Input
+            {...control}
+            type="text"
+            autoComplete="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Jean Dupont"
+          />
+        )}
+      </FormField>
 
-      <div>
-        <label htmlFor="invite-password" className="block text-sm font-medium text-foreground">
-          Mot de passe
-        </label>
-        <div className="relative mt-1.5">
-          <input
-            id="invite-password"
+      <FormField id="invite-password" label="Mot de passe" required>
+        {(control) => (
+          <div className="relative">
+            <Input
+              {...control}
+              {...errorProps}
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pr-10"
+              placeholder="8 caractères minimum"
+            />
+            {/* Un seul bouton pour les deux champs, comme reset-password-form.tsx. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Masquer les mots de passe' : 'Afficher les mots de passe'}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff /> : <Eye />}
+            </Button>
+          </div>
+        )}
+      </FormField>
+
+      <FormField id="invite-confirm-password" label="Confirmer le mot de passe" required>
+        {(control) => (
+          <Input
+            {...control}
+            {...errorProps}
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-input bg-background py-2 pl-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="8 caractères minimum"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
           />
-          {/* Un seul bouton pour les deux champs, comme reset-password-form.tsx. */}
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-label={
-              showPassword ? 'Masquer les mots de passe' : 'Afficher les mots de passe'
-            }
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-      </div>
+        )}
+      </FormField>
 
-      <div>
-        <label htmlFor="invite-confirm-password" className="block text-sm font-medium text-foreground">
-          Confirmer le mot de passe
-        </label>
-        <input
-          id="invite-confirm-password"
-          type={showPassword ? 'text' : 'password'}
-          autoComplete="new-password"
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          placeholder="••••••••"
-        />
-      </div>
+      {error && (
+        <p id="invite-error" role="alert" className="text-sm text-destructive-text">
+          {error}
+        </p>
+      )}
 
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      <Button type="submit" disabled={loading} size="lg" className="w-full">
+        {loading && <Spinner />}
         Créer mon compte
-      </button>
+      </Button>
     </form>
   );
 }

@@ -3,10 +3,13 @@
 import { useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
 import { signIn, signUp } from '@/lib/auth/auth-client';
 import { translateAuthError } from '@/lib/auth/auth-errors';
-import { GoogleIcon, MicrosoftIcon } from '@/components/auth/oauth-icons';
+import { SocialSignupButtons } from '@/components/auth/social-signup-buttons';
+import { FormField } from '@/components/shared/form-field';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import type { BillingPeriod, PlanId } from '@/lib/billing/plans';
 
 export function RegisterForm({
@@ -94,28 +97,20 @@ export function RegisterForm({
     router.refresh();
   }
 
+  // Une seule erreur pour tout le formulaire (règles locales, serveur, Google, Microsoft) : elle
+  // est reliée aux deux champs mot de passe, les seuls que les règles locales mettent en cause.
+  const errorProps = error
+    ? ({ 'aria-invalid': true, 'aria-describedby': 'register-error' } as const)
+    : {};
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={handleGoogleSignUp}
-          disabled={googleLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon className="h-4 w-4" />}
-          Google
-        </button>
-        <button
-          type="button"
-          onClick={handleMicrosoftSignUp}
-          disabled={microsoftLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-input py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {microsoftLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MicrosoftIcon className="h-4 w-4" />}
-          Microsoft
-        </button>
-      </div>
+      <SocialSignupButtons
+        googleLoading={googleLoading}
+        microsoftLoading={microsoftLoading}
+        onGoogle={handleGoogleSignUp}
+        onMicrosoft={handleMicrosoftSignUp}
+      />
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
@@ -124,96 +119,88 @@ export function RegisterForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-foreground">
-            Nom complet
-          </label>
-          <input
-            id="name"
-            type="text"
-            autoComplete="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Jean Dupont"
-          />
-        </div>
+        <FormField id="name" label="Nom complet" required>
+          {(control) => (
+            <Input
+              {...control}
+              type="text"
+              autoComplete="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jean Dupont"
+            />
+          )}
+        </FormField>
 
-        <div>
-          <label htmlFor="cabinetName" className="block text-sm font-medium text-foreground">
-            Nom du cabinet
-          </label>
-          <input
-            id="cabinetName"
-            type="text"
-            autoComplete="organization"
-            required
-            value={cabinetName}
-            onChange={(e) => setCabinetName(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Cabinet Dupont & Associés"
-          />
-        </div>
+        <FormField id="cabinetName" label="Nom du cabinet" required>
+          {(control) => (
+            <Input
+              {...control}
+              type="text"
+              autoComplete="organization"
+              required
+              value={cabinetName}
+              onChange={(e) => setCabinetName(e.target.value)}
+              placeholder="Cabinet Dupont & Associés"
+            />
+          )}
+        </FormField>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="vous@cabinet.be"
-          />
-        </div>
+        <FormField id="email" label="Email" required>
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="vous@cabinet.be"
+            />
+          )}
+        </FormField>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-foreground">
-            Mot de passe
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="8 caractères minimum"
-          />
-        </div>
+        <FormField id="password" label="Mot de passe" required>
+          {(control) => (
+            <Input
+              {...control}
+              {...errorProps}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="8 caractères minimum"
+            />
+          )}
+        </FormField>
 
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
-            Confirmer le mot de passe
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="••••••••"
-          />
-        </div>
+        <FormField id="confirmPassword" label="Confirmer le mot de passe" required>
+          {(control) => (
+            <Input
+              {...control}
+              {...errorProps}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          )}
+        </FormField>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p id="register-error" role="alert" className="text-sm text-destructive-text">
+            {error}
+          </p>
+        )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={loading} size="lg" className="w-full">
+          {loading && <Spinner />}
           Créer mon compte
-        </button>
+        </Button>
 
         <p className="text-center text-sm text-muted-foreground">
           Déjà un compte ?{' '}

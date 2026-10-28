@@ -116,6 +116,31 @@ describe('EmailTemplateEditor', () => {
     expect(screen.getByRole('button', { name: /Envoyer un test/ })).toBeDisabled();
   });
 
+  it('relie l erreur du message à son champ pour les lecteurs d ecran', () => {
+    renderEditor();
+
+    const body = screen.getByLabelText('Message');
+    fireEvent.change(body, { target: { value: 'Bonjour {{inconnue}}' } });
+
+    expect(body).toHaveAttribute('aria-invalid', 'true');
+    expect(body).toHaveAccessibleDescription(/Variable inconnue/);
+    expect(screen.getByLabelText('Sujet')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('décrit le message par son aide de mise en forme tant qu il est valide', () => {
+    renderEditor();
+
+    expect(screen.getByLabelText('Message')).toHaveAccessibleDescription(/Une ligne vide sépare/);
+  });
+
+  it('propose chaque variable comme un vrai bouton', () => {
+    renderEditor();
+
+    for (const variable of TEMPLATES.INVITATION_GESTIONNAIRE.variables) {
+      expect(screen.getByRole('button', { name: `{{${variable.name}}}` })).toBeInTheDocument();
+    }
+  });
+
   it('enregistre puis passe en personnalise', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
     vi.stubGlobal('fetch', fetchMock);

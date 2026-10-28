@@ -60,7 +60,7 @@ Toute nouvelle décision s'ajoute dans `DECISIONS.md` (numéro suivant, date) **
 | 2 | Fiche fiscale 281.10 générée dans l'application ? | `roles/05-collaborateur.md`, `modules/integrations.md` § 6 |
 | 3 | ~~Délai de grâce de 14 jours~~ : fixé à 7 jours (D57) | `DECISIONS.md` |
 | 4 | Barèmes : veille automatique (D51, chantier F de `ROADMAP.md`) en deux niveaux, détection puis extraction assistée, toujours validée par le SuperAdmin ; reste à confirmer sur les vrais PDF et la politique des robots | `roles/01-superadmin.md` § 7, `modules/paie.md` § 5 |
-| 5 | Accès à des fiches réelles anonymisées pour les cas de référence ? **En partie** : une fiche personnelle d'Adrien (2026, célibataire, temps partiel, employeur public) sert de base côté salarié et sera complétée ; il manque des cas à précompte non nul, avec charges de famille, ouvrier et temps plein (D98) | `modules/paie.md` § 8 |
+| 5 | Accès à des fiches réelles anonymisées pour les cas de référence ? **En partie** : une fiche réelle anonymisée sert de base côté salarié et sera complétée ; il manque des cas à précompte non nul, avec charges de famille, ouvrier et temps plein (D98) | `modules/paie.md` § 8 |
 | 6 | ~~Catégorie d'employeur pour les cotisations patronales~~ : cas général du secteur privé marchand en première version, la catégorie reste un paramètre du barème (D98) | `DECISIONS.md` |
 | 7 | Priorité, fournisseur et budget du module IA | `modules/intelligence.md` § 4 |
 | 8 | Taille maximale d'un document déposé | `modules/collaboration.md` § 3 |
