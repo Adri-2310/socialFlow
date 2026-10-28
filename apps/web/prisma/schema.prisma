@@ -76,6 +76,8 @@ model User {
   // Periodes ouvertes et prestations encodees par ce compte (D90, D92).
   periodesOuvertes     PeriodePaie[]
   prestationsModifiees Prestation[]
+  baremesCrees         BaremeVersion[]    @relation("BaremeCreePar")
+  baremesActives       BaremeVersion[]    @relation("BaremeActivePar")
 
   auditLogsAsActor  AuditLog[] @relation("AuditLogActor")
   auditLogsAsTarget AuditLog[] @relation("AuditLogTarget")
@@ -408,6 +410,36 @@ model Prestation {
   @@index([cabinetId])
   @@index([salarieId])
   @@map("prestation")
+}
+
+// Version datee des parametres legaux du moteur de paie (D99, D22, modules/paie.md § 5).
+// Table GLOBALE, sans cabinetId : un bareme n'est pas une donnee de paie (D8), il est le
+// meme pour tous les cabinets. Les parametres sont des entiers (centimes, dix-milliemes) et
+// valides par lib/payroll/bareme/schema.ts ; chaque bloc cite sa source. Statuts en chaines
+// MAJUSCULES (A_VERIFIER | ACTIF | RETIRE). Une seule version ACTIF par mois et par categorie
+// d'employeur (D98) : Prisma n'exprime pas cette contrainte, elle est verifiee par
+// lib/payroll/bareme/choisir.ts et le sera a l'activation (chantier F).
+model BaremeVersion {
+  id                 String    @id @default(cuid())
+  code               String    @unique // "BE-2026-01"
+  valideDepuis       DateTime  @db.Date
+  valideJusqua       DateTime? @db.Date // null = sans fin
+  statut             String
+  categorieEmployeur String // D98, ex. PRIVE_MARCHAND
+  parametres         Json
+  source             Json
+
+  // SetNull : le compte peut etre purge, le bareme reste.
+  creeParId   String?
+  creePar     User?     @relation("BaremeCreePar", fields: [creeParId], references: [id], onDelete: SetNull)
+  activeParId String?
+  activePar   User?     @relation("BaremeActivePar", fields: [activeParId], references: [id], onDelete: SetNull)
+  activeLe    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([statut, valideDepuis])
+  @@map("bareme_version")
 }
 
 // Modele d'email personnalise d'un cabinet (D30, D68). Absent = modele par
