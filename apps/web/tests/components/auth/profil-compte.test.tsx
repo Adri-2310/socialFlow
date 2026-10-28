@@ -48,14 +48,23 @@ describe('AccountSettings', () => {
   const annuler = (formulaire: HTMLElement) =>
     formulaire.querySelectorAll('button[type="button"]')[0] as HTMLButtonElement;
   const formulaireDe = (champ: HTMLElement) => champ.closest('form') as HTMLFormElement;
-  const modifier = (rang: number) => screen.getAllByRole('button', { name: 'Modifier' })[rang];
+  const modifier = (rang: number) => screen.getAllByRole('button', { name: /^Modifier/ })[rang];
 
   it('affiche le nom et l’adresse email, avec « Modifier » pour chacun', async () => {
     rendre();
 
     expect(screen.getByText('Alicia Martin')).toBeInTheDocument();
     expect(screen.getByText('alicia@test.com')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Modifier' })).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^Modifier/ })).toHaveLength(3));
+  });
+
+  it('distingue les trois boutons « Modifier » par leur cible', async () => {
+    rendre();
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^Modifier/ })).toHaveLength(3));
+    expect(screen.getByRole('button', { name: 'Modifier le nom' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Modifier l'adresse email" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modifier le mot de passe' })).toBeInTheDocument();
   });
 
   it('sans mot de passe (connexion Google), ne propose pas de le modifier', async () => {
@@ -63,7 +72,7 @@ describe('AccountSettings', () => {
     rendre();
 
     await waitFor(() => expect(listAccounts).toHaveBeenCalled());
-    expect(screen.getAllByRole('button', { name: 'Modifier' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^Modifier/ })).toHaveLength(2);
     expect(screen.queryByText('Mot de passe')).not.toBeInTheDocument();
   });
 
@@ -180,7 +189,7 @@ describe('AccountSettings', () => {
   describe('mot de passe', () => {
     const ouvrir = async () => {
       rendre();
-      await waitFor(() => expect(screen.getAllByRole('button', { name: 'Modifier' })).toHaveLength(3));
+      await waitFor(() => expect(screen.getAllByRole('button', { name: /^Modifier/ })).toHaveLength(3));
       await userEvent.click(modifier(2));
     };
 

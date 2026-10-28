@@ -14,16 +14,20 @@ import { Spinner } from '@/components/ui/spinner';
 type Field = 'name' | 'email' | 'password' | null;
 
 // Bouton « Modifier » commun aux trois lignes : texte à la couleur du cabinet, sur fond neutre.
-function EditButton({ onClick }: { onClick: () => void }) {
+// `cible` complète le nom accessible (« Modifier le nom ») : trois boutons « Modifier » identiques
+// ne se distinguent pas dans la liste des boutons d'un lecteur d'écran. Le texte visible reste
+// au début du nom (WCAG 2.5.3).
+function EditButton({ cible, onClick }: { cible: string; onClick: () => void }) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="sm"
       onClick={onClick}
+      aria-label={`Modifier ${cible}`}
       className="text-xs text-primary hover:bg-primary/10 hover:text-primary"
     >
-      <Pencil className="size-3.5" /> Modifier
+      <Pencil aria-hidden="true" className="size-3.5" /> Modifier
     </Button>
   );
 }
@@ -121,7 +125,7 @@ function NameRow({
           <p className="text-sm font-medium text-foreground">{name}</p>
         </div>
       </div>
-      <EditButton onClick={onEdit} />
+      <EditButton cible="le nom" onClick={onEdit} />
     </div>
   );
 }
@@ -260,7 +264,7 @@ function EmailRow({
             <p className="text-sm font-medium text-foreground">{email}</p>
           </div>
         </div>
-        <EditButton onClick={onEdit} />
+        <EditButton cible="l'adresse email" onClick={onEdit} />
       </div>
 
       {!emailVerified && (
@@ -416,7 +420,7 @@ function PasswordRow({
           <p className="text-sm font-medium text-foreground">••••••••</p>
         </div>
       </div>
-      <EditButton onClick={onEdit} />
+      <EditButton cible="le mot de passe" onClick={onEdit} />
     </div>
   );
 }
