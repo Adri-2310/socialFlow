@@ -6,6 +6,13 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const links = [
   { href: '/', label: 'Accueil' },
@@ -60,37 +67,42 @@ export function Navbar() {
             );
           })}
 
-          {/* Dropdown Entreprise */}
-          <div className="group relative">
-            <button
-              className={`flex items-center gap-1 text-sm font-medium transition ${
-                isCompanyActive ? 'text-primary' : 'text-muted-foreground hover:text-primary'
-              }`}
+          {/* Menu « Entreprise » : s'ouvre au survol, au clic et au clavier (flèches, Échap). */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              openOnHover
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={`h-auto gap-1 rounded-none p-0 text-sm font-medium hover:bg-transparent ${
+                    isCompanyActive
+                      ? 'text-primary hover:text-primary'
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                />
+              }
             >
               Entreprise
-              <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" />
-            </button>
-            <div className="invisible absolute left-1/2 top-full w-44 -translate-x-1/2 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
-              <div className="rounded-xl border border-border/60 bg-card/95 p-1.5 shadow-lg backdrop-blur-md">
-                {companyLinks.map((link) => {
-                  const active = pathname === link.href;
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
-                        active
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-muted hover:text-primary'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+              <ChevronDown aria-hidden="true" className="size-3.5 transition group-aria-expanded/button:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-44 rounded-xl p-1.5">
+              {companyLinks.map((link) => {
+                const active = pathname === link.href;
+                return (
+                  <DropdownMenuItem
+                    key={link.href}
+                    render={<Link href={link.href} aria-current={active ? 'page' : undefined} />}
+                    className={`px-3 py-2 text-sm font-medium ${
+                      active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary'
+                    }`}
+                  >
+                    {link.label}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Actions */}
@@ -98,29 +110,31 @@ export function Navbar() {
           <ThemeToggle />
           <Link
             href="/login"
-            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted sm:inline-block"
+            className={buttonVariants({ variant: 'ghost', className: 'hidden h-9 sm:inline-flex' })}
           >
             Se connecter
           </Link>
-          <Link
-            href="/register"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-md transition hover:opacity-90"
-          >
+          <Link href="/register" className={buttonVariants({ className: 'h-9 shadow-md hover:opacity-90' })}>
             Essai gratuit
           </Link>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="grid h-9 w-9 place-items-center rounded-lg text-foreground md:hidden"
-            aria-label="Ouvrir le menu"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="navbar-mobile-menu"
+            className="md:hidden"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+            {mobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+          </Button>
         </div>
       </nav>
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="border-t border-border px-4 py-3 md:hidden">
+        <div id="navbar-mobile-menu" className="border-t border-border px-4 py-3 md:hidden">
           {links.map((link) => {
             const active = pathname === link.href;
             return (
