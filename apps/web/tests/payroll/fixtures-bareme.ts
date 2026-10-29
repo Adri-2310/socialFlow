@@ -5,6 +5,7 @@ import type {
   ParametresCsss,
   ParametresHeuresSupplementaires,
   ParametresJoursFeries,
+  ParametresSalaireGaranti,
   ParametresOnss,
   ParametresPrecompte,
   ParametresReductionStructurelle,
@@ -163,4 +164,20 @@ export const JOURS_FERIES_2026: ParametresJoursFeries = {
   apresPaques: [1, 39, 50],
   maintienMaladieJours: 30,
   maintienAutreSuspensionJours: 14,
+};
+
+// Salaire garanti : loi du 3 juillet 1978 relative aux contrats de travail (art. 52, 54, 70, 71, 72).
+// ATTENTION : `plafondJournalierCentimes` est une valeur de TEST (100,00 € par jour) choisie pour
+// que les calculs à la main restent lisibles, PAS le plafond réel. Le plafond réel de l'INAMI
+// (incapacité primaire, 189,3583 € à partir du 01/09/2026) est dans
+// doc/reference/inami-plafond-salarial-incapacite.html : il sera inséré avec le barème réel (étape 9).
+export const SALAIRE_GARANTI_2026: ParametresSalaireGaranti = {
+  ouvrierJoursPleins: 7,
+  ouvrierJoursPartiels: 7,
+  accidentTravailJoursPleins: 7,
+  employeLongueDureeJours: 30,
+  employeCourteDureeJoursPleins: 7,
+  employeCourteDureeJoursPartiels: 7,
+  tauxPartiel: 600_000, // 60 %
+  plafondJournalierCentimes: 10_000, // VALEUR DE TEST
 };

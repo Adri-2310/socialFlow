@@ -1,13 +1,14 @@
 import { arrondirFraction } from './arrondi';
 import type { ParametresJoursFeries } from './bareme/schema';
+import { joursDuMois } from './calendrier';
 import { ErreurMoteur } from './erreurs';
 import { formaterDuree } from './format';
 import type { Centimes, DateIso, LigneCalcul } from './types';
 import { BORNES, exigerEntier } from './validation';
 
 // JOURS FÉRIÉS (modules/paie.md § 3, étape 8a, D107).
-// Sources : loi du 4 janvier 1974 relative aux jours fériés (art. 6 : un jour férié tombant un
-// dimanche ou un jour d'inactivité est remplacé ; art. 14 : le droit à la rémunération) et arrêté
+// Sources : loi du 4 janvier 1974 relative aux jours fériés (art. 6 à 9 : un jour férié tombant
+// un dimanche ou un jour d'inactivité est remplacé ; art. 14 : le droit à la rémunération) et arrêté
 // royal du 18 avril 1974 (art. 1 : les dix jours ; art. 2 et 3 : la rémunération ; art. 10 et 11 :
 // l'absence injustifiée ; art. 12 : le maintien du droit pendant une suspension du contrat).
 // La liste des jours et les durées de maintien viennent du bloc `joursFeries` du barème.
@@ -45,14 +46,6 @@ export function paques(annee: number): { mois: number; jour: number } {
   const mois = Math.floor((h + l - 7 * m + 114) / 31);
   const jour = ((h + l - 7 * m + 114) % 31) + 1;
   return { mois, jour };
-}
-
-const estBissextile = (annee: number) =>
-  (annee % 4 === 0 && annee % 100 !== 0) || annee % 400 === 0;
-
-function joursDuMois(annee: number, mois: number): number {
-  if (mois === 2) return estBissextile(annee) ? 29 : 28;
-  return [4, 6, 9, 11].includes(mois) ? 30 : 31;
 }
 
 // Ajoute des jours à une date, en avançant mois par mois (au plus quelques mois ici).
@@ -96,14 +89,15 @@ export function joursFeriesDuMois(
 }
 
 // Suspension du contrat en cours le jour férié (art. 12 de l'arrêté royal du 18 avril 1974) :
-//   - MALADIE_ACCIDENT_MATERNITE_GREVE : maladie, accident, accident du travail, maladie
-//     professionnelle, congé de grossesse ou d'accouchement, grève ou lock-out (art. 12, 3°) ;
+//   - MALADIE_ACCIDENT_MATERNITE_GREVE : maladie, accident, accident du travail ou maladie
+//     professionnelle entraînant une incapacité TOTALE, congé de grossesse ou d'accouchement, grève ou
+//     lock-out remplissant les conditions de l'art. 11 (art. 12, 3°) : c'est l'appelant qui en juge ;
 //   - AUTRE : les autres suspensions légales et la force majeure temporaire (art. 12, 4°) ;
 //   - VACANCES : vacances annuelles ou rappel sous les armes, droit conservé sans limite (art. 12, 1° et 2°).
 export type TypeSuspension = 'MALADIE_ACCIDENT_MATERNITE_GREVE' | 'AUTRE' | 'VACANCES';
 
 export interface JourFerieOuvrier {
-  // Le jour férié lui-même, ou le jour de remplacement fixé par l'entreprise (loi, art. 6).
+  // Le jour férié lui-même, ou le jour de remplacement fixé selon les art. 7 à 9 de la loi (art. 6 : principe).
   date: DateIso;
   // 'FERIE' : la date doit être l'un des jours fériés légaux ; 'REMPLACEMENT' : jour habituel
   // d'activité mis à la place d'un jour férié tombé un dimanche ou un jour d'inactivité.

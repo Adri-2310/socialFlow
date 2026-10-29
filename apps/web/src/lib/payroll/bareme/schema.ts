@@ -265,6 +265,30 @@ export const joursFeriesSchema = z
   });
 export type ParametresJoursFeries = z.infer<typeof joursFeriesSchema>;
 
+// BLOC `salaireGaranti` (étape 8b) : rémunération maintenue par l'employeur en cas d'incapacité de
+// travail. Source : loi du 3 juillet 1978 relative aux contrats de travail, version consolidée :
+//   - ouvrier (art. 52) : 7 jours de rémunération normale puis 7 jours à 60 % de la part qui ne
+//     dépasse pas le plafond de l'assurance maladie-invalidité ; accident du travail ou maladie
+//     professionnelle (art. 54) : 7 jours de rémunération normale ;
+//   - employé engagé pour 3 mois ou plus (art. 70) : rémunération maintenue 30 jours ;
+//   - employé engagé pour moins de 3 mois (art. 71 et 72) : comme l'ouvrier.
+// Les durées sont en jours CALENDRIER (week-ends compris) depuis le début de l'incapacité.
+export const salaireGarantiSchema = z.strictObject({
+  ouvrierJoursPleins: z.int().min(0).max(365), // art. 52 § 1 : 7
+  ouvrierJoursPartiels: z.int().min(0).max(365), // art. 52 § 1 : 7 jours suivants à 60 %
+  accidentTravailJoursPleins: z.int().min(0).max(365), // art. 54 § 1 et art. 72 : 7
+  employeLongueDureeJours: z.int().min(0).max(365), // art. 70 : 30
+  employeCourteDureeJoursPleins: z.int().min(0).max(365), // art. 71 : 7
+  employeCourteDureeJoursPartiels: z.int().min(0).max(365), // art. 71 : 7 jours suivants à 60 %
+  tauxPartiel: tauxSchema, // 60 % s'écrit 600 000
+  // Plafond JOURNALIER BRUT de la rémunération pris en compte par l'assurance maladie-invalidité
+  // pour les jours à 60 %. Source : INAMI, « Votre plafond salarial » (doc/reference/
+  // inami-plafond-salarial-incapacite.html), incapacité primaire : 189,3583 € à partir du
+  // 01/09/2026 ; il change à chaque indexation, donc une valeur par version de barème (D108).
+  plafondJournalierCentimes: montantCentimesSchema,
+});
+export type ParametresSalaireGaranti = z.infer<typeof salaireGarantiSchema>;
+
 // BLOC `anomalies` (étape 8d) : seuils des alertes de contrôle de la fiche. Contrairement aux autres
 // blocs, ce n'est PAS un paramètre légal mais un choix de SocialFlow (D105) : sa « source » est la
 // décision interne, pas un texte de loi.
@@ -292,6 +316,7 @@ export const parametresBaremeSchema = z.strictObject({
   reductionStructurelle: reductionStructurelleSchema.optional(),
   heuresSupplementaires: heuresSupplementairesSchema.optional(),
   joursFeries: joursFeriesSchema.optional(),
+  salaireGaranti: salaireGarantiSchema.optional(),
   anomalies: anomaliesSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;
