@@ -20,8 +20,8 @@ import { BORNES, exigerEntier } from './validation';
 //
 // Périmètre de la v1 (D102) : un travailleur HABITANT DU ROYAUME payé AU MOIS. Les non-résidents
 // sont refusés (`PRECOMPTE_NON_SUPPORTE`), les dirigeants d'entreprise et les paiements par
-// quinzaine ou par semaine ne sont pas calculables ici. Les réductions des n° 44 (assurance de
-// groupe) et 45 (heures supplémentaires) ne sont pas appliquées dans cette étape.
+// quinzaine ou par semaine ne sont pas calculables ici. La réduction du n° 44 (assurance de groupe)
+// n'est pas appliquée ; celle du n° 45 (heures supplémentaires) l'est depuis l'étape 8c (D106).
 
 // Situation fiscale du salarié (D95), mêmes critères que le dossier. Le moteur ne lit pas la base
 // de données : l'appelant convertit la ligne du dossier en cet objet.
@@ -57,6 +57,9 @@ export interface EntreePrecompte {
   bonusVoletBCentimes: Centimes; // idem, volet B
   situation: SituationFiscalePaie;
   habitantRoyaume: boolean; // n° 36 : seuls les habitants du Royaume sont calculés en v1
+  // n° 45 et 111.2 : réduction pour heures supplémentaires avec sursalaire, calculée par
+  // heures-supplementaires.ts. Facultative : 0 si le mois n'en comporte pas.
+  reductionHeuresSupplementairesCentimes?: Centimes;
 }
 
 // Le détail de chaque sous-étape, pour l'écran « explication du calcul » et les contrôles.
@@ -69,6 +72,7 @@ export interface DetailPrecompte {
   reductionsFamille: Centimes; // d
   precompteAvantBonus: Centimes; // e : (impôt de base - réductions) / 12
   reductionBonusEmploi: Centimes; // f
+  reductionHeuresSupplementaires: Centimes; // g : n° 45, déduite comme le bonus
 }
 
 export interface ResultatPrecompte {
@@ -339,12 +343,20 @@ export function calculerPrecompte(
   // e) Mensualisation (n° 42) : un douzième, arrondi au centime.
   const precompteAvantBonus = arrondirFraction(impotApresReductions, MOIS_PAR_AN);
 
+  const reductionHeuresSup = exigerEntier(
+    'La réduction pour heures supplémentaires',
+    entree.reductionHeuresSupplementairesCentimes ?? 0,
+    0,
+    BORNES.montantMax,
+  );
+
   // f) Réduction liée au bonus à l'emploi (n° 46) : une part de chaque volet réellement accordé,
   //    arrondie séparément puis additionnée (D102). Le précompte ne devient jamais négatif.
   const reductionBonus =
     appliquerTaux(bonusA, bloc.bonusEmploiFiscal.tauxVoletA) +
     appliquerTaux(bonusB, bloc.bonusEmploiFiscal.tauxVoletB);
-  const precompte = Math.max(0, precompteAvantBonus - reductionBonus);
+  // g) Réduction pour heures supplémentaires (n° 111.2 et 45) : retranchée de la même façon.
+  const precompte = Math.max(0, precompteAvantBonus - reductionBonus - reductionHeuresSup);
 
   const detail: DetailPrecompte = {
     baseMensuelle,
@@ -355,6 +367,7 @@ export function calculerPrecompte(
     reductionsFamille,
     precompteAvantBonus,
     reductionBonusEmploi: reductionBonus,
+    reductionHeuresSupplementaires: reductionHeuresSup,
   };
   // Rien à retenir : pas de ligne (et pas de « -0 »).
   if (precompte === 0) return { precompte, detail, lignes: [] };

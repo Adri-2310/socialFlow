@@ -120,6 +120,35 @@ describe('calculerReductionEnfants (n° 38 et 8)', () => {
   });
 });
 
+describe('calculerPrecompte : réduction pour heures supplémentaires (n° 45)', () => {
+  it('se retranche du précompte, comme le bonus', () => {
+    // Précompte du cas 2 800,00 € : 423,29 - 61,82 = 361,47 ; moins 57,75 de réduction = 303,72
+    const r = calculerPrecompte(
+      { ...entree2800, reductionHeuresSupplementairesCentimes: 5_775 },
+      BLOC,
+    );
+    expect(r.precompte).toBe(30_372);
+    expect(r.detail.reductionHeuresSupplementaires).toBe(5_775);
+  });
+
+  it('ne rend jamais le précompte négatif', () => {
+    const r = calculerPrecompte(
+      { ...entree2800, reductionHeuresSupplementairesCentimes: 100_000 },
+      BLOC,
+    );
+    expect(r.precompte).toBe(0);
+    expect(r.lignes).toEqual([]);
+  });
+
+  it('refuse un montant négatif ou décimal', () => {
+    for (const v of [-1, 10.5]) {
+      expect(() =>
+        calculerPrecompte({ ...entree2800, reductionHeuresSupplementairesCentimes: v }, BLOC),
+      ).toThrow(ErreurMoteur);
+    }
+  });
+});
+
 describe('calculerPrecompte : cas complets', () => {
   it('isolé, 2 800,00 € : exemple du plan', () => {
     // a) retenue 365,96 - 164,75 = 201,21 ; base 2 598,79       b) x 12 = 31 185,48 ; frais 6 070,00 ; net 25 115,48
@@ -136,6 +165,7 @@ describe('calculerPrecompte : cas complets', () => {
       reductionsFamille: 0,
       precompteAvantBonus: 42_329,
       reductionBonusEmploi: 6_182,
+      reductionHeuresSupplementaires: 0,
     });
     expect(r.precompte).toBe(36_147);
     expect(r.lignes).toEqual([

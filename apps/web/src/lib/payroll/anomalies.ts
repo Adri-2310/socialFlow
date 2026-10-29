@@ -26,6 +26,9 @@ export interface EntreeAnomalies {
   prestationsRealisees: number;
   // Net de la fiche du mois précédent ; absent (null) pour une première fiche.
   netMoisPrecedentCentimes: Centimes | null;
+  // Cumul annuel d'heures volontaires (ce mois compris, en minutes) et plafond du barème, pour
+  // signaler qu'on approche de la limite. Absent (null) si la fiche n'a pas d'heures supplémentaires.
+  heuresVolontaires?: { cumulMinutes: number; plafondMinutes: number } | null;
 }
 
 // Détecte les anomalies d'une fiche calculée.
@@ -85,6 +88,21 @@ export function detecterAnomalies(entree: EntreeAnomalies, bloc: ParametresAnoma
         code: 'ECART_NET_MOIS_PRECEDENT',
         gravite: 'AVERTISSEMENT',
         message: "Le net s'écarte fortement de celui du mois précédent.",
+      });
+    }
+  }
+
+  // Heures volontaires : au-delà du seuil (90 %) du plafond annuel, la prochaine fiche pourrait être
+  // refusée par le moteur. Comparaison en entiers : cumul x 1 000 000 > seuil x plafond.
+  const heures = entree.heuresVolontaires;
+  if (heures) {
+    exigerEntier("Le cumul d'heures volontaires", heures.cumulMinutes, 0, 366 * 24 * 60);
+    exigerEntier("Le plafond d'heures volontaires", heures.plafondMinutes, 1, 366 * 24 * 60);
+    if (heures.cumulMinutes * DIVISEUR_TAUX > bloc.proximitePlafondHeures * heures.plafondMinutes) {
+      anomalies.push({
+        code: 'HEURES_SUP_PLAFOND_PROCHE',
+        gravite: 'AVERTISSEMENT',
+        message: "Le plafond annuel d'heures supplémentaires volontaires est presque atteint.",
       });
     }
   }

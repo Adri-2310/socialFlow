@@ -218,12 +218,37 @@ export const reductionStructurelleSchema = z
   );
 export type ParametresReductionStructurelle = z.infer<typeof reductionStructurelleSchema>;
 
+// BLOC `heuresSupplementaires` (étape 8c) : heures supplémentaires volontaires et réduction de
+// précompte. Sources : loi du 16 mars 1971 sur le travail, art. 25bis modifié (360 heures, sursalaire
+// non dû sur 240 d'entre elles, DOC 56 1333/007) ; SPF Emploi, durée du travail (sursalaire de 50 %
+// la semaine, 100 % le dimanche et les jours fériés) ; Instructions ONSS 2026/3, pp. 115-116
+// (exonérations) ; Annexe III n° 45 (réduction de précompte, 57,75 %, 130 premières heures).
+// Les plafonds sont en MINUTES (D96) pour rester entiers : 360 heures = 21 600 minutes.
+export const heuresSupplementairesSchema = z
+  .strictObject({
+    sursalaireSemaine: tauxSchema, // 50 % s'écrit 500 000 (lundi au samedi)
+    sursalaireDimancheFerie: tauxSchema, // 100 % s'écrit 1 000 000
+    // Heures volontaires par année civile : 360 h au total, dont 240 h sans sursalaire.
+    plafondVolontairesMinutes: z.int().min(0),
+    plafondSansSursalaireMinutes: z.int().min(0),
+    // Annexe III n° 45.2 : la réduction ne porte que sur les 130 premières heures par an.
+    plafondReductionMinutes: z.int().min(0),
+    // Annexe III n° 45.4 : 57,75 % de la base du sursalaire (sursalaire légal de 50 ou 100 %).
+    tauxReduction: tauxSchema,
+  })
+  .refine((h) => h.plafondSansSursalaireMinutes <= h.plafondVolontairesMinutes, {
+    message: 'Le plafond sans sursalaire dépasse le plafond des heures volontaires.',
+  });
+export type ParametresHeuresSupplementaires = z.infer<typeof heuresSupplementairesSchema>;
+
 // BLOC `anomalies` (étape 8d) : seuils des alertes de contrôle de la fiche. Contrairement aux autres
 // blocs, ce n'est PAS un paramètre légal mais un choix de SocialFlow (D105) : sa « source » est la
 // décision interne, pas un texte de loi.
 export const anomaliesSchema = z.strictObject({
   // Écart relatif du net avec le mois précédent au-delà duquel on alerte : 25 % s'écrit 250 000.
   ecartNetMoisPrecedent: tauxSchema,
+  // Part du plafond annuel d'heures volontaires au-delà de laquelle on alerte : 90 % s'écrit 900 000.
+  proximitePlafondHeures: tauxSchema,
 });
 export type ParametresAnomalies = z.infer<typeof anomaliesSchema>;
 
@@ -241,6 +266,7 @@ export const parametresBaremeSchema = z.strictObject({
   csss: csssSchema.optional(),
   cotisationsPatronales: cotisationsPatronalesSchema.optional(),
   reductionStructurelle: reductionStructurelleSchema.optional(),
+  heuresSupplementaires: heuresSupplementairesSchema.optional(),
   anomalies: anomaliesSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;

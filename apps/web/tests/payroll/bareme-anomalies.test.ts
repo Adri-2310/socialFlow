@@ -11,8 +11,12 @@ describe('bloc anomalies', () => {
   });
 
   it('refuse un seuil décimal, démesuré ou une clé inconnue', () => {
-    expect(anomaliesSchema.safeParse({ ecartNetMoisPrecedent: 250_000.5 }).success).toBe(false);
-    expect(anomaliesSchema.safeParse({ ecartNetMoisPrecedent: 99_000_000 }).success).toBe(false);
+    expect(
+      anomaliesSchema.safeParse({ ...ANOMALIES_2026, ecartNetMoisPrecedent: 250_000.5 }).success,
+    ).toBe(false);
+    expect(
+      anomaliesSchema.safeParse({ ...ANOMALIES_2026, ecartNetMoisPrecedent: 99_000_000 }).success,
+    ).toBe(false);
     expect(anomaliesSchema.safeParse({ ...ANOMALIES_2026, ecartBrut: 1 }).success).toBe(false);
   });
 

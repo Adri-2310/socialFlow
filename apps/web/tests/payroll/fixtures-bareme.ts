@@ -3,6 +3,7 @@ import type {
   ParametresBonusEmploi,
   ParametresCotisationsPatronales,
   ParametresCsss,
+  ParametresHeuresSupplementaires,
   ParametresOnss,
   ParametresPrecompte,
   ParametresReductionStructurelle,
@@ -131,4 +132,16 @@ export const REDUCTION_STRUCTURELLE_2026_3: ParametresReductionStructurelle = {
 // Seuil d'alerte des anomalies : choix de SocialFlow (D105), pas un paramètre légal.
 export const ANOMALIES_2026: ParametresAnomalies = {
   ecartNetMoisPrecedent: 250_000, // 25 %
+  proximitePlafondHeures: 900_000, // 90 %
+};
+
+// Heures supplémentaires : loi du 16 mars 1971 art. 25bis (DOC 56 1333/007), SPF Emploi (sursalaires),
+// Annexe III n° 45 (57,75 %, 130 heures). Plafonds en minutes.
+export const HEURES_SUPPLEMENTAIRES_2026: ParametresHeuresSupplementaires = {
+  sursalaireSemaine: 500_000, // 50 %
+  sursalaireDimancheFerie: 1_000_000, // 100 %
+  plafondVolontairesMinutes: 21_600, // 360 h
+  plafondSansSursalaireMinutes: 14_400, // 240 h
+  plafondReductionMinutes: 7_800, // 130 h
+  tauxReduction: 577_500, // 57,75 %
 };

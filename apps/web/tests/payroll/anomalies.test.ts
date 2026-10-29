@@ -93,11 +93,39 @@ describe('detecterAnomalies : écart avec le mois précédent (seuil 25 %)', () 
 
   it('le seuil vient du barème', () => {
     // seuil 10 % = 100 000 : 2 000,00 -> 2 200,01 alerte, 2 200,00 non
-    const dixPourCent = { ecartNetMoisPrecedent: 100_000 };
+    const dixPourCent = { ...BLOC, ecartNetMoisPrecedent: 100_000 };
     expect(
       detecterAnomalies(entree({ netCentimes: 220_001 }), dixPourCent).map((a) => a.code),
     ).toEqual(['ECART_NET_MOIS_PRECEDENT']);
     expect(detecterAnomalies(entree({ netCentimes: 220_000 }), dixPourCent)).toEqual([]);
+  });
+});
+
+describe('detecterAnomalies : proximité du plafond d’heures volontaires (seuil 90 %)', () => {
+  // Plafond 360 h = 21 600 minutes ; 90 % = 19 440 minutes.
+  const heures = (cumulMinutes: number) => ({ cumulMinutes, plafondMinutes: 21_600 });
+
+  it('pas d’alerte à 90,00 % pile', () => {
+    expect(codes(entree({ heuresVolontaires: heures(19_440) }))).toEqual([]);
+  });
+
+  it('alerte dès une minute au-dessus', () => {
+    expect(codes(entree({ heuresVolontaires: heures(19_441) }))).toEqual([
+      'HEURES_SUP_PLAFOND_PROCHE',
+    ]);
+  });
+
+  it('pas d’alerte sans heures supplémentaires', () => {
+    expect(codes(entree({ heuresVolontaires: null }))).toEqual([]);
+  });
+
+  it('refuse un plafond nul', () => {
+    expect(() =>
+      detecterAnomalies(
+        entree({ heuresVolontaires: { cumulMinutes: 0, plafondMinutes: 0 } }),
+        BLOC,
+      ),
+    ).toThrow(ErreurMoteur);
   });
 });
 

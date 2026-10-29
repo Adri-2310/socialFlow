@@ -37,6 +37,12 @@ describe('calculerNet', () => {
     expect(calculerNet({ ...base, csssCentimes: -3_408 })).toBe(268_458);
   });
 
+  it('ajoute les heures volontaires sans sursalaire, hors brut', () => {
+    // 2 614,26 + 200,00 (10 h à 20,00 €, exonérées d'ONSS et de précompte) = 2 814,26
+    expect(calculerNet({ ...base, netExonereCentimes: 20_000 })).toBe(281_426);
+    expect(() => calculerNet({ ...base, netExonereCentimes: -1 })).toThrow(ErreurMoteur);
+  });
+
   it('accepte un net négatif : l’anomalie est signalée plus tard (étape 8)', () => {
     // 100,00 - 13,07 - 0,00 - 200,00 = -113,07
     expect(
