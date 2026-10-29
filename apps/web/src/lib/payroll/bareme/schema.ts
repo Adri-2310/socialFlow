@@ -218,6 +218,15 @@ export const reductionStructurelleSchema = z
   );
 export type ParametresReductionStructurelle = z.infer<typeof reductionStructurelleSchema>;
 
+// BLOC `anomalies` (étape 8d) : seuils des alertes de contrôle de la fiche. Contrairement aux autres
+// blocs, ce n'est PAS un paramètre légal mais un choix de SocialFlow (D105) : sa « source » est la
+// décision interne, pas un texte de loi.
+export const anomaliesSchema = z.strictObject({
+  // Écart relatif du net avec le mois précédent au-delà duquel on alerte : 25 % s'écrit 250 000.
+  ecartNetMoisPrecedent: tauxSchema,
+});
+export type ParametresAnomalies = z.infer<typeof anomaliesSchema>;
+
 // `strictObject` refuse toute clé inconnue : une faute de frappe dans un nom de paramètre
 // (« onsss ») est une erreur, pas un paramètre ignoré en silence.
 // Les blocs légaux sont FACULTATIFS dans la forme (un barème de l'étape 2 n'en a aucun) mais
@@ -232,6 +241,7 @@ export const parametresBaremeSchema = z.strictObject({
   csss: csssSchema.optional(),
   cotisationsPatronales: cotisationsPatronalesSchema.optional(),
   reductionStructurelle: reductionStructurelleSchema.optional(),
+  anomalies: anomaliesSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;
 

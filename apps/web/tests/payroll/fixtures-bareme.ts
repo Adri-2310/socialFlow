@@ -1,4 +1,5 @@
 import type {
+  ParametresAnomalies,
   ParametresBonusEmploi,
   ParametresCotisationsPatronales,
   ParametresCsss,
@@ -125,4 +126,9 @@ export const REDUCTION_STRUCTURELLE_2026_3: ParametresReductionStructurelle = {
   finProgression: 800_000, // 0,80
   valeurMinimale: 1_180_000, // 1,18
   pente: 280_000, // 0,28
+};
+
+// Seuil d'alerte des anomalies : choix de SocialFlow (D105), pas un paramètre légal.
+export const ANOMALIES_2026: ParametresAnomalies = {
+  ecartNetMoisPrecedent: 250_000, // 25 %
 };
