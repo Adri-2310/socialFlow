@@ -167,6 +167,57 @@ export const csssSchema = z.strictObject({
 });
 export type ParametresCsss = z.infer<typeof csssSchema>;
 
+// BLOC `cotisationsPatronales` (étape 7) : les cotisations de l'employeur sur la rémunération, pour
+// le secteur privé marchand (catégorie 1 de la réduction structurelle, D98). Source : Instructions
+// administratives ONSS 2026/3, pages 174 à 177 (taux de base, modération salariale, vacances
+// annuelles, cotisation de 1,60 %), cotisations spéciales « Fonds amiante » et « accidents du travail ».
+export const cotisationsPatronalesSchema = z.strictObject({
+  // Cotisation de base : 19,88 % (catégorie 1 depuis le 1er janvier 2018).
+  tauxBase: tauxSchema,
+  // Les ouvriers sont pris à 108 % de leur rémunération (même règle que la cotisation personnelle).
+  coefficientOuvrier: tauxSchema,
+  // Modération salariale : ce taux (4,27 %) s'applique deux fois, à la rémunération et à la
+  // cotisation de base elle-même (p. 176 : « 5,67 % de la rémunération, augmentée de 5,67 % des
+  // cotisations patronales dues », ramené à 4,27 % pour la catégorie 1).
+  moderation: tauxSchema,
+  // Vacances annuelles des ouvriers (p. 177) : 5,57 % perçus chaque trimestre, plus 10,27 % réclamés
+  // une fois par an par avis de débit. Hors modération et hors plafond de la réduction.
+  vacancesOuvrier: z.strictObject({ trimestrielle: tauxSchema, avisDebit: tauxSchema }),
+  fondsAmiante: tauxSchema, // 0,01 % aux trimestres 1 à 3 de 2026 ; 0 au 4e trimestre
+  accidentsTravailSpecial: tauxSchema, // cotisation spéciale de 0,02 %
+  // Employeurs de 10 travailleurs ou plus (p. 177) : 1,60 %, avec modération salariale.
+  dixTravailleurs: tauxSchema,
+});
+export type ParametresCotisationsPatronales = z.infer<typeof cotisationsPatronalesSchema>;
+
+// BLOC `reductionStructurelle` (étape 7) : réduction des cotisations patronales pour les bas
+// salaires, catégorie 1 (générale). Source : Instructions administratives ONSS 2026/3, pages 374 à
+// 383 (« La réduction structurelle », valeurs applicables à partir du 3e trimestre 2026).
+// R = alpha x (S0 - S) + gamma x (S2 - S), chaque terme ramené à 0 s'il est négatif, S étant le
+// salaire trimestriel de référence. La réduction vaut R x µ x beta (µ = part des prestations).
+export const reductionStructurelleSchema = z
+  .strictObject({
+    plafondBasSalaires: montantCentimesSchema, // S0 : 11 687,74 € par trimestre
+    coefficientBasSalaires: tauxSchema, // alpha : 0,1400
+    plafondTresBasSalaires: montantCentimesSchema, // S2 : 9 738,14 € par trimestre
+    coefficientTresBasSalaires: tauxSchema, // gamma : 0,1600
+    // Le facteur beta dépend de µ, la part des prestations (µ = 0,86 s'écrit 860 000) :
+    //   µ < debutProgression : beta = valeurMinimale ;
+    //   debutProgression <= µ < finProgression : beta = valeurMinimale + (µ - debut) x pente ;
+    //   µ >= finProgression : beta = 1/µ, donc la réduction est complète.
+    // Sous `plancherPrestations`, beta vaut 0, sauf pour un contrat au moins à mi-temps.
+    plancherPrestations: tauxSchema, // 0,275
+    debutProgression: tauxSchema, // 0,55
+    finProgression: tauxSchema, // 0,80
+    valeurMinimale: tauxSchema, // 1,18
+    pente: tauxSchema, // 0,28
+  })
+  .refine(
+    (r) => r.plancherPrestations <= r.debutProgression && r.debutProgression < r.finProgression,
+    { message: 'Les seuils de prestations doivent être croissants.' },
+  );
+export type ParametresReductionStructurelle = z.infer<typeof reductionStructurelleSchema>;
+
 // `strictObject` refuse toute clé inconnue : une faute de frappe dans un nom de paramètre
 // (« onsss ») est une erreur, pas un paramètre ignoré en silence.
 // Les blocs légaux sont FACULTATIFS dans la forme (un barème de l'étape 2 n'en a aucun) mais
@@ -179,6 +230,8 @@ export const parametresBaremeSchema = z.strictObject({
   bonusEmploi: bonusEmploiSchema.optional(),
   precompte: precompteSchema.optional(),
   csss: csssSchema.optional(),
+  cotisationsPatronales: cotisationsPatronalesSchema.optional(),
+  reductionStructurelle: reductionStructurelleSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;
 

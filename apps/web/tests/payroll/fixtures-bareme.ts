@@ -1,8 +1,10 @@
 import type {
   ParametresBonusEmploi,
+  ParametresCotisationsPatronales,
   ParametresCsss,
   ParametresOnss,
   ParametresPrecompte,
+  ParametresReductionStructurelle,
 } from '@/lib/payroll/bareme/schema';
 
 // Paramètres de TEST, recopiés à la main du document officiel (pas calculés par le moteur) :
@@ -97,4 +99,30 @@ export const CSSS_2026_3: ParametresCsss = {
     { depuis: 583_614, fixe: 0, excedentDe: 583_614, taux: 59_000 }, // 5,90 %
     { depuis: 657_055, fixe: 4_332, excedentDe: 657_054, taux: 11_000, plafond: 18_282 },
   ],
+};
+
+// Cotisations patronales : Instructions administratives ONSS 2026/3, pages 174 à 177 (taux de
+// base 19,88 %, modération 4,27 %, vacances ouvriers 5,57 % + 10,27 %, cotisation de 1,60 %) et
+// cotisations spéciales Fonds amiante (0,01 %) et accidents du travail (0,02 %).
+export const COTISATIONS_PATRONALES_2026_3: ParametresCotisationsPatronales = {
+  tauxBase: 198_800, // 19,88 %
+  coefficientOuvrier: 1_080_000, // 108 %
+  moderation: 42_700, // 4,27 %
+  vacancesOuvrier: { trimestrielle: 55_700, avisDebit: 102_700 }, // 5,57 % et 10,27 %
+  fondsAmiante: 100, // 0,01 %
+  accidentsTravailSpecial: 200, // 0,02 %
+  dixTravailleurs: 16_000, // 1,60 %
+};
+
+// Réduction structurelle, catégorie 1, à partir du 3e trimestre 2026 : pages 374 à 383.
+export const REDUCTION_STRUCTURELLE_2026_3: ParametresReductionStructurelle = {
+  plafondBasSalaires: 1_168_774, // S0 : 11 687,74 €
+  coefficientBasSalaires: 140_000, // 0,1400
+  plafondTresBasSalaires: 973_814, // S2 : 9 738,14 €
+  coefficientTresBasSalaires: 160_000, // 0,1600
+  plancherPrestations: 275_000, // 0,275
+  debutProgression: 550_000, // 0,55
+  finProgression: 800_000, // 0,80
+  valeurMinimale: 1_180_000, // 1,18
+  pente: 280_000, // 0,28
 };

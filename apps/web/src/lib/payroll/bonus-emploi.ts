@@ -34,6 +34,21 @@ export interface Prestations {
   pleinTemps: number;
 }
 
+// Vérifie les prestations (unité connue, nombres entiers dans les bornes du mois) ; partagé avec la
+// réduction structurelle, qui lit les mêmes prestations.
+export function exigerPrestations(prestations: Prestations): void {
+  const { unite, realisees, pleinTemps } = prestations;
+  if (unite !== 'JOURS' && unite !== 'MINUTES') {
+    throw new ErreurMoteur(
+      'ENTREE_INVALIDE',
+      "L'unité des prestations doit être JOURS ou MINUTES.",
+    );
+  }
+  const maxUnites = unite === 'JOURS' ? BORNES.joursDansUnMoisMax : BORNES.minutesDansUnMoisMax;
+  exigerEntier('Les prestations réalisées', realisees, 0, maxUnites);
+  exigerEntier("Les prestations d'un temps plein", pleinTemps, 1, maxUnites);
+}
+
 export interface EntreeBonusEmploi {
   categorie: CategorieSalarie;
   // W : brut du mois à 100 % (jamais majoré de 8 %, même pour un ouvrier, p. 450).
@@ -133,16 +148,8 @@ export function calculerBonusEmploi(
     bareme.plafondAnnuel,
   );
 
-  const { unite, realisees, pleinTemps } = entree.prestations;
-  if (unite !== 'JOURS' && unite !== 'MINUTES') {
-    throw new ErreurMoteur(
-      'ENTREE_INVALIDE',
-      "L'unité des prestations doit être JOURS ou MINUTES.",
-    );
-  }
-  const maxUnites = unite === 'JOURS' ? BORNES.joursDansUnMoisMax : BORNES.minutesDansUnMoisMax;
-  exigerEntier('Les prestations réalisées', realisees, 0, maxUnites);
-  exigerEntier("Les prestations d'un temps plein", pleinTemps, 1, maxUnites);
+  const { realisees, pleinTemps } = entree.prestations;
+  exigerPrestations(entree.prestations);
 
   // Aucune prestation : la loi ne permet pas de déterminer un salaire de référence (p. 453,
   // « codes MRT ») ; il n'y a donc pas de bonus : résultat 0, sans ligne.
