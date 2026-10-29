@@ -241,6 +241,30 @@ export const heuresSupplementairesSchema = z
   });
 export type ParametresHeuresSupplementaires = z.infer<typeof heuresSupplementairesSchema>;
 
+// BLOC `joursFeries` (étape 8a) : les dix jours fériés légaux et les durées de maintien du droit.
+// Sources : arrêté royal du 18 avril 1974 déterminant les modalités générales d'exécution de la loi
+// du 4 janvier 1974 relative aux jours fériés, art. 1 (la liste) et art. 12 (maintien du droit
+// pendant 30 jours après le début d'une maladie, d'un accident, d'un congé de maternité ou d'une
+// grève, 14 jours après une autre suspension).
+// Sept jours ont une date fixe ; les trois autres suivent Pâques : lundi de Pâques (Pâques + 1 jour),
+// Ascension (Pâques + 39 jours), lundi de Pentecôte (Pâques + 50 jours).
+export const joursFeriesSchema = z
+  .strictObject({
+    fixes: z
+      .array(z.strictObject({ mois: z.int().min(1).max(12), jour: z.int().min(1).max(31) }))
+      .min(1),
+    apresPaques: z.array(z.int().min(1).max(100)),
+    maintienMaladieJours: z.int().min(0).max(365), // art. 12, 3° : 30
+    maintienAutreSuspensionJours: z.int().min(0).max(365), // art. 12, 4° : 14
+  })
+  .refine((j) => new Set(j.fixes.map((f) => `${f.mois}-${f.jour}`)).size === j.fixes.length, {
+    message: 'Un jour férié fixe est listé deux fois.',
+  })
+  .refine((j) => new Set(j.apresPaques).size === j.apresPaques.length, {
+    message: 'Un décalage depuis Pâques est listé deux fois.',
+  });
+export type ParametresJoursFeries = z.infer<typeof joursFeriesSchema>;
+
 // BLOC `anomalies` (étape 8d) : seuils des alertes de contrôle de la fiche. Contrairement aux autres
 // blocs, ce n'est PAS un paramètre légal mais un choix de SocialFlow (D105) : sa « source » est la
 // décision interne, pas un texte de loi.
@@ -267,6 +291,7 @@ export const parametresBaremeSchema = z.strictObject({
   cotisationsPatronales: cotisationsPatronalesSchema.optional(),
   reductionStructurelle: reductionStructurelleSchema.optional(),
   heuresSupplementaires: heuresSupplementairesSchema.optional(),
+  joursFeries: joursFeriesSchema.optional(),
   anomalies: anomaliesSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;

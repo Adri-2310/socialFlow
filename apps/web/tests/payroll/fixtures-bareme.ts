@@ -4,6 +4,7 @@ import type {
   ParametresCotisationsPatronales,
   ParametresCsss,
   ParametresHeuresSupplementaires,
+  ParametresJoursFeries,
   ParametresOnss,
   ParametresPrecompte,
   ParametresReductionStructurelle,
@@ -144,4 +145,22 @@ export const HEURES_SUPPLEMENTAIRES_2026: ParametresHeuresSupplementaires = {
   plafondSansSursalaireMinutes: 14_400, // 240 h
   plafondReductionMinutes: 7_800, // 130 h
   tauxReduction: 577_500, // 57,75 %
+};
+
+// Jours fériés : arrêté royal du 18 avril 1974, art. 1 (la liste de dix jours) et art. 12 (maintien
+// du droit : 30 jours après une maladie, un accident, un congé de maternité ou une grève ; 14 jours
+// après une autre suspension). Lundi de Pâques = Pâques + 1, Ascension = + 39, lundi de Pentecôte = + 50.
+export const JOURS_FERIES_2026: ParametresJoursFeries = {
+  fixes: [
+    { mois: 1, jour: 1 }, // 1er janvier
+    { mois: 5, jour: 1 }, // fête du travail
+    { mois: 7, jour: 21 }, // fête nationale
+    { mois: 8, jour: 15 }, // Assomption
+    { mois: 11, jour: 1 }, // Toussaint
+    { mois: 11, jour: 11 }, // Armistice
+    { mois: 12, jour: 25 }, // Noël
+  ],
+  apresPaques: [1, 39, 50],
+  maintienMaladieJours: 30,
+  maintienAutreSuspensionJours: 14,
 };

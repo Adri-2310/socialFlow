@@ -146,6 +146,65 @@ describe('calculerBrutEmploye', () => {
   });
 });
 
+describe('calculerBrutEmploye : entrée ou sortie en cours de mois (8a, D107)', () => {
+  it('retranche les jours hors contrat : 2 400,00 x 20 / (2 x 20) = 1 200,00 €', () => {
+    // 10 jours hors contrat sur 20 jours de référence = 20 demi-jours.
+    const r = calculerBrutEmploye(employe({ horsContratDemiJours: 20, joursReferenceMois: 20 }));
+    expect(r.brut).toBe(120_000);
+    expect(r.lignes[1]).toMatchObject({
+      code: 'PRORATA_ENTREE_SORTIE',
+      base: 240_000,
+      montant: -120_000,
+    });
+    expect(r.lignes[1].libelle).toBe(
+      'Entrée ou sortie en cours de mois : 10 jours hors contrat sur 20',
+    );
+  });
+
+  it('se combine avec une absence : 2 400 - 1 200 - 120 = 1 080,00 €', () => {
+    const r = calculerBrutEmploye(
+      employe({ horsContratDemiJours: 20, absenceNonRemDemiJours: 2, joursReferenceMois: 20 }),
+    );
+    expect(r.brut).toBe(108_000);
+    expect(r.lignes.map((l) => l.code)).toEqual([
+      'SALAIRE_BASE',
+      'ABSENCE_NON_REMUNEREE',
+      'PRORATA_ENTREE_SORTIE',
+    ]);
+  });
+
+  it('arrondit, la moitié monte : 100 001 x 1 / 2 = 50 000,5 -> 50 001', () => {
+    const r = calculerBrutEmploye(
+      employe({ remunerationMensuelle: 100_001, horsContratDemiJours: 1, joursReferenceMois: 1 }),
+    );
+    expect(r.lignes[1].montant).toBe(-50_001);
+  });
+
+  it('sans jours hors contrat (ou 0), rien ne change', () => {
+    expect(calculerBrutEmploye(employe({ horsContratDemiJours: 0 })).lignes).toHaveLength(1);
+  });
+
+  it('refuse sans jours de référence, au-delà du mois, ou une valeur incohérente', () => {
+    expect(code(() => calculerBrutEmploye(employe({ horsContratDemiJours: 2 })))).toBe(
+      'JOURS_REFERENCE_MANQUANT',
+    );
+    // 30 demi-jours hors contrat + 12 d'absence = 42 > 2 x 20
+    expect(
+      code(() =>
+        calculerBrutEmploye(
+          employe({ horsContratDemiJours: 30, absenceNonRemDemiJours: 12, joursReferenceMois: 20 }),
+        ),
+      ),
+    ).toBe('ABSENCE_SUPERIEURE_AU_MOIS');
+    expect(code(() => calculerBrutEmploye(employe({ horsContratDemiJours: -1 })))).toBe(
+      'ENTREE_INVALIDE',
+    );
+    expect(code(() => calculerBrutEmploye(employe({ horsContratDemiJours: 1.5 })))).toBe(
+      'ENTREE_INVALIDE',
+    );
+  });
+});
+
 describe('calculerBrutOuvrier', () => {
   it('heures x taux : 15,00 €/h x 30 h 24 = 456,00 €', () => {
     const r = calculerBrutOuvrier(ouvrier());

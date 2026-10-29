@@ -29,6 +29,11 @@ export const BORNES = {
   joursDansUnMoisMax: JOURS_MOIS_MAX,
   // 31 x 24 x 60 = 44 640 minutes : on ne peut pas prester plus d'heures que le mois n'en contient.
   minutesDansUnMoisMax: JOURS_MOIS_MAX * MINUTES_PAR_JOUR,
+  // Un jour compte 24 x 60 = 1 440 minutes : on ne peut pas perdre plus d'heures en une journée.
+  minutesDansUnJourMax: MINUTES_PAR_JOUR,
+  // Jours écoulés depuis le début d'une suspension du contrat : au plus 100 ans de 366 jours.
+  // Une maladie de longue durée est possible ; au-delà, c'est une faute de saisie.
+  joursSuspensionMax: 100 * 366,
   // D96 : une durée hebdomadaire ne dépasse pas 60 heures (3 600 minutes).
   minutesSemaineMax: 60 * 60,
   // Nombre de personnes d'une même catégorie à charge (enfants, autres personnes) : même plafond

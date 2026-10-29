@@ -7,8 +7,9 @@ import { BORNES, exigerEntier } from './validation';
 // ÉTAPE 1 DU CALCUL : LE BRUT (modules/paie.md § 3, ligne 1).
 //
 // Étape 3 de la mission : seulement le brut « simple » (rémunération, absences non rémunérées,
-// prime). Jours fériés, congés, maladie, heures supplémentaires et entrée ou sortie en cours de
-// mois viennent à l'étape 8, avec leurs sources légales. Rien n'est inventé en attendant.
+// prime). Étape 8a : prorata d'entrée ou de sortie en cours de mois (employé) ; les jours fériés de
+// l'ouvrier sont dans `jours-feries.ts`. Congés, maladie et heures supplémentaires viennent aux
+// autres sous-étapes, avec leurs sources légales. Rien n'est inventé en attendant.
 
 // Résultat commun aux deux statuts : le montant du brut et le détail qui l'explique, ligne par
 // ligne, pour la fiche de paie.
@@ -46,6 +47,11 @@ export interface EntreeBrutEmploye extends Prime {
   // Nombre de jours sur lequel se répartit le mois pour valoriser une absence. C'est une règle de
   // la commission paritaire, pas du moteur : l'appelant la fournit, le moteur refuse de deviner.
   joursReferenceMois: number | null;
+  // Étape 8a (D107) : demi-journées du mois pendant lesquelles le contrat n'existait pas encore ou
+  // plus (entrée ou sortie en cours de mois). Valorisées exactement comme une absence non
+  // rémunérée, avec les mêmes jours de référence : aucune règle nouvelle, la répartition du mois
+  // reste celle de la commission paritaire. Facultatif, 0 par défaut.
+  horsContratDemiJours?: number;
 }
 
 // Employé (D39, D100) : brut = rémunération mensuelle fixe, moins les absences non rémunérées,
@@ -84,8 +90,15 @@ export function calculerBrutEmploye(entree: EntreeBrutEmploye): ResultatBrut {
   ];
   let brut = mensuel;
 
-  // 3. Absences non rémunérées : retranchées du salaire, valorisées au prorata des jours.
-  if (demiJours > 0) {
+  // 3. Absences non rémunérées et jours hors contrat (entrée ou sortie en cours de mois) :
+  // retranchés du salaire, valorisés au prorata des jours de référence.
+  const horsContrat = exigerEntier(
+    'Les jours hors contrat (entrée ou sortie en cours de mois)',
+    entree.horsContratDemiJours ?? 0,
+    0,
+    2 * BORNES.joursDansUnMoisMax,
+  );
+  if (demiJours > 0 || horsContrat > 0) {
     // Sans le nombre de jours de référence, on ne peut pas valoriser une journée : on refuse
     // plutôt que de supposer 20, 21,67 ou 26 jours sans source (règle 5 de la mission).
     if (entree.joursReferenceMois === null) {
@@ -101,22 +114,37 @@ export function calculerBrutEmploye(entree: EntreeBrutEmploye): ResultatBrut {
       BORNES.joursDansUnMoisMax,
     );
     // Absent plus de jours que le mois n'en compte : saisie incohérente, jamais un brut négatif.
-    if (demiJours > 2 * jours) {
+    if (demiJours + horsContrat > 2 * jours) {
       throw new ErreurMoteur(
         'ABSENCE_SUPERIEURE_AU_MOIS',
         'Les absences non rémunérées dépassent le nombre de jours de référence du mois.',
       );
     }
-    const absence = arrondirFraction(mensuel * demiJours, 2 * jours);
-    lignes.push({
-      code: 'ABSENCE_NON_REMUNEREE',
-      libelle: `Absence non rémunérée : ${formaterJours(demiJours)} sur ${jours}`,
-      base: mensuel,
-      taux: null,
-      // Négatif : la ligne vient en déduction du brut.
-      montant: -absence,
-    });
-    brut -= absence;
+    if (demiJours > 0) {
+      const absence = arrondirFraction(mensuel * demiJours, 2 * jours);
+      lignes.push({
+        code: 'ABSENCE_NON_REMUNEREE',
+        libelle: `Absence non rémunérée : ${formaterJours(demiJours)} sur ${jours}`,
+        base: mensuel,
+        taux: null,
+        // Négatif : la ligne vient en déduction du brut.
+        montant: -absence,
+      });
+      brut -= absence;
+    }
+    if (horsContrat > 0) {
+      // Exemple à la main : entrée le 16 d'un mois de 20 jours de référence, 10 jours hors contrat
+      // = 20 demi-jours : 2 400,00 x 20 / (2 x 20) = 1 200,00 € retranchés.
+      const prorata = arrondirFraction(mensuel * horsContrat, 2 * jours);
+      lignes.push({
+        code: 'PRORATA_ENTREE_SORTIE',
+        libelle: `Entrée ou sortie en cours de mois : ${formaterJours(horsContrat)} hors contrat sur ${jours}`,
+        base: mensuel,
+        taux: null,
+        montant: -prorata,
+      });
+      brut -= prorata;
+    }
   }
 
   // 4. Prime éventuelle, ajoutée en dernier.
