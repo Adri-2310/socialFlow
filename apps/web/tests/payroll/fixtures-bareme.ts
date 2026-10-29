@@ -1,5 +1,6 @@
 import type {
   ParametresBonusEmploi,
+  ParametresCsss,
   ParametresOnss,
   ParametresPrecompte,
 } from '@/lib/payroll/bareme/schema';
@@ -72,4 +73,28 @@ export const PRECOMPTE_2026: ParametresPrecompte = {
     conjointHandicape: 62_400,
   },
   bonusEmploiFiscal: { tauxVoletA: 331_400, tauxVoletB: 525_400 }, // 33,14 %, 52,54 %
+};
+
+// Cotisation spéciale pour la sécurité sociale : Instructions administratives ONSS 2026/3,
+// « La cotisation spéciale pour la sécurité sociale » (barèmes depuis le 01/04/2022).
+// Montants par TRIMESTRE. Les seuils « >= x » du document restent tels quels ; « > x » s'écrit
+// « >= x + 0,01 € » (6 570,54 € devient 657 055 centimes).
+export const CSSS_2026_3: ParametresCsss = {
+  coefficientOuvrier: 1_080_000, // 108 %
+  individuelle: [
+    { depuis: 583_614, fixe: 0, excedentDe: 583_614, taux: 42_200 }, // 5 836,14 : 4,22 %
+    { depuis: 657_055, fixe: 3_099, excedentDe: 657_054, taux: 11_000 }, // 30,99 + 1,10 %
+    { depuis: 1_121_101, fixe: 8_205, excedentDe: 1_121_100, taux: 33_800 }, // 82,05 + 3,38 %
+    { depuis: 1_230_001, fixe: 11_883, excedentDe: 1_230_000, taux: 11_000 }, // 118,83 + 1,10 %
+    { depuis: 1_811_647, fixe: 18_282, excedentDe: 0, taux: 0 }, // 182,82 fixe
+  ],
+  communeConjointRevenus: [
+    { depuis: 328_529, fixe: 1_545, excedentDe: 0, taux: 0 }, // 3 285,29 : 15,45
+    { depuis: 583_614, fixe: 0, excedentDe: 583_614, taux: 59_000, plancher: 1_545 }, // 5,90 %
+    { depuis: 657_055, fixe: 4_332, excedentDe: 657_054, taux: 11_000, plafond: 15_492 },
+  ],
+  communeConjointSansRevenus: [
+    { depuis: 583_614, fixe: 0, excedentDe: 583_614, taux: 59_000 }, // 5,90 %
+    { depuis: 657_055, fixe: 4_332, excedentDe: 657_054, taux: 11_000, plafond: 18_282 },
+  ],
 };

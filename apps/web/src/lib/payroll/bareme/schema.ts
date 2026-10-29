@@ -125,6 +125,48 @@ export const precompteSchema = z.strictObject({
 });
 export type ParametresPrecompte = z.infer<typeof precompteSchema>;
 
+// BLOC `csss` (étape 6) : cotisation spéciale pour la sécurité sociale, retenue au travailleur.
+// Source : Instructions administratives ONSS 2026/3, « Les cotisations spéciales > La cotisation
+// spéciale pour la sécurité sociale », `doc/reference/onss-csss-2026-3.html` (barèmes en vigueur
+// depuis le 1er avril 2022).
+//
+// Une tranche donne le montant dû POUR UN TRIMESTRE quand la rémunération trimestrielle Q est au
+// moins `depuis` : montant = `fixe` + `taux` x (Q - `excedentDe`), ramené entre `plancher` et
+// `plafond` quand ils existent. Exemple (isolé, 6 570,55 € et plus) : 30,99 € + 1,10 % de ce qui
+// dépasse 6 570,54 €. Les seuils du document (« > 6 570,54 € », « >= 3 285,29 € ») s'écrivent tous
+// « Q >= depuis » une fois comptés en centimes, d'où 6 570,55 €.
+const trancheCsssSchema = z
+  .strictObject({
+    depuis: montantCentimesSchema, // Q à partir duquel (inclus) la tranche s'applique
+    fixe: montantCentimesSchema,
+    excedentDe: montantCentimesSchema, // le taux porte sur Q - excedentDe
+    taux: tauxSchema,
+    plancher: montantCentimesSchema.optional(),
+    plafond: montantCentimesSchema.optional(),
+  })
+  .refine((t) => t.plancher === undefined || t.plafond === undefined || t.plancher <= t.plafond, {
+    message: 'Le plancher dépasse le plafond.',
+  });
+
+// Au moins une tranche, seuils strictement croissants. En dessous de la première tranche : 0.
+const baremeCsssSchema = z
+  .array(trancheCsssSchema)
+  .min(1)
+  .refine((t) => t.every((x, i) => i === 0 || x.depuis > t[i - 1].depuis), {
+    message: 'Les tranches doivent être strictement croissantes.',
+  });
+
+export const csssSchema = z.strictObject({
+  // Les ouvriers sont pris à 108 % de leur rémunération, comme pour la cotisation personnelle.
+  coefficientOuvrier: tauxSchema,
+  // Imposition individuelle (isolé).
+  individuelle: baremeCsssSchema,
+  // Imposition commune : le conjoint a ou n'a pas de revenus professionnels.
+  communeConjointRevenus: baremeCsssSchema,
+  communeConjointSansRevenus: baremeCsssSchema,
+});
+export type ParametresCsss = z.infer<typeof csssSchema>;
+
 // `strictObject` refuse toute clé inconnue : une faute de frappe dans un nom de paramètre
 // (« onsss ») est une erreur, pas un paramètre ignoré en silence.
 // Les blocs légaux sont FACULTATIFS dans la forme (un barème de l'étape 2 n'en a aucun) mais
@@ -136,6 +178,7 @@ export const parametresBaremeSchema = z.strictObject({
   onss: onssSchema.optional(),
   bonusEmploi: bonusEmploiSchema.optional(),
   precompte: precompteSchema.optional(),
+  csss: csssSchema.optional(),
 });
 export type ParametresBareme = z.infer<typeof parametresBaremeSchema>;
 
