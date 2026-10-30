@@ -17,6 +17,7 @@
 | Gestionnaire RH (1) | Dossiers salariés : chiffrement NISS/IBAN, dévoilement journalisé, historique daté des conditions de travail, sortie et archivage, import CSV, invitation au portail (D81 à D89) | ✅ (23/10, branche `feature/gestionnaire-rh`, fusionnée dans `dev`) |
 | Gestionnaire RH (2), première partie | Périodes de paie, prestations (les écarts du mois) et tableau de bord du gestionnaire (D90 à D93) | ✅ (24/10, fusionné dans `dev`, migrations appliquées en production) |
 | Second audit avant le moteur de paie | Conservation légale de la paie à la purge d'un cabinet (D94), situation fiscale complète du précompte (D95), heures hebdomadaires en minutes (D96), garde 2FA des pages alignée sur celle des routes, chiffrement du NISS et de l'IBAN lié au dossier (D97) | ✅ (26/10, branche `feature/correctifs-audit`, à fusionner dans `dev`) |
+| Moteur de paie v1 (G2a) | Barèmes réels de 2026 en fichiers JSON, calcul complet de la fiche (brut, jours fériés, salaire garanti, heures supplémentaires, ONSS, bonus, précompte, CSSS, coût employeur), cas de référence rejouables, garde-fou d'activation (D99 à D119) | ✅ (30/10, branche `feature/moteur-paie`, sans écran) |
 
 ## 2. Chantiers
 
@@ -50,7 +51,7 @@ Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entr
 | 20/10/2026 | Correctifs d'audit terminés : autorisations centralisées, CI, code réorganisé |
 | 15/11/2026 | Dossiers salariés complets (Gestionnaire RH 1) : **atteint le 23/10** |
 | 26/10/2026 | Second audit corrigé : paie conservée à la purge d'un cabinet, situation fiscale complète, heures en minutes, chiffrement lié au dossier |
-| 22/11/2026 | **Moteur de paie v1** validé sur tous les cas de référence (G2a) |
+| 22/11/2026 | **Moteur de paie v1** validé sur tous les cas de référence (G2a) : **code terminé le 30/10** ; les cas de référence seront refaits à partir du 01/11 |
 | 13/12/2026 | Cycle des fiches côté gestionnaire : machine à états, PDF, envoi par lien et code (G2b) |
 | 03/01/2027 | Déclarations simulées DIMONA, DmfA et C4 (G2c) |
 | 31/01/2027 | **Premier cycle de paie de bout en bout** (démontrable) : le gestionnaire ouvre la période, l'entreprise encode et valide |

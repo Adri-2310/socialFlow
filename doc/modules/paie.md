@@ -65,15 +65,15 @@ Les valeurs chiffrées ci-dessous servent de **repères** : la source de vérit�
 
 | # | Étape | Règle | Source officielle |
 |---|---|---|---|
-| 1 | **Brut** | Employé : rémunération mensuelle × fraction d'occupation, moins les absences non rémunérées, plus le salaire garanti en cas de maladie, les heures supplémentaires et les primes. Ouvrier : heures × taux horaire, plus les mêmes éléments | Contrat + prestations |
+| 1 | **Brut** | Employé : rémunération mensuelle (celle du contrat, déjà proportionnelle à l'occupation : D100), moins les absences non rémunérées au prorata des jours, plus le salaire garanti, les jours fériés, les heures supplémentaires et les primes. Ouvrier : minutes prestées × taux horaire, plus les mêmes éléments (D100, D106 à D108) | Contrat + prestations |
 | 2 | **Base ONSS** | Employé : 100 % du brut. Ouvrier : **108 %** du brut (le pécule est payé par la caisse de vacances) | Instructions ONSS |
 | 3 | **ONSS personnelle** | **13,07 %** de la base ONSS | Instructions ONSS |
-| 4 | **Bonus à l'emploi** | Réduction des cotisations personnelles selon le salaire de référence (deux volets : bas et très bas salaires), proratisée au temps partiel ; jamais supérieure à l'ONSS personnelle | Instructions administratives ONSS, « Bonus à l'emploi » (trimestre en cours) |
+| 4 | **Bonus à l'emploi** | Réduction des cotisations personnelles selon le salaire de référence (deux volets : bas et très bas salaires), proratisée au temps partiel ; jamais supérieure à l'ONSS personnelle. Le salaire de référence est la base ONSS, heures supplémentaires ordinaires comprises ; les heures supplémentaires de l'horeca et les flexi-jobs en sont exclus (instructions ONSS, pp. 374 et 449) | Instructions administratives ONSS, « Bonus à l'emploi » (trimestre en cours) |
 | 5 | **Imposable** | Brut − ONSS personnelle + bonus à l'emploi | — |
 | 6 | **Précompte professionnel** | Formule-clé de l'**Annexe III de l'AR/CIR 92** : revenu annualisé, frais professionnels forfaitaires, barème progressif, quotité exemptée, réductions pour personnes à charge, puis remensualisation. Réduction de précompte liée au bonus à l'emploi fiscal | Annexe III 2026 (AR du 11/12/2025, MB du 29/12/2025) |
 | 7 | **Cotisation spéciale de sécurité sociale** | Montant mensuel par tranche, selon le revenu et la situation du ménage | Instructions ONSS |
 | 8 | **Net** | Imposable − précompte − cotisation spéciale ± retenues ou avantages nets | — |
-| 9 | **Coût employeur** | Brut + cotisations patronales (taux de base selon la catégorie d'employeur et la modération salariale) ± réductions structurelles | Instructions ONSS |
+| 9 | **Coût employeur** | Brut + cotisations patronales (taux de base selon la catégorie d'employeur et la modération salariale) − réduction structurelle ; s'y ajoutent les heures supplémentaires exonérées de retenue (D104, D106) | Instructions ONSS |
 
 Exemple publié pour vérifier l'ordre de grandeur du précompte 2026 : 2 800 € brut, marié, conjoint sans revenus ou avec revenus non précisés, sans enfant → précompte de 363,90 € (Securex). Ces exemples **ne remplacent pas** les cas de référence (§ 6).
 
@@ -83,9 +83,9 @@ Exemple publié pour vérifier l'ordre de grandeur du précompte 2026 : 2 800 �
 |---|---|
 | **Temps partiel** (D39) | Fraction d'occupation = heures du travailleur / heures de la personne de référence ; proratisation du salaire et du bonus à l'emploi |
 | **Entrée ou sortie en cours de mois** | Prorata selon les jours (employé) ou les heures réelles (ouvrier) ; fiche à l'unité (D38) |
-| **Maladie** | Salaire garanti à charge de l'employeur pendant la période légale, différente pour les employés et les ouvriers ; au-delà, la mutuelle prend le relais (hors fiche) |
-| **Jours fériés** | Rémunérés comme des jours prestés |
-| **Heures supplémentaires** | Sursalaire légal ; régime fiscal avantageux limité à **130 heures par an** en 2026 (hors construction et horeca) |
+| **Maladie** (D108, D109, D111) | Salaire garanti à charge de l'employeur, non soumis à l'ONSS. Ouvrier : 7 jours à 100 % puis 7 jours à 60 % de la part du salaire sous le plafond (art. 52) ; accident du travail : 7 jours (art. 54). Employé : 30 jours (art. 70) ; contrat de moins de 3 mois : art. 71 et 72. Indemnité complémentaire des CCT 12bis (ouvriers) et 13bis (employés de moins de 3 mois) pour les jours 8 à 30. Le plafond de l'INAMI est converti selon le régime de travail (D111). Une rechute reprend les jours déjà consommés. Au-delà, la mutuelle prend le relais (hors fiche) |
+| **Jours fériés** (D107) | Employé : rémunérés comme des jours prestés. Ouvrier : jour férié payé selon la loi du 4 janvier 1974, calculé par le moteur à partir du calendrier des jours fériés |
+| **Heures supplémentaires** (D106, D110) | Trois sortes (avec ou sans sursalaire, volontaires). Plafonds de 2026 : 360 heures volontaires, 240 heures sans sursalaire. Réduction de précompte n° 45 sur les 180 premières heures, à 57,75 % (loi du 15/07/2026, art. 47 à 49 ; AR du 24/07/2026). L'AR du 9/07/2026 exclut ces 240 heures de la rémunération pour l'ONSS. Les heures de relance de janvier à mars 2026 sont déduites des plafonds. Les paramètres viennent du bloc `heuresSupplementaires` du barème |
 | **Pécule de vacances employés** (D45) | Simple pécule = maintien du salaire pendant les vacances. Double pécule : fiche spéciale annuelle, avec retenue ONSS sur une partie et précompte à taux exceptionnel. Pécule de sortie à la fin du contrat |
 | **Pécule de vacances ouvriers** (D45) | Pas versé sur la fiche (caisse de vacances) ; simple mention |
 | **Fiche rectificative** (D13) | Recalcul complet avec le barème de la **période d'origine** et la **date de paiement d'origine** (D112), pas ceux du jour |
@@ -111,7 +111,7 @@ Flux de mise à jour :
 3. Le SuperAdmin compare, **lance les cas de référence** sur la nouvelle version, puis l'active. Un barème n'est jamais activé si un cas de référence échoue.
 4. Les fiches déjà envoyées gardent leur version (D13).
 
-**Fiabilité des sources (D115).** Chaque bloc de `source` porte un champ `fiabilite` (`OFFICIELLE`, `DECISION_INTERNE` ou `A_CONFIRMER`) ; l'activation d'une version avec un bloc `A_CONFIRMER` ou sans fiabilité sera refusée. Le barème réel de 2026 est dans `apps/web/prisma/bareme/` (septembre, octobre, novembre).
+**Fiabilité des sources (D115).** Chaque bloc de `source` porte un champ `fiabilite` (`OFFICIELLE`, `DECISION_INTERNE` ou `A_CONFIRMER`) ; l'activation d'une version avec un bloc `A_CONFIRMER` ou sans fiabilité est refusée par `peutActiverBareme` (D119). Le barème réel de 2026 est dans `apps/web/prisma/bareme/` (septembre, octobre, novembre).
 
 ⚠️ **Limite réelle** : ces sources publient surtout du PDF et du HTML, pas une API de données. L'extraction automatique peut échouer. Le job doit alors au minimum **détecter qu'une nouvelle publication existe** et prévenir le SuperAdmin, qui saisit les paramètres dans un formulaire. C'est le minimum garanti, l'extraction complète est un bonus.
 
@@ -143,5 +143,25 @@ Flux de mise à jour :
 
 ## 8. Questions ouvertes
 
-1. As-tu accès à des **fiches de paie réelles anonymisées** (stage, contact en secrétariat social, ton client) pour construire les cas de référence ? C'est ce qui rendra le moteur crédible devant le jury.
-2. **Catégorie d'employeur** pour les cotisations patronales : on part sur le cas général du secteur privé marchand ?
+1. **Cas de référence** : la série du 30/10/2026 vient d'un simulateur externe (source secondaire). À refaire pour le 01/11/2026 (quotité de 11 550 €) et dès que le calculateur du SPF Finances refonctionne ; ajouter des cas de temps partiel, de salaire garanti et d'heures supplémentaires dès qu'une source externe existe (D118).
+2. **Catégorie d'employeur** : tranchée par D98 (secteur privé marchand). Les autres catégories sont refusées à l'activation (D119).
+
+## 9. Limites connues du moteur v1
+
+Choisies et assumées ; chacune est aussi dans `AMELIORATIONS.md` § 7. Le moteur ne les calcule pas, ou les calcule avec un choix documenté.
+
+| Sujet | Limite | Décision |
+|---|---|---|
+| Fonds de fermeture d'entreprises (FFE) | Non calculé ; les taux sont dans `reference/onss-ffe-taux-2026.md` | D117 |
+| Cotisation spéciale de modération (« index centime », salaires au-dessus d'environ 4 000 €) | Non calculée | D117 |
+| Taux de 1,60 % « porté à 1,69 % » et modération de 4,27 % | Choix assumé entre les deux lectures du texte | D117 |
+| Précompte des indemnités (n° 78 et 53 de l'Annexe III) | Non implémenté ; choix confirmé par Adrien | D116 |
+| Délai de la CCT (14 jours) et de la loi du 19/12/2025 (8 semaines) | Le moteur suit la CCT ; texte de la loi à déposer | D109, D110 |
+| Plafond de l'INAMI pour un régime de 5 jours | Conversion déduite (plafond × 6 / jours par semaine), non confirmée par un texte | D111 |
+| Jours fériés après la fin du contrat (AR 1974, art. 14) | Non traités | D107 |
+| Accident du travail, jours 8 à 30 | Non traités | D109 |
+| Reprise progressive du travail | Non traitée | D110 |
+| Couples dont un des conjoints a 66 ans (quotient de 12 790 €) | Non traités | D110 |
+| Instructions ONSS 2026/4 | Non déposées : les taux sont ceux de 2026/3 | D103, D115 |
+| Septembre 2026 et novembre 2026 | Barèmes saisis mais non activables : aucun cas de référence dans leur période | D118, D119 |
+| Précompte et paiement après le 01/11/2026 | Valeurs de l'AR du 27/09/2026 saisies, mais non vérifiées par une simulation externe | D110, D115 |

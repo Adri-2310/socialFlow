@@ -286,3 +286,44 @@
 - Les contrastes se règlent par teinte et par thème : une même couleur peut passer en clair et échouer en sombre (lien actif de la navigation à 3,7:1 avant correction).
 
 **Reste à faire** : passer `VERIFICATION-INTERFACE.md` à la main (tiroir mobile, menu mobile du site, écrans SuperAdmin en priorité) ; mesurer Lighthouse sur `next build` + `next start` ; fusionner dans `dev` ; dettes restantes dans `AMELIORATIONS.md` § 6 (modale de suspension sans ton, `cabinets-table` à 375 lignes, `DataTable` sans en-tête collant, libellé du MRR, barre de défilement de l'import CSV).
+
+---
+
+## 2026-10-30 — Moteur de paie v1 (G2a) : calcul complet de la fiche, barème réel et garde-fou d'activation
+
+> **BROUILLON — à relire et à compléter par moi.** Les points marqués « ? » sont ceux dont je dois confirmer ou écrire ma part.
+
+**Objectif** : produire un moteur de paie sans écran dans `apps/web/src/lib/payroll/` : fonctions pures, argent en centimes entiers, paramètres légaux uniquement lus dans une `BaremeVersion`, rejouable sur des cas de référence au centime près. Aucun taux ni barème ne vient de la mémoire de l'assistant : tout vient de textes officiels déposés dans `doc/reference/`.
+
+**Décisions prises** : D99 à D119 (voir `DECISIONS.md`).
+- D99 à D105 : modèle `BaremeVersion` en blocs par sujet légal, brut (temps partiel, D100), ONSS et bonus, précompte (Annexe III), CSSS et net, coût employeur, anomalies.
+- D106 à D111 : heures supplémentaires, jours fériés, salaire garanti, compléments des CCT 12bis et 13bis, règles de 2026 modifiées en cours d'année, plafond de l'INAMI selon le régime.
+- D112 et D113 : le précompte suit la version du barème à la date de paiement, le reste suit la période ; `calculerFiche` assemble tout.
+- D114 : pas de période avant septembre 2026 ni avant l'inscription de l'entreprise (ma proposition).
+- D115 à D117 : barème réel en trois fichiers JSON avec la fiabilité de chaque source ; choix que j'assume (précompte des indemnités, cotisations patronales, salaire garanti).
+- D118 et D119 : huit cas de référence rejouables et garde-fou d'activation (« un barème n'est jamais activé si un cas échoue »).
+
+**Réalisé** : branche `feature/moteur-paie`, un commit par étape présentée et validée avant d'être codée. Le barème de septembre à novembre 2026 est semé dans la base de développement (statut `A_VERIFIER`). Aucun écran : les tests sont la seule interface jusqu'à G2b.
+
+**Contrôlé / corrigé par moi**
+- J'ai fourni les textes officiels un par un (Annexe III, instructions ONSS, lois et arrêtés du Moniteur belge, CCT 12bis et 13bis, page de l'INAMI) et refusé de contacter le SPF Finances ou un secrétariat social : c'est un travail scolaire. ?
+- J'ai trouvé le simulateur externe qui sert de source aux huit cas, et fait vérifier ses écarts avec les textes officiels (CSSS de l'ouvrier à 108 %, arrondi du bonus fiscal). ?
+- J'ai proposé de bloquer toute période avant septembre 2026 et avant l'inscription de l'entreprise, au lieu de gérer des mois sans barème (D114). ?
+- J'ai confirmé moi-même les blocs dont aucun texte déposé ne tranche, en me réservant un contrôle périodique des sources (D116, D117). ?
+- J'ai demandé à tester par une interface plutôt que par des tests seuls ; ce sera possible avec G2b. ?
+- J'ai fait corriger la clé tierce enregistrée par erreur dans une page sauvegardée, et choisi de ne pas réécrire l'historique. ?
+- Corrections issues des relectures et audits de l'assistant : référence du bonus (la base ONSS, et non le salaire hors heures supplémentaires), arrondi à chaque étape de l'Annexe III n° 12, modélisation de la rechute, ancienneté de l'employé, attribution d'un article. ?
+- Autres relectures, refus ou corrections de ma part : ?
+
+**Écrit à la main** : ?
+
+**Tests** : 32 fichiers et 407 tests pour `tests/payroll/` (3 `todo` pour les séries futures), valeurs calculées à la main avec leur détail en commentaire. Huit cas de référence externes, dont sept redonnent le simulateur au centime ; le huitième (ouvrier) suit les textes officiels là où le simulateur s'en écarte. Un test de mutation vérifie qu'un barème faussé est détecté. Suite complète du projet : à lancer à la fin, avec mon accord.
+
+**Difficultés et apprentissages**
+- Un site de calcul n'est pas une source officielle : il s'écarte du texte sur la CSSS de l'ouvrier et sur l'arrondi. Il sert de contrôle d'ordre de grandeur ; le texte officiel tranche.
+- Les règles de 2026 changent en cours d'année (heures supplémentaires, précompte au 01/08 et au 01/11) : le moteur doit choisir la version selon la période, et le précompte selon la date de paiement.
+- Les valeurs calculées à la main par l'assistant se trompent aussi (ONSS de l'ouvrier à 379,72 au lieu de 379,71, ordre de grandeur d'un arrondi) : un test écrit avec la même erreur que le code ne prouve rien.
+- Un texte du Moniteur belge contient des tableaux difficiles à lire : relire le PDF original avant de changer le statut d'une source.
+- Une page web sauvegardée peut contenir une clé d'API tierce : analyser les fichiers déposés avant de les commiter.
+
+**Reste à faire** : refaire les cas de référence à partir du 01/11/2026 (quotité de 11 550 €) et avec le calculateur du SPF Finances dès son retour ; la liste des limites est dans `modules/paie.md` § 9 et `AMELIORATIONS.md` § 7 ; fusionner `feature/moteur-paie` dans `dev` ; à la toute fin, appliquer `add_bareme_version` et le semis en production ; cronjob de veille des sources.
