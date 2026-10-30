@@ -314,11 +314,13 @@
 - J'ai demandé à tester par une interface plutôt que par des tests seuls ; ce sera possible avec G2b. ?
 - J'ai fait corriger la clé tierce enregistrée par erreur dans une page sauvegardée, et choisi de ne pas réécrire l'historique. ?
 - Corrections issues des relectures et audits de l'assistant : référence du bonus (la base ONSS, et non le salaire hors heures supplémentaires), arrondi à chaque étape de l'Annexe III n° 12, modélisation de la rechute, ancienneté de l'employé, attribution d'un article. ?
+- J'ai choisi une version simplifiée du moteur (employés CP 200 et ouvriers CP 100, Belgique seulement, D120) plutôt que de viser toute la paie belge : je ne suis pas une entreprise, je n'ai pas accès à tous les simulateurs ni à tous les documents, et un périmètre réduit mais verrouillé (tout le reste est refusé avec un message clair) est plus honnête qu'un périmètre large à moitié juste. ?
+- J'ai accepté la dérogation à l'absence de cas de référence (D122, option B) parce que je ne peux pas produire un cas externe pour chaque mois ; elle ne couvre jamais un cas qui échoue, et les fiches concernées sont marquées « barème non vérifié ». ?
 - Autres relectures, refus ou corrections de ma part : ?
 
 **Écrit à la main** : ?
 
-**Tests** : 32 fichiers et 407 tests pour `tests/payroll/` (3 `todo` pour les séries futures), valeurs calculées à la main avec leur détail en commentaire. Huit cas de référence externes, dont sept redonnent le simulateur au centime ; le huitième (ouvrier) suit les textes officiels là où le simulateur s'en écarte. Un test de mutation vérifie qu'un barème faussé est détecté. Suite complète du projet : à lancer à la fin, avec mon accord.
+**Tests** : 39 fichiers et 452 tests pour `tests/payroll/` et `tests/conventions/` (3 `todo` pour les séries futures), `lib/payroll` couvert à 100 % avec un seuil imposé, valeurs calculées à la main avec leur détail en commentaire. Huit cas de référence externes, dont sept redonnent le simulateur au centime ; le huitième (ouvrier) suit les textes officiels là où le simulateur s'en écarte. Un test de mutation vérifie qu'un barème faussé est détecté. Suite complète du projet : à lancer à la fin, avec mon accord.
 
 **Difficultés et apprentissages**
 - Un site de calcul n'est pas une source officielle : il s'écarte du texte sur la CSSS de l'ouvrier et sur l'arrondi. Il sert de contrôle d'ordre de grandeur ; le texte officiel tranche.
@@ -327,4 +329,4 @@
 - Un texte du Moniteur belge contient des tableaux difficiles à lire : relire le PDF original avant de changer le statut d'une source.
 - Une page web sauvegardée peut contenir une clé d'API tierce : analyser les fichiers déposés avant de les commiter.
 
-**Reste à faire** : refaire les cas de référence à partir du 01/11/2026 (quotité de 11 550 €) et avec le calculateur du SPF Finances dès son retour ; la liste des limites est dans `modules/paie.md` § 9 et `AMELIORATIONS.md` § 7 ; fusionner `feature/moteur-paie` dans `dev` ; à la toute fin, appliquer `add_bareme_version` et le semis en production ; cronjob de veille des sources.
+**Reste à faire** : cas de référence externes à faire avec le calculateur du SPF Finances (série du 01/11/2026 avec la quotité de 11 550 €, série de septembre 2026, n° 6 de l'Annexe III : conjoint avec revenus, avec et sans enfant) ; la liste des limites est dans `modules/paie.md` § 9 et `AMELIORATIONS.md` § 7 ; pousser `feature/moteur-paie` et la fusionner dans `dev` ; mise en production à la toute fin (`modules/paie.md` § 12) ; cronjob de veille des sources.

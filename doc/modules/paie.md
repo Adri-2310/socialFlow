@@ -220,3 +220,20 @@ Le moteur v1 est une **version simplifiée pour le TFE**. Il couvre le besoin mi
 | `absenceNonRemDemiJours` | ne compte pas | ne compte pas | Règle de SocialFlow |
 
 Pour un temps partiel, l'unité est MINUTES : H = minutes déclarées, U = minutes mensuelles d'un temps plein du même régime (calculées comme les heures du mois d'un ouvrier).
+
+## 12. Mise en production du moteur (à faire à la toute fin, rien n'est lancé avant)
+
+Ordre à suivre, avec l'accord d'Adrien à chaque étape :
+
+1. **Point de restauration Neon** de la base `production` avant toute écriture.
+2. **Migrations** : `npx prisma migrate deploy` applique `add_bareme_version` puis `add_bareme_derogation_motif` (ajouts seulement, aucune donnée supprimée). Les migrations du cycle des fiches (G2b) viendront plus tard.
+3. **Semis des barèmes** : `npm run db:seed:bareme` avec la `DATABASE_URL` de production ; les trois versions arrivent en `A_VERIFIER`, jamais actives, et le semis est idempotent.
+4. **Activation** : `npm run bareme:activer -- <code> --par <email SuperAdmin> [--derogation "<motif>"]`, d'abord avec `--dry-run`. Le script affiche la base visée et demande une confirmation. Sans cas de référence externe, il faut la dérogation de D122 et son motif.
+5. **Vérification** : la version voulue est `ACTIF`, `derogationMotif` est rempli si la dérogation a servi, et l'audit `BAREME_ACTIVATED` existe.
+
+**Cas de référence externes encore à produire** (les `it.todo` de `tests/payroll/cas-reference.test.ts`), avec le calculateur du SPF Finances, sans contacter l'administration :
+- série du 01/11/2026 : les mêmes cas avec la quotité de 11 550 € ;
+- série de septembre 2026 : valider `BE-2026-09` par une source externe datée de septembre ;
+- n° 6 de l'Annexe III : conjoint avec revenus, avec et sans enfant.
+
+Chaque cas validé réduit le recours à la dérogation de D122.
