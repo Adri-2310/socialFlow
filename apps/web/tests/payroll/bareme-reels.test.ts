@@ -68,13 +68,13 @@ describe('barème réel 2026 : forme', () => {
       expect(fiabilite).toEqual({
         onss: 'OFFICIELLE',
         bonusEmploi: 'OFFICIELLE',
-        precompte: 'A_CONFIRMER',
+        precompte: 'DECISION_INTERNE',
         csss: 'OFFICIELLE',
-        cotisationsPatronales: 'A_CONFIRMER',
+        cotisationsPatronales: 'DECISION_INTERNE',
         reductionStructurelle: 'OFFICIELLE',
-        heuresSupplementaires: 'A_CONFIRMER',
+        heuresSupplementaires: 'OFFICIELLE',
         joursFeries: 'OFFICIELLE',
-        salaireGaranti: 'A_CONFIRMER',
+        salaireGaranti: 'DECISION_INTERNE',
         anomalies: 'DECISION_INTERNE',
       });
     }

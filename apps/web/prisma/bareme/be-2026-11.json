@@ -279,9 +279,9 @@
     "precompte": {
       "document": "Annexe III à l'AR/CIR 92, modifiée par les arrêtés royaux du 24/07/2026 et du 27/09/2026",
       "reference": "n° 27-28, 31 à 41 et 46 ; AR du 24/07/2026 art. 4 (63 %) ; AR du 27/09/2026 art. 1 à 9 et 10 (revenus payés à partir du 01/11/2026)",
-      "versionDocument": "AR du 11/12/2025 (doc/reference/precompte/annexe-iii-2026.pdf) ; Moniteur belge du 30/07/2026 et du 02/10/2026 (doc/reference/)",
+      "versionDocument": "AR du 11/12/2025 (doc/reference/precompte/annexe-iii-2026.pdf) ; Moniteur belge du 30/07/2026 et du 02/10/2026 (doc/reference/) ; choix assumés confirmés par Adrien le 30/10/2026 (D116) : précompte des indemnités et lecture littérale du n° 6, à vérifier avec le calculateur du SPF Finances dès qu'il refonctionne",
       "consulteLe": "2026-10-30",
-      "fiabilite": "A_CONFIRMER"
+      "fiabilite": "DECISION_INTERNE"
     },
     "csss": {
       "document": "Instructions administratives de l'ONSS aux employeurs : la cotisation spéciale pour la sécurité sociale",
@@ -293,9 +293,9 @@
     "cotisationsPatronales": {
       "document": "Instructions administratives de l'ONSS aux employeurs",
       "reference": "pp. 175-177 : cotisations patronales ; fonds amiante à 0 au 4e trimestre",
-      "versionDocument": "édition 2026/3 (doc/reference/onss-instructions-2026-3.pdf) ; D104 : 1,60 % inféré, fonds de fermeture non lu",
+      "versionDocument": "édition 2026/3 (doc/reference/onss-instructions-2026-3.pdf) ; D104 : 1,60 % inféré, fonds de fermeture non lu ; choix et limites assumés, confirmés par Adrien le 30/10/2026 (D117)",
       "consulteLe": "2026-10-30",
-      "fiabilite": "A_CONFIRMER"
+      "fiabilite": "DECISION_INTERNE"
     },
     "reductionStructurelle": {
       "document": "Instructions administratives de l'ONSS aux employeurs",
@@ -305,11 +305,11 @@
       "fiabilite": "OFFICIELLE"
     },
     "heuresSupplementaires": {
-      "document": "Loi du 16 mars 1971 (art. 25bis) ; loi du 15/07/2026 (art. 43 à 49) ; Annexe III n° 45 ; Instructions ONSS",
-      "reference": "art. 25bis (360 h dont 240 h sans sursalaire) ; art. 47-49 (180 h) ; n° 45 et 111.2 (57,75 %) ; ONSS pp. 115-116",
-      "versionDocument": "texte adopté DOC 56 1333/007 ; loi consolidée du 15/07/2026 ; AR du 24/07/2026 ; édition ONSS 2026/3 ; D106 : base ouvrière à 108 % et exclusions CSSS à confirmer",
+      "document": "Loi du 16 mars 1971 (art. 25bis) ; loi du 15/07/2026 (art. 43 à 49) ; arrêté royal du 9/07/2026 ; Annexe III n° 45 ; Instructions ONSS",
+      "reference": "art. 25bis (360 h dont 240 h sans sursalaire) ; AR du 9/07/2026 art. 1 (29° de l'art. 19, § 2 de l'AR du 28/11/1969) ; art. 47-49 (180 h) ; n° 45.2, 45.4 et 111.2 (57,75 %, brut social servant de base au sursalaire) ; ONSS pp. 115-116, 374 et 449 ; page de la CSSS",
+      "versionDocument": "texte adopté DOC 56 1333/007 ; Moniteur belge du 17/07/2026 ; loi consolidée du 15/07/2026 ; AR du 24/07/2026 ; édition ONSS 2026/3 ; points de D106 levés le 30/10/2026",
       "consulteLe": "2026-10-30",
-      "fiabilite": "A_CONFIRMER"
+      "fiabilite": "OFFICIELLE"
     },
     "joursFeries": {
       "document": "Arrêté royal du 18 avril 1974 déterminant les modalités générales d’exécution de la loi du 4 janvier 1974 relative aux jours fériés",
@@ -321,9 +321,9 @@
     "salaireGaranti": {
       "document": "Loi du 3 juillet 1978 ; CCT n° 12bis et n° 13bis ; INAMI, plafond salarial",
       "reference": "art. 52, 54, 70 à 72 ; CCT art. 3 et 4 (25,88 %/85,88 % et 26,93 %/86,93 %) ; plafond 189,3583 € à partir du 01/09/2026",
-      "versionDocument": "loi consolidée au 15/06/2026 ; CCT coordonnées au 1.5.1997 ; page INAMI du 29/10/2026 ; D108 à D111 : points à confirmer",
+      "versionDocument": "loi consolidée au 15/06/2026 ; CCT coordonnées au 1.5.1997 ; page INAMI du 29/10/2026 ; D108 à D111 : points à confirmer ; choix et limites assumés, confirmés par Adrien le 30/10/2026 (D117)",
       "consulteLe": "2026-10-30",
-      "fiabilite": "A_CONFIRMER"
+      "fiabilite": "DECISION_INTERNE"
     },
     "anomalies": {
       "document": "Décision interne de SocialFlow",

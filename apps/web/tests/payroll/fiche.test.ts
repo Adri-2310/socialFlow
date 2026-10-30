@@ -351,13 +351,16 @@ describe('calculerFiche : jours fériés de l’ouvrier (D107)', () => {
 describe('calculerFiche : heures supplémentaires (D106)', () => {
   const sans = calculerFiche(fiche());
 
-  it('5 h ordinaires à 50 % : 150,00 € de brut et de base ONSS, bonus inchangé, réduction n° 45 de 57,75 €', () => {
+  it('5 h ordinaires à 50 % : 150,00 € de brut et de base ONSS, comptées dans le salaire de référence du bonus, réduction n° 45 de 57,75 €', () => {
     // 20,00 €/h x 5 h = 100,00 + 50 % = 150,00 ; brut 2 950,00 ; ONSS 13,07 % x 2 950,00 = 385,565 -> 385,57
     const r = calculerFiche(fiche({ heuresSupplementaires: heures({ ordinaires50: 300 }) }));
     expect(r.brut).toBe(295_000);
     expect(r.baseOnss).toBe(295_000);
     expect(r.onssPersonnelle).toBe(38_557);
-    expect(r.bonusEmploi).toBe(sans.bonusEmploi); // les heures supplémentaires sont hors de la référence
+    // salaire de référence 2 950,00 € (les heures ordinaires y sont : masse salariale déclarée à 100 %) :
+    // volet B 0 (au-dessus de 2 937,93 €) ; volet A 127,54 - 27,39 % x (2 950,00 - 2 937,93) = 124,2340 -> 124,23 €
+    expect(r.bonusEmploi).toBe(12_423);
+    expect(sans.bonusEmploi).toBe(16_475); // sans les heures, le salaire de référence est de 2 800,00 €
     expect(r.detailPrecompte.reductionHeuresSupplementaires).toBe(5_775);
     expect(r.netExonere).toBe(0);
   });

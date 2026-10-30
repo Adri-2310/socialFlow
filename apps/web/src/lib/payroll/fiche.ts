@@ -49,8 +49,8 @@ import { exigerEntier } from './validation';
 //                  + heures supplémentaires ordinaires
 //                  (les 60 %, l'indemnité des CCT et les heures volontaires ne sont pas de la
 //                  rémunération soumise à l'ONSS : D106, D108, D109)
-//   référence du bonus à l'emploi et de la réduction structurelle = base ONSS sans les heures
-//                  supplémentaires (choix à confirmer, D113)
+//   référence du bonus à l'emploi et de la réduction structurelle = base ONSS : la masse salariale
+//                  déclarée à 100 %, dont seules les heures supplémentaires horeca et les flexi-jobs sont exclus (ONSS 2026/3 pp. 374 et 449, D113)
 //   imposable    = brut total - ONSS personnelle + bonus à l'emploi
 //   précompte    : sur le brut total, moins la réduction des heures supplémentaires (n° 45)
 //   CSSS et cotisations patronales : sur la base ONSS
@@ -237,8 +237,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
     }
   }
 
-  // 1 quater. Heures supplémentaires (D106). Avec la référence du bonus, qui les exclut.
-  let referenceBonus = baseOnss;
+  // 1 quater. Heures supplémentaires (D106).
   let netExonere = 0;
   let reductionHeuresSup = 0;
   let heuresVolontaires: { cumulMinutes: number; plafondMinutes: number } | null = null;
@@ -247,7 +246,6 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
     const heures = calculerHeuresSupplementaires(entree.heuresSupplementaires, blocHeures);
     brutTotal += heures.brutImposable;
     baseOnss += heures.baseOnss;
-    referenceBonus = baseOnss - heures.baseOnss;
     netExonere = heures.netExonere;
     reductionHeuresSup = heures.reductionPrecompte;
     heuresVolontaires = {
@@ -258,7 +256,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
   }
 
   // Un brut négatif est une saisie incohérente (trop de retenues) : on le dit clairement.
-  if (brutTotal < 0 || baseOnss < 0 || referenceBonus < 0) {
+  if (brutTotal < 0 || baseOnss < 0) {
     throw new ErreurMoteur(
       'BRUT_NEGATIF',
       'Les retenues du mois dépassent le brut : vérifier les absences et les incapacités.',
@@ -275,7 +273,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
   const bonus = calculerBonusEmploi(
     {
       categorie,
-      brutReferenceCentimes: referenceBonus,
+      brutReferenceCentimes: baseOnss,
       prestations: entree.prestations,
       cotisationPersonnelleCentimes: onss.cotisation,
       bonusDejaPrisAnneeCentimes: entree.cumuls.bonusDejaPrisAnneeCentimes,
@@ -341,7 +339,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
   const fraction = fractionOccupation(entree.occupation);
   const reduction = calculerReductionStructurelle(
     {
-      brutReferenceCentimes: referenceBonus,
+      brutReferenceCentimes: baseOnss,
       prestations: entree.prestations,
       contratAuMoinsMiTemps: fraction.numerateur * 2 >= fraction.denominateur,
       cotisationsReductiblesCentimes: patronales.cotisationsReductibles,
