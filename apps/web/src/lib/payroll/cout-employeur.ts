@@ -16,6 +16,31 @@ import { BORNES, exigerEntier } from './validation';
 // Hors v1 : assurance accidents du travail, assurance groupe, titres-repas, secrétariat social et
 // toute charge qui n'est pas une cotisation de sécurité sociale.
 
+// Ce que le coût employeur NE contient PAS : il est présenté comme une ESTIMATION. Cette liste est
+// celle que l'écran affiche à côté du montant ; elle reprend modules/paie.md § 9 et § 10 (D120 (e)).
+export const LIMITES_COUT_EMPLOYEUR_ESTIME = [
+  { code: 'FONDS_FERMETURE', libelle: "Fonds de fermeture d'entreprises : non calculé (D117)." },
+  {
+    code: 'INDEX_CENTIME',
+    libelle: 'Cotisation spéciale « index centime » : non calculée (D117).',
+  },
+  {
+    code: 'DISPENSE_PRECOMPTE_HEURES_SUP',
+    libelle:
+      'Dispense de versement du précompte professionnel sur les heures supplémentaires : non prise en compte.',
+  },
+  {
+    code: 'REDUCTION_STRUCTURELLE_TRIMESTRIELLE',
+    libelle:
+      'Réduction structurelle : estimation mensuelle d’un calcul trimestriel, sans régularisation (D104).',
+  },
+  {
+    code: 'AUTRES_CHARGES',
+    libelle:
+      'Assurance accidents du travail, assurance groupe, titres-repas, secrétariat social : hors périmètre.',
+  },
+] as const;
+
 export interface EntreeCoutEmployeur {
   brutCentimes: Centimes;
   cotisationsPatronalesCentimes: Centimes; // total, positif

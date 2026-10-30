@@ -19,6 +19,8 @@ export interface ResultatBrut {
 }
 
 // La prime (D92) : un montant en centimes et un libellé court, tous deux facultatifs.
+// D120 (a) : c'est UNIQUEMENT une prime liée au travail du mois, taxée comme le salaire. Une prime
+// ponctuelle ou de fin d'année relève du n° 53 de l'Annexe III, hors périmètre : ne pas la saisir.
 interface Prime {
   primeCents: number | null;
   primeLibelle: string | null;

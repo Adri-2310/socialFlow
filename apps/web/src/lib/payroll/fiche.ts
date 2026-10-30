@@ -64,6 +64,8 @@ export interface VersionAvecParametres extends VersionBareme {
   parametres: ParametresBareme;
 }
 
+// D120 (a) : « prime liée au travail du mois », taxée comme le salaire ; une prime ponctuelle ou de
+// fin d'année (n° 53 de l'Annexe III) est hors périmètre et ne doit pas être saisie ici.
 export interface PrimeFiche {
   primeCents: number | null;
   primeLibelle: string | null;
@@ -138,6 +140,9 @@ export interface ResultatFiche {
   cotisationsPatronales: Centimes;
   reductionStructurelle: Centimes;
   coutEmployeur: Centimes;
+  // D120 (e) : le coût employeur est une ESTIMATION ; l'interface l'affiche comme telle, avec la liste
+  // `LIMITES_COUT_EMPLOYEUR_ESTIME` de ce qu'il ne contient pas (modules/paie.md § 9 et § 10).
+  coutEmployeurEstime: true;
   lignes: LigneCalcul[]; // détail ordonné de la fiche du salarié (montants signés)
   lignesEmployeur: LigneCalcul[]; // cotisations patronales et réduction structurelle
   anomalies: Anomalie[];
@@ -147,6 +152,11 @@ export interface ResultatFiche {
 }
 
 export function calculerFiche(entree: EntreeFiche): ResultatFiche {
+  // D120 : seuls les employés et les ouvriers sont dans le périmètre. Un autre statut (un dirigeant,
+  // par exemple) est refusé ici, avec un message sur le statut, avant tout calcul.
+  if (entree.salaire.statut !== 'EMPLOYE' && entree.salaire.statut !== 'OUVRIER') {
+    throw new ErreurMoteur('ENTREE_INVALIDE', 'Le statut du salarié doit être EMPLOYE ou OUVRIER.');
+  }
   const categorie: CategorieSalarie = entree.salaire.statut;
   exigerEntier('Le mois de la fiche', entree.periode.mois, 1, 12);
 
@@ -377,6 +387,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
     cotisationsPatronales: patronales.total,
     reductionStructurelle: reduction.reduction,
     coutEmployeur,
+    coutEmployeurEstime: true,
     lignes: [
       ...lignesSalaire,
       ...onss.lignes,
