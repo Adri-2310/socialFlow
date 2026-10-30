@@ -208,14 +208,8 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
   // 1 ter. Salaire garanti en cas d'incapacité (D108 à D111).
   if (entree.incapacite !== undefined) {
     const { incapacite, salaire } = entree;
-    if (incapacite.statut !== salaire.statut) {
-      throw new ErreurMoteur(
-        'ENTREE_INCOMPATIBLE',
-        "L'incapacité de travail ne correspond pas au statut du salarié (ouvrier ou employé).",
-      );
-    }
-    const bloc = exigerBloc(parametres, 'salaireGaranti');
     if (incapacite.statut === 'OUVRIER' && salaire.statut === 'OUVRIER') {
+      const bloc = exigerBloc(parametres, 'salaireGaranti');
       // L'ouvrier est payé aux heures prestées : le salaire garanti S'AJOUTE au brut.
       // Seuls les jours à 100 % sont de la rémunération soumise à l'ONSS (ONSS p. 115).
       const { statut: _statut, ...reste } = incapacite;
@@ -227,6 +221,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
       baseOnss += garanti.baseOnss;
       lignesSalaire.push(...garanti.lignes);
     } else if (incapacite.statut === 'EMPLOYE' && salaire.statut === 'EMPLOYE') {
+      const bloc = exigerBloc(parametres, 'salaireGaranti');
       // L'employé garde son salaire mensuel : on RETRANCHE ce que l'employeur ne doit plus. Le
       // salaire versé en indemnité (60 % et complément) reste dans le brut mais sort de la base ONSS.
       if (salaire.joursReferenceMois === null) {
@@ -247,6 +242,12 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
       brutTotal -= garanti.retenue;
       baseOnss -= garanti.retenue + garanti.horsOnss;
       lignesSalaire.push(...garanti.lignes);
+    } else {
+      // Ouvrier avec une incapacité d'employé, ou l'inverse : jamais ignoré en silence.
+      throw new ErreurMoteur(
+        'ENTREE_INCOMPATIBLE',
+        "L'incapacité de travail ne correspond pas au statut du salarié (ouvrier ou employé).",
+      );
     }
   }
 

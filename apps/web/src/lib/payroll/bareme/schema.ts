@@ -112,7 +112,8 @@ export const allocationsExceptionnellesSchema = z.strictObject({
     .refine(
       (t) =>
         t.every((x, i) => (i === t.length - 1 ? x.jusqua === null : x.jusqua !== null)) &&
-        t.every((x, i) => i === 0 || (x.jusqua ?? Infinity) > (t[i - 1].jusqua ?? Infinity)),
+        // La tranche précédente a une borne : la première condition l'a déjà vérifié.
+        t.every((x, i) => i === 0 || x.jusqua === null || x.jusqua > (t[i - 1].jusqua as number)),
       { message: 'Les bornes doivent croître, et seule la dernière tranche est sans borne.' },
     ),
   // n° 54 : montant limite de la rémunération annuelle, de 1 à 12 enfants à charge. Change au
