@@ -281,6 +281,15 @@ export const salaireGarantiSchema = z.strictObject({
   employeCourteDureeJoursPleins: z.int().min(0).max(365), // art. 71 : 7
   employeCourteDureeJoursPartiels: z.int().min(0).max(365), // art. 71 : 7 jours suivants à 60 %
   tauxPartiel: tauxSchema, // 60 % s'écrit 600 000
+  // Indemnité complémentaire des CCT n° 12bis (ouvriers) et n° 13bis (employés de moins de 3 mois),
+  // art. 3 et 4, textes coordonnés dans doc/reference/ : due pendant les `complementJours` jours qui
+  // suivent la période à 100 %, en pourcentage de la part du salaire normal sous le plafond, puis de
+  // la part au-dessus. L'art. 4 b autorise des taux différents dans certains secteurs (hors v1).
+  complementJours: z.int().min(0).max(365), // 23 jours calendrier
+  complementOuvrierPlafonne: tauxSchema, // 25,88 % s'écrit 258 800
+  complementOuvrierExcedent: tauxSchema, // 85,88 % s'écrit 858 800
+  complementEmployePlafonne: tauxSchema, // 26,93 % s'écrit 269 300
+  complementEmployeExcedent: tauxSchema, // 86,93 % s'écrit 869 300
   // Plafond JOURNALIER BRUT de la rémunération pris en compte par l'assurance maladie-invalidité
   // pour les jours à 60 %. Source : INAMI, « Votre plafond salarial » (doc/reference/
   // inami-plafond-salarial-incapacite.html), incapacité primaire : 189,3583 € à partir du

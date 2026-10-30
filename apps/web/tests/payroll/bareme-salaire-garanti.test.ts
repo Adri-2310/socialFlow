@@ -23,6 +23,12 @@ describe('bloc salaireGaranti', () => {
     expect(salaireGarantiSchema.safeParse({ ...s, employeLongueDureeJours: 30.5 }).success).toBe(
       false,
     );
+    expect(
+      salaireGarantiSchema.safeParse({ ...s, complementOuvrierPlafonne: 258_800.5 }).success,
+    ).toBe(false);
+    expect(salaireGarantiSchema.safeParse({ ...s, complementJours: 23.5 }).success).toBe(false);
+    const { complementJours: _jours, ...sansComplement } = s;
+    expect(salaireGarantiSchema.safeParse(sansComplement).success).toBe(false);
     const { plafondJournalierCentimes: _plafond, ...sansPlafond } = s;
     expect(salaireGarantiSchema.safeParse(sansPlafond).success).toBe(false);
     expect(salaireGarantiSchema.safeParse({ ...s, mutuelle: 1 }).success).toBe(false);

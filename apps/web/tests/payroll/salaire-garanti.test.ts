@@ -70,10 +70,13 @@ describe('calculerSalaireGarantiOuvrier : maladie (art. 52)', () => {
     ]);
   });
 
-  it('deuxième semaine à 60 % plafonné : 5 x min(114,00 ; 100,00) x 60 % = 300,00 €', () => {
-    // base = 5 x 10 000 = 50 000 (la part au-dessus du plafond est exclue) ; 60 % = 30 000
+  it('deuxième semaine : loi à 60 % plafonné (300,00 €) + complément CCT 12bis (189,52 €)', () => {
+    // loi : 5 x min(114,00 ; 100,00) = 500,00 -> 60 % = 300,00 € (30 000)
+    // CCT : 25,88 % x 500,00 = 129,40 € (12 940) ; 85,88 % x 5 x 14,00 = 70,00 -> 60,116 -> 60,12 € (6 012)
+    // total 489,52 € = 85,88 % de 570,00 € (489,516)
     const r = calculerSalaireGarantiOuvrier(entreeOuvrier(semaine2), BLOC);
-    expect(r.montant).toBe(30_000);
+    expect(r.montant).toBe(48_952);
+    expect(r.complement).toBe(18_952);
     expect(r.lignes).toEqual([
       {
         code: 'SALAIRE_GARANTI_60',
@@ -82,61 +85,128 @@ describe('calculerSalaireGarantiOuvrier : maladie (art. 52)', () => {
         taux: 600_000,
         montant: 30_000,
       },
+      {
+        code: 'COMPLEMENT_CCT_PLAFONNE',
+        libelle: 'Indemnité complémentaire CCT 12bis (part sous le plafond)',
+        base: 50_000,
+        taux: 258_800,
+        montant: 12_940,
+      },
+      {
+        code: 'COMPLEMENT_CCT_EXCEDENT',
+        libelle: 'Indemnité complémentaire CCT 12bis (part au-dessus du plafond)',
+        base: 7_000,
+        taux: 858_800,
+        montant: 6_012,
+      },
     ]);
   });
 
   it('seuls les jours à 100 % entrent dans la base ONSS (ONSS 2026/3, p. 115)', () => {
     expect(calculerSalaireGarantiOuvrier(entreeOuvrier(semaine1), BLOC).baseOnss).toBe(57_000);
     expect(calculerSalaireGarantiOuvrier(entreeOuvrier(semaine2), BLOC).baseOnss).toBe(0);
-    // un mois sur trois semaines : 570,00 € à 100 % soumis à l'ONSS, 300,00 € à 60 % exclus
+    // un mois sur trois semaines : 570,00 € à 100 % soumis à l'ONSS, le reste (loi 60 % et complément) exclu
     const r = calculerSalaireGarantiOuvrier(
       entreeOuvrier([...semaine1, ...semaine2, ...semaine3]),
       BLOC,
     );
-    expect(r.montant).toBe(87_000);
+    expect(r.montant).toBe(124_903);
     expect(r.baseOnss).toBe(57_000);
   });
 
-  it('sous le plafond, 60 % de la rémunération : 10,00 €/h -> 76,00 € par jour, 5 jours à 60 % = 228,00 €', () => {
-    // 1 000 x 456 / 60 = 7 600 par jour ; 5 jours = 38 000 ; 60 % = 22 800
+  it('sous le plafond : 10,00 €/h -> 76,00 € par jour, 5 jours = 380,00 € : 60 % + 25,88 % = 326,34 €', () => {
+    // 1 000 x 456 / 60 = 7 600 par jour ; 5 jours = 38 000 ; loi 60 % = 22 800
+    // CCT : 25,88 % x 38 000 = 9 834,4 -> 9 834 ; total 32 634 = 85,88 % de 380,00 € (326,344)
     const r = calculerSalaireGarantiOuvrier(
       entreeOuvrier(semaine2, { tauxHoraireCentimes: 1_000 }),
       BLOC,
     );
-    expect(r.montant).toBe(22_800);
+    expect(r.montant).toBe(32_634);
+    expect(r.lignes.map((l) => l.code)).toEqual(['SALAIRE_GARANTI_60', 'COMPLEMENT_CCT_PLAFONNE']);
   });
 
-  it('un mois sur trois semaines : 570,00 + 300,00 = 870,00 € ; plus rien dès le jour 15', () => {
+  it('un mois sur trois semaines : 570,00 + 300,00 + 379,03 = 1 249,03 €', () => {
+    // sommes des 10 jours à complément : sous le plafond 100 000 -> 25,88 % = 25 880 ;
+    // au-dessus 14 000 -> 85,88 % = 12 023,2 -> 12 023 ; complément 37 903
     const r = calculerSalaireGarantiOuvrier(
       entreeOuvrier([...semaine1, ...semaine2, ...semaine3]),
       BLOC,
     );
-    expect(r.montant).toBe(87_000);
-    expect(r.lignes.map((l) => l.code)).toEqual(['SALAIRE_GARANTI_100', 'SALAIRE_GARANTI_60']);
+    expect(r.montant).toBe(124_903);
+    expect(r.complement).toBe(37_903);
+    expect(r.lignes.map((l) => l.code)).toEqual([
+      'SALAIRE_GARANTI_100',
+      'SALAIRE_GARANTI_60',
+      'COMPLEMENT_CCT_PLAFONNE',
+      'COMPLEMENT_CCT_EXCEDENT',
+    ]);
   });
 
-  it('les limites : jour 7 à 100 %, jour 8 à 60 %, jour 14 à 60 %, jour 15 à 0', () => {
+  it('les limites : jours 1 à 7 à 100 %, 8 à 14 loi + CCT, 15 à 30 CCT seule, 31 plus rien', () => {
     const un = (date: string) =>
       calculerSalaireGarantiOuvrier(entreeOuvrier([jo(date)]), BLOC).montant;
-    expect(un('2026-03-08')).toBe(11_400); // jour 7
-    expect(un('2026-03-09')).toBe(6_000); // jour 8 : 60 % x 100,00
-    expect(un('2026-03-15')).toBe(6_000); // jour 14
-    expect(un('2026-03-16')).toBe(0); // jour 15
+    // un jour : loi 60 % x 100,00 = 60,00 ; CCT 25,88 % x 100,00 + 85,88 % x 14,00 = 25,88 + 12,02 = 37,90
+    expect(un('2026-03-08')).toBe(11_400); // jour 7 : 114,00 €
+    expect(un('2026-03-09')).toBe(9_790); // jour 8 : 60,00 + 37,90 = 97,90 €
+    expect(un('2026-03-15')).toBe(9_790); // jour 14
+    expect(un('2026-03-16')).toBe(3_790); // jour 15 : CCT seule, 37,90 €
+    expect(un('2026-03-31')).toBe(3_790); // jour 30
+    expect(un('2026-04-01')).toBe(0); // jour 31 : plus d'employeur
   });
 
   it('un jour sans activité (0 minute) ne rapporte rien mais compte dans la période (art. 56)', () => {
-    // samedi 7 et dimanche 8 sans activité : le lundi 9 reste le jour 8
+    // samedi 7 et dimanche 8 sans activité : le lundi 9 reste le jour 8 (60,00 + 37,90 = 97,90 €)
     const r = calculerSalaireGarantiOuvrier(
       entreeOuvrier([jo('2026-03-07', 0), jo('2026-03-08', 0), jo('2026-03-09')]),
       BLOC,
     );
-    expect(r.montant).toBe(6_000);
+    expect(r.montant).toBe(9_790);
   });
 
   it('un jour déjà rémunéré (jour férié) compte dans la période mais n’est pas payé deux fois', () => {
     // mercredi 4 mars déjà payé ailleurs : 4 jours x 114,00 = 456,00 €
     const jours = semaine1.map((j) => (j.date === '2026-03-04' ? jo(j.date, 456, true) : j));
     expect(calculerSalaireGarantiOuvrier(entreeOuvrier(jours), BLOC).montant).toBe(45_600);
+  });
+
+  it('un avantage complémentaire déjà payé s’impute sur le complément (CCT 12bis, art. 9)', () => {
+    // complément 189,52 € - avantage 100,00 € = 89,52 € ; loi 300,00 € ; total 389,52 €
+    const r = calculerSalaireGarantiOuvrier(
+      entreeOuvrier(semaine2, { avantageComplementaireImputableCentimes: 10_000 }),
+      BLOC,
+    );
+    expect(r.complement).toBe(8_952);
+    expect(r.montant).toBe(38_952);
+    expect(r.lignes.at(-1)).toEqual({
+      code: 'COMPLEMENT_CCT_IMPUTATION',
+      libelle: 'Avantage complémentaire déjà payé (imputé)',
+      base: null,
+      taux: null,
+      montant: -10_000,
+    });
+  });
+
+  it('l’imputation ne dépasse jamais le complément : avantage de 500,00 € -> complément 0', () => {
+    const r = calculerSalaireGarantiOuvrier(
+      entreeOuvrier(semaine2, { avantageComplementaireImputableCentimes: 50_000 }),
+      BLOC,
+    );
+    expect(r.complement).toBe(0);
+    expect(r.montant).toBe(30_000);
+    expect(r.lignes.at(-1)?.montant).toBe(-18_952);
+  });
+
+  it('refuse un avantage imputable négatif ou décimal', () => {
+    for (const v of [-1, 1.5]) {
+      expect(
+        code(() =>
+          calculerSalaireGarantiOuvrier(
+            entreeOuvrier(semaine2, { avantageComplementaireImputableCentimes: v }),
+            BLOC,
+          ),
+        ),
+      ).toBe('ENTREE_INVALIDE');
+    }
   });
 });
 
@@ -169,7 +239,7 @@ describe('calculerSalaireGarantiOuvrier : ancienneté et exclusions', () => {
   it('une exclusion (art. 52 § 3) supprime tout droit', () => {
     for (const exclusion of ['FAUTE_GRAVE', 'COMPETITION_SPORTIVE_REMUNEREE'] as const) {
       const r = calculerSalaireGarantiOuvrier(entreeOuvrier(semaine1, { exclusion }), BLOC);
-      expect(r).toEqual({ montant: 0, baseOnss: 0, lignes: [] });
+      expect(r).toEqual({ montant: 0, baseOnss: 0, complement: 0, lignes: [] });
     }
   });
 
@@ -238,8 +308,10 @@ describe('calculerSalaireGarantiEmploye : contrat de 3 mois ou plus (art. 70)', 
     expect(r).toEqual({
       retenue: 0,
       horsOnss: 0,
+      complement: 0,
       demiJoursNonGarantis: 0,
       demiJoursAPartiel: 0,
+      demiJoursAvecComplement: 0,
       lignes: [],
     });
   });
@@ -288,7 +360,7 @@ describe('calculerSalaireGarantiEmploye : contrat de 3 mois ou plus (art. 70)', 
   });
 });
 
-describe('calculerSalaireGarantiEmploye : contrat de moins de 3 mois (art. 71 et 72)', () => {
+describe('calculerSalaireGarantiEmploye : contrat de moins de 3 mois (art. 71 et 72, CCT 13bis)', () => {
   const court = (
     jours: JourIncapaciteEmploye[],
     extra: Partial<EntreeSalaireGarantiEmploye> = {},
@@ -297,53 +369,83 @@ describe('calculerSalaireGarantiEmploye : contrat de moins de 3 mois (art. 71 et
       entreeEmploye(jours, { contrat: 'COURTE_DUREE', ...extra }),
       BLOC,
     );
+  const jours8a11 = [je('2026-03-09'), je('2026-03-10'), je('2026-03-11'), je('2026-03-12')];
 
   it('jours 1 à 7 : rien à retrancher', () => {
     expect(court([je('2026-03-06'), je('2026-03-08')]).retenue).toBe(0);
   });
 
-  it('jours 8 à 11 (4 jours = 8 demi-jours) à 60 % plafonné : retenue de 240,00 €', () => {
-    // valeur 2 400,00 x 8 / 40 = 480,00 € ; plafond 100,00 x 8 / 2 = 400,00 € ; payé 60 % x 400,00 = 240,00 €
-    const r = court([je('2026-03-09'), je('2026-03-10'), je('2026-03-11'), je('2026-03-12')]);
-    expect(r.retenue).toBe(24_000);
+  it('jours 8 à 11 (8 demi-jours) : loi 60 % + complément CCT 13bis, retenue de 62,74 €', () => {
+    // valeur 2 400,00 x 8 / 40 = 480,00 € (48 000) ; plafond 100,00 x 8 / 2 = 400,00 € (40 000)
+    // loi : 60 % x 400,00 = 240,00 € (24 000)
+    // CCT : 26,93 % x 400,00 = 107,72 € (10 772) ; 86,93 % x 80,00 = 69,544 -> 69,54 € (6 954)
+    // payé 24 000 + 17 726 = 41 726 (= 86,93 % de 480,00 : 417,264) ; retenue 48 000 - 41 726 = 6 274
+    const r = court(jours8a11);
+    expect(r.retenue).toBe(6_274);
+    expect(r.horsOnss).toBe(41_726);
+    expect(r.complement).toBe(17_726);
     expect(r.demiJoursAPartiel).toBe(8);
+    expect(r.demiJoursAvecComplement).toBe(8);
     expect(r.lignes).toEqual([
       {
-        code: 'SALAIRE_GARANTI_60_RETENUE',
-        libelle: 'Salaire garanti à 60 % (plafonné) : 4 jours sur 20',
+        code: 'SALAIRE_GARANTI_PARTIEL_RETENUE',
+        libelle:
+          'Incapacité du 8e au 30e jour, salaire à 60 % et complément CCT 13bis : 4 jours sur 20',
         base: 48_000,
-        taux: 600_000,
-        montant: -24_000,
+        taux: null,
+        montant: -6_274,
       },
     ]);
   });
 
-  it('le salaire versé à 60 % est exclu de la base ONSS : 240,00 € ; contrat long : rien', () => {
-    // valeur 480,00 ; plafond 400,00 ; payé 60 % x 400,00 = 240,00 € (24 000), retenue 240,00 €
-    const r = court([je('2026-03-09'), je('2026-03-10'), je('2026-03-11'), je('2026-03-12')]);
-    expect(r.horsOnss).toBe(24_000);
+  it('le salaire versé en indemnité est exclu de la base ONSS : 417,26 € ; contrat long : rien', () => {
+    expect(court(jours8a11).horsOnss).toBe(41_726);
     expect(calculerSalaireGarantiEmploye(entreeEmploye([je('2026-04-01')]), BLOC).horsOnss).toBe(0);
   });
 
-  it('sous le plafond, 60 % de la valeur : 1 000,00 € -> 8 demi-jours = 200,00 €, payé 120,00 €, retenue 80,00 €', () => {
-    const r = court([je('2026-03-09'), je('2026-03-10'), je('2026-03-11'), je('2026-03-12')], {
-      remunerationMensuelle: 100_000,
-    });
-    expect(r.retenue).toBe(8_000);
+  it('sous le plafond : 1 000,00 € -> 8 demi-jours = 200,00 € ; 60 % (120,00) + 26,93 % (53,86) = 173,86 €', () => {
+    // valeur 100 000 x 8 / 40 = 20 000 ; loi 60 % = 12 000 ; CCT 26,93 % x 20 000 = 5 386
+    // payé 17 386 (= 86,93 % de 200,00) ; retenue 20 000 - 17 386 = 2 614
+    const r = court(jours8a11, { remunerationMensuelle: 100_000 });
+    expect(r.retenue).toBe(2_614);
+    expect(r.horsOnss).toBe(17_386);
   });
 
-  it('au-delà du 14e jour : plus rien n’est dû, tout est retranché', () => {
-    // dimanche 15 mars = jour 14 (à 60 %) ; lundi 16 mars = jour 15
-    const r = court([je('2026-03-16')]);
-    expect(r.demiJoursNonGarantis).toBe(2);
-    expect(r.retenue).toBe(12_000);
+  it('jours 15 à 30 : seule l’indemnité CCT est due (la mutuelle verse les 60 %), 1 jour = 44,32 €', () => {
+    // dimanche 15 mars = jour 14 (loi + CCT) ; lundi 16 mars = jour 15 (CCT seule)
     expect(court([je('2026-03-15')]).demiJoursAPartiel).toBe(2);
+    // valeur 2 400,00 x 2 / 40 = 120,00 € (12 000) ; plafond 100,00 € ; part au-dessus 20,00 €
+    // CCT : 26,93 % x 100,00 = 26,93 € (2 693) ; 86,93 % x 20,00 = 17,386 -> 17,39 € (1 739) ; total 44,32 €
+    const r = court([je('2026-03-16')]);
+    expect(r.demiJoursAPartiel).toBe(0);
+    expect(r.demiJoursAvecComplement).toBe(2);
+    expect(r.demiJoursNonGarantis).toBe(0);
+    expect(r.complement).toBe(4_432);
+    expect(r.horsOnss).toBe(4_432);
+    expect(r.retenue).toBe(7_568);
   });
 
-  it('accident du travail : 7 jours seulement (art. 72), pas de période à 60 %', () => {
+  it('au-delà du 30e jour : plus rien n’est dû, tout est retranché', () => {
+    // mercredi 1er avril = jour 31
+    const r = court([je('2026-04-01')]);
+    expect(r.demiJoursNonGarantis).toBe(2);
+    expect(r.demiJoursAvecComplement).toBe(0);
+    expect(r.retenue).toBe(12_000);
+  });
+
+  it('un avantage complémentaire déjà payé s’impute sur l’indemnité CCT (art. 9)', () => {
+    // complément 177,26 - 50,00 = 127,26 € (12 726) ; payé 24 000 + 12 726 = 36 726 ; retenue 11 274
+    const r = court(jours8a11, { avantageComplementaireImputableCentimes: 5_000 });
+    expect(r.complement).toBe(12_726);
+    expect(r.horsOnss).toBe(36_726);
+    expect(r.retenue).toBe(11_274);
+  });
+
+  it('accident du travail : 7 jours seulement (art. 72), pas de période à 60 % ni d’indemnité CCT (hors v1)', () => {
     const r = court([je('2026-03-09')], { nature: 'ACCIDENT_TRAVAIL' });
     expect(r.demiJoursNonGarantis).toBe(2);
     expect(r.demiJoursAPartiel).toBe(0);
+    expect(r.complement).toBe(0);
     expect(r.retenue).toBe(12_000);
   });
 });
@@ -384,13 +486,13 @@ describe('calculerSalaireGarantiEmploye : entrées refusées', () => {
 // ---------------------------------------------------------------- rechute, ancienneté, exclusions
 describe('calculerSalaireGarantiOuvrier : rechute dans les huit semaines (art. 52 § 2, 1°)', () => {
   it('les jours déjà indemnisés comptent : 3 jours consommés, la rechute du 23 mars reprend au jour 4', () => {
-    // 23 mars = jour 4 (3 + 1) : 114,00 € à 100 % ; 27 mars = jour 8 (3 + 5) : 60 % x 100,00 = 60,00 €
+    // 23 mars = jour 4 (3 + 1) : 114,00 € à 100 % ; 27 mars = jour 8 (3 + 5) : 60,00 + 37,90 = 97,90 €
     const jours = [jo('2026-03-23'), jo('2026-03-27')];
     const r = calculerSalaireGarantiOuvrier(
       entreeOuvrier(jours, { debutPeriodeGarantie: '2026-03-23', joursDejaConsommes: 3 }),
       BLOC,
     );
-    expect(r.montant).toBe(17_400);
+    expect(r.montant).toBe(21_190);
     // Sans jours consommés, la même rechute repartirait de zéro : 114,00 + 114,00 = 228,00 €
     const neuve = calculerSalaireGarantiOuvrier(
       entreeOuvrier(jours, { debutPeriodeGarantie: '2026-03-23' }),

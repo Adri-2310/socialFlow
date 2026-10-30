@@ -179,5 +179,11 @@ export const SALAIRE_GARANTI_2026: ParametresSalaireGaranti = {
   employeCourteDureeJoursPleins: 7,
   employeCourteDureeJoursPartiels: 7,
   tauxPartiel: 600_000, // 60 %
+  // CCT n° 12bis et n° 13bis, art. 3 et 4 (textes coordonnés du Conseil national du travail)
+  complementJours: 23,
+  complementOuvrierPlafonne: 258_800, // 25,88 %
+  complementOuvrierExcedent: 858_800, // 85,88 %
+  complementEmployePlafonne: 269_300, // 26,93 %
+  complementEmployeExcedent: 869_300, // 86,93 %
   plafondJournalierCentimes: 10_000, // VALEUR DE TEST
 };
