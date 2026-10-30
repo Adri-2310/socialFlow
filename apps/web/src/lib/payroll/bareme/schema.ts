@@ -88,6 +88,48 @@ const trancheBaremeSchema = z.strictObject({
   taux: tauxSchema,
 });
 
+// Sous-bloc « allocations exceptionnelles » du précompte (n° 53 à 55 et 78.1.2 de l'Annexe III) :
+// primes ponctuelles, pécules de vacances, indemnités de maladie payées par l'employeur. Ce sont
+// les VALEURS seulement ; le calcul n'existe pas encore (il attend la règle de la rémunération
+// annuelle normale). Tout en entiers : montants en centimes, pourcentages en dix-millièmes de pour cent.
+const trancheAllocationSchema = z.strictObject({
+  // Rémunération annuelle brute normale jusqu'à (inclus) ; null pour la dernière tranche, sans borne.
+  jusqua: montantCentimesSchema.nullable(),
+  pecules: tauxSchema, // pourcentage de précompte sur un pécule de vacances
+  autres: tauxSchema, // pourcentage sur les autres indemnités et allocations
+});
+
+const reductionEnfantsAllocationSchema = z.strictObject({
+  pourcentage: tauxSchema, // pourcentage de la réduction, colonne 2 du tableau
+  remunerationMax: montantCentimesSchema, // au-delà de ce montant annuel, aucune réduction (colonne 3)
+});
+
+export const allocationsExceptionnellesSchema = z.strictObject({
+  // n° 53 : tranches classées ; seule la dernière n'a pas de borne.
+  taux: z
+    .array(trancheAllocationSchema)
+    .min(1)
+    .refine(
+      (t) =>
+        t.every((x, i) => (i === t.length - 1 ? x.jusqua === null : x.jusqua !== null)) &&
+        t.every((x, i) => i === 0 || (x.jusqua ?? Infinity) > (t[i - 1].jusqua ?? Infinity)),
+      { message: 'Les bornes doivent croître, et seule la dernière tranche est sans borne.' },
+    ),
+  // n° 54 : montant limite de la rémunération annuelle, de 1 à 12 enfants à charge. Change au
+  // 01/11/2026 (AR du 27/09/2026, art. 9) : le précompte suit la date de paiement (D112).
+  exonerationEnfants: z
+    .array(montantCentimesSchema)
+    .length(12)
+    .refine((t) => t.every((x, i) => i === 0 || x > t[i - 1]), {
+      message: 'Les montants limites doivent croître avec le nombre d’enfants.',
+    }),
+  // n° 55 : de 1 à 5 enfants à charge (pas de réduction au-delà).
+  reductionEnfants: z.array(reductionEnfantsAllocationSchema).length(5),
+  // n° 78.1.2 : indemnité payée par l'employeur sans rémunération de référence, sans réduction.
+  tauxSansReference: tauxSchema,
+});
+export type ParametresAllocationsExceptionnelles = z.infer<typeof allocationsExceptionnellesSchema>;
+
 export const precompteSchema = z.strictObject({
   // n° 28 : frais professionnels forfaitaires des travailleurs : 30 %, au maximum 6 070 €
   // (maximum atteint dès 20 233,33 € de base annuelle).
@@ -122,6 +164,9 @@ export const precompteSchema = z.strictObject({
   // n° 46 : le bonus à l'emploi donne aussi droit à une réduction de précompte : une part du
   // volet A (33,14 %) et une part du volet B (52,54 %) du bonus réellement accordé.
   bonusEmploiFiscal: z.strictObject({ tauxVoletA: tauxSchema, tauxVoletB: tauxSchema }),
+  // n° 53 à 55 et 78.1.2. Facultatif tant qu'aucun calcul ne l'utilise : une version sans ce
+  // sous-bloc reste valide, et le calcul l'exigera quand il existera.
+  allocationsExceptionnelles: allocationsExceptionnellesSchema.optional(),
 });
 export type ParametresPrecompte = z.infer<typeof precompteSchema>;
 

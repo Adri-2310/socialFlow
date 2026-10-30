@@ -97,6 +97,43 @@
       "bonusEmploiFiscal": {
         "tauxVoletA": 331400,
         "tauxVoletB": 630000
+      },
+      "allocationsExceptionnelles": {
+        "taux": [
+          { "jusqua": 1067500, "pecules": 0, "autres": 0 },
+          { "jusqua": 1366000, "pecules": 191700, "autres": 232200 },
+          { "jusqua": 1737500, "pecules": 212000, "autres": 252300 },
+          { "jusqua": 2084000, "pecules": 262500, "autres": 302800 },
+          { "jusqua": 2358000, "pecules": 313000, "autres": 353300 },
+          { "jusqua": 2634000, "pecules": 343300, "autres": 383600 },
+          { "jusqua": 3183000, "pecules": 363400, "autres": 403800 },
+          { "jusqua": 3464000, "pecules": 393700, "autres": 434100 },
+          { "jusqua": 4586000, "pecules": 423900, "autres": 464400 },
+          { "jusqua": 5990000, "pecules": 474400, "autres": 514800 },
+          { "jusqua": null, "pecules": 535000, "autres": 535000 }
+        ],
+        "exonerationEnfants": [
+          1954300,
+          2275000,
+          2906000,
+          3613000,
+          4320000,
+          5027000,
+          5734000,
+          6441000,
+          7148000,
+          7855000,
+          8562000,
+          9269000
+        ],
+        "reductionEnfants": [
+          { "pourcentage": 75000, "remunerationMax": 2894000 },
+          { "pourcentage": 200000, "remunerationMax": 2894000 },
+          { "pourcentage": 350000, "remunerationMax": 3183500 },
+          { "pourcentage": 550000, "remunerationMax": 3762500 },
+          { "pourcentage": 750000, "remunerationMax": 4052000 }
+        ],
+        "tauxSansReference": 321000
       }
     },
     "csss": {
@@ -278,7 +315,7 @@
     },
     "precompte": {
       "document": "Annexe III à l'AR/CIR 92, modifiée par les arrêtés royaux du 24/07/2026 et du 27/09/2026",
-      "reference": "n° 27-28, 31 à 41 et 46 ; AR du 24/07/2026 art. 4 (63 %) ; AR du 27/09/2026 art. 1 à 9 et 10 (revenus payés à partir du 01/11/2026)",
+      "reference": "n° 27-28, 31 à 41, 46, 53 à 55 et 78.1.2 (allocations exceptionnelles, valeurs seulement : le calcul n’est pas encore branché) ; AR du 24/07/2026 art. 4 (63 %) ; AR du 27/09/2026 art. 1 à 9 (dont art. 9 : nouveau tableau du n° 54) et 10 (revenus payés à partir du 01/11/2026)",
       "versionDocument": "AR du 11/12/2025 (doc/reference/precompte/annexe-iii-2026.pdf) ; Moniteur belge du 30/07/2026 et du 02/10/2026 (doc/reference/) ; choix assumés confirmés par Adrien le 30/10/2026 (D116) : précompte des indemnités et lecture littérale du n° 6, à vérifier avec le calculateur du SPF Finances dès qu'il refonctionne",
       "consulteLe": "2026-10-30",
       "fiabilite": "DECISION_INTERNE"
