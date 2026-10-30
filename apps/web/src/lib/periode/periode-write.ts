@@ -1,6 +1,6 @@
 import { entrepriseWhere, type Scope } from '@/lib/authz/authz';
 import { prisma } from '@/lib/prisma';
-import { dateLimiteParDefaut, moisOuvrable } from './periode-dates';
+import { dateLimiteParDefaut, moisOuvrable, refusBorneBasse } from './periode-dates';
 
 // Cycle d'une période de paie (D90, D91, roles/03 § 5) : ouverture, décalage de la date limite,
 // verrouillage et déverrouillage des prestations. Tout est écrit avec son audit dans la même
@@ -13,6 +13,8 @@ export type PeriodeError =
   | { error: 'ENTREPRISE_NOT_FOUND' }
   | { error: 'PERIODE_NOT_FOUND' }
   | { error: 'PERIODE_OUT_OF_RANGE' }
+  | { error: 'PERIODE_BEFORE_PAIE_START' }
+  | { error: 'PERIODE_BEFORE_ENTREPRISE_START' }
   | { error: 'PERIODE_ALREADY_EXISTS' }
   | { error: 'PERIODE_LOCKED' }
   | { error: 'PERIODE_ALREADY_LOCKED' }
@@ -49,7 +51,13 @@ export async function openPeriode(
   aujourdhui = new Date(),
 ): Promise<
   | { ok: true; id: string; dateLimite: string }
-  | Failure<'ENTREPRISE_NOT_FOUND' | 'PERIODE_OUT_OF_RANGE' | 'PERIODE_ALREADY_EXISTS'>
+  | Failure<
+      | 'ENTREPRISE_NOT_FOUND'
+      | 'PERIODE_OUT_OF_RANGE'
+      | 'PERIODE_BEFORE_PAIE_START'
+      | 'PERIODE_BEFORE_ENTREPRISE_START'
+      | 'PERIODE_ALREADY_EXISTS'
+    >
 > {
   if (scope.kind !== 'entreprises') return { ok: false, error: 'ENTREPRISE_NOT_FOUND' };
 
@@ -62,12 +70,21 @@ export async function openPeriode(
             { id: entrepriseId, cabinetId: scope.cabinetId, deletedAt: null },
           ],
         },
-        select: { id: true, jourLimitePrestations: true },
+        select: { id: true, jourLimitePrestations: true, createdAt: true },
       });
       if (!entreprise) return { ok: false as const, error: 'ENTREPRISE_NOT_FOUND' as const };
 
       if (!moisOuvrable(annee, mois, aujourdhui)) {
         return { ok: false as const, error: 'PERIODE_OUT_OF_RANGE' as const };
+      }
+      // D114 : borne basse. Pas de période avant le début de la paie (septembre 2026), ni avant le
+      // mois d'inscription de l'entreprise ; une période déjà ouverte n'est jamais touchée.
+      const refus = refusBorneBasse(annee, mois, entreprise.createdAt);
+      if (refus === 'AVANT_DEBUT_PAIE') {
+        return { ok: false as const, error: 'PERIODE_BEFORE_PAIE_START' as const };
+      }
+      if (refus === 'AVANT_INSCRIPTION') {
+        return { ok: false as const, error: 'PERIODE_BEFORE_ENTREPRISE_START' as const };
       }
       const existante = await tx.periodePaie.findUnique({
         where: { entrepriseId_annee_mois: { entrepriseId, annee, mois } },

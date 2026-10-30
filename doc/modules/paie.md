@@ -57,6 +57,8 @@ interface ResultatCalcul {
 export function calculerFiche(entree: EntreeCalcul): ResultatCalcul;
 ```
 
+> **Première période de paie (D114).** On ne peut pas ouvrir de période avant septembre 2026, premier mois couvert par une version de barème réelle, ni avant le mois d'inscription de l'entreprise : le calcul n'a donc jamais à traiter un mois sans barème.
+
 ## 3. Étapes de calcul (fiche mensuelle ordinaire)
 
 Les valeurs chiffrées ci-dessous servent de **repères** : la source de vérité est la `BaremeVersion` active, remplie depuis les textes officiels.

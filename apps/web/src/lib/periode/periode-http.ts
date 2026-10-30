@@ -8,6 +8,8 @@ export function periodeErrorResponse(result: PeriodeError) {
     case 'PERIODE_NOT_FOUND':
       return NextResponse.json({ error: result.error }, { status: 404 });
     case 'PERIODE_OUT_OF_RANGE':
+    case 'PERIODE_BEFORE_PAIE_START':
+    case 'PERIODE_BEFORE_ENTREPRISE_START':
       return NextResponse.json(
         { error: result.error, fields: { mois: result.error } },
         { status: 409 },

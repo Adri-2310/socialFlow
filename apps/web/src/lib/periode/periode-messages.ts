@@ -1,4 +1,6 @@
 import { ERROR_MESSAGES } from '@/lib/salarie/form-messages';
+import { PREMIER_MOIS_PAIE } from './periode-dates';
+import { libelleMois } from './periode-format';
 
 // Messages des formulaires des périodes et des prestations. Sans dépendance côté serveur :
 // importé par des composants client.
@@ -21,6 +23,10 @@ export const PERIODE_ERROR_MESSAGES: Record<string, string> = {
 export const PERIODE_FIELD_ERRORS: Record<string, string> = {
   PERIODE_OUT_OF_RANGE:
     'On peut ouvrir un mois passé, le mois courant ou le mois suivant, pas plus loin.',
+  // D114 : borne basse des périodes.
+  PERIODE_BEFORE_PAIE_START: `La paie démarre en ${libelleMois(PREMIER_MOIS_PAIE.annee, PREMIER_MOIS_PAIE.mois)} : on ne peut pas ouvrir un mois plus ancien.`,
+  PERIODE_BEFORE_ENTREPRISE_START:
+    'On ne peut pas ouvrir une période avant le mois d’inscription de l’entreprise.',
   INVALID_MOIS: 'Mois invalide.',
   INVALID_ANNEE: 'Année invalide.',
   INVALID_DATE_LIMITE: 'Date invalide.',
