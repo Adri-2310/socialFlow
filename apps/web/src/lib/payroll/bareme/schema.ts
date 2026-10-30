@@ -291,10 +291,12 @@ export const salaireGarantiSchema = z.strictObject({
   complementEmployePlafonne: tauxSchema, // 26,93 % s'écrit 269 300
   complementEmployeExcedent: tauxSchema, // 86,93 % s'écrit 869 300
   // Plafond JOURNALIER BRUT de la rémunération pris en compte par l'assurance maladie-invalidité
-  // pour les jours à 60 %. Source : INAMI, « Votre plafond salarial » (doc/reference/
-  // inami-plafond-salarial-incapacite.html), incapacité primaire : 189,3583 € à partir du
-  // 01/09/2026 ; il change à chaque indexation, donc une valeur par version de barème (D108).
-  plafondJournalierCentimes: montantCentimesSchema,
+  // (régime de 6 jours indemnisables par semaine), en DIX-MILLIÈMES d'euro comme l'INAMI le publie :
+  // 189,3583 € s'écrit 1 893 583. Source : INAMI, « Votre plafond salarial » (doc/reference/
+  // inami-plafond-salarial-incapacite.html), incapacité primaire, à partir du 01/09/2026 ; il change à
+  // chaque indexation, donc une valeur par version de barème (D108, D111). Le moteur le ramène au
+  // régime de travail du salarié (6 / jours d'activité par semaine) au moment de la comparaison.
+  plafondJournalierDixMilliemes: z.int().min(0),
 });
 export type ParametresSalaireGaranti = z.infer<typeof salaireGarantiSchema>;
 

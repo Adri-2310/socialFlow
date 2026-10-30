@@ -12,6 +12,13 @@ import { BORNES, exigerEntier } from './validation';
 // art. 56 (seuls les jours d'activité habituelle comptent), art. 70 à 72 (employés).
 // Les durées, le taux de 60 % et le plafond viennent du bloc `salaireGaranti` du barème.
 //
+// Étape 9a (D111) : le plafond de l'INAMI vaut pour 6 jours indemnisables par semaine, alors que la
+// pratique le compare à la rémunération MENSUELLE (plafond mensuel = plafond journalier x 26, UCM).
+// Pour un travailleur à j jours par semaine, comparer la rémunération d'un jour de travail au
+// plafond journalier brut reviendrait à plafonner trop tôt : on convertit le plafond en
+// plafond x 6 / j, ce qui revient exactement à la comparaison mensuelle ramenée au jour.
+// Exemple : 189,3583 € x 6 / 5 = 227,23 € pour un travailleur à 5 jours par semaine.
+//
 // Étape 8b bis (D109) : les CCT n° 12bis (ouvriers) et n° 13bis (employés engagés pour moins de
 // 3 mois), textes coordonnés dans `doc/reference/`, ajoutent pendant les 23 jours qui suivent les
 // 7 premiers jours (jours 8 à 30) une indemnité complémentaire à la charge de l'employeur :
@@ -70,6 +77,37 @@ function lireJoursDejaConsommes(valeur: number | undefined): number {
   return exigerEntier('Les jours déjà indemnisés', valeur ?? 0, 0, 365);
 }
 
+// Dix-millièmes d'euro dans un centime (le plafond du barème est stocké en dix-millièmes d'euro).
+const DIXMILLIEMES_PAR_CENTIME = 100;
+
+function lireJoursActivite(valeur: number): number {
+  // Le moteur ne devine pas le régime de travail : entier de 1 à 6 jours par semaine (D111).
+  return exigerEntier("Les jours d'activité par semaine", valeur, 1, 6);
+}
+
+// Plafond de l'INAMI pour la rémunération d'UN jour de travail, en centimes (D111) :
+// plafond x 6 / jours d'activité par semaine, un seul arrondi au centime, la moitié monte (n° 12).
+// Exemples : 100,00 € à 6 jours = 10 000 ; à 5 jours = 12 000 ; 189,3583 € à 5 jours = 22 723.
+export function plafondEffectifJournalier(
+  plafondDixMilliemes: number,
+  joursActiviteParSemaine: number,
+): Centimes {
+  const jours = lireJoursActivite(joursActiviteParSemaine);
+  return arrondirFraction(plafondDixMilliemes * 6, jours * DIXMILLIEMES_PAR_CENTIME);
+}
+
+// Même plafond pour un nombre de DEMI-journées (employé) : plafond x 6 x demi-jours / (2 x jours).
+function plafondEffectifDemiJours(
+  plafondDixMilliemes: number,
+  joursActiviteParSemaine: number,
+  demiJours: number,
+): Centimes {
+  return arrondirFraction(
+    plafondDixMilliemes * 6 * demiJours,
+    2 * joursActiviteParSemaine * DIXMILLIEMES_PAR_CENTIME,
+  );
+}
+
 function refuserDoublons(dates: DateIso[]): void {
   if (new Set(dates).size !== dates.length) {
     throw new ErreurMoteur('JOUR_EN_DOUBLE', 'Un jour est listé deux fois.');
@@ -92,6 +130,9 @@ export interface JourIncapaciteOuvrier {
 
 export interface EntreeSalaireGarantiOuvrier {
   tauxHoraireCentimes: Centimes;
+  // Jours d'activité par semaine du régime de travail (1 à 6) : sert à convertir le plafond de
+  // l'INAMI, valable pour 6 jours par semaine (D111). Obligatoire : le moteur ne le devine pas.
+  joursActiviteParSemaine: number;
   nature: NatureIncapacite;
   debutPeriodeGarantie: DateIso; // début de l'incapacité en cours
   // Jours calendrier déjà indemnisés pendant l'incapacité précédente, en cas de rechute dans les
@@ -197,6 +238,10 @@ export function calculerSalaireGarantiOuvrier(
     );
   }
   const consommes = lireJoursDejaConsommes(entree.joursDejaConsommes);
+  const plafondJour = plafondEffectifJournalier(
+    bloc.plafondJournalierDixMilliemes,
+    entree.joursActiviteParSemaine,
+  );
   const avantage = exigerEntier(
     "L'avantage complémentaire imputable",
     entree.avantageComplementaireImputableCentimes ?? 0,
@@ -246,7 +291,7 @@ export function calculerSalaireGarantiOuvrier(
     } else if (entree.nature === 'MALADIE' && rang <= joursPleins + bloc.ouvrierJoursPartiels) {
       // Art. 52 § 1 : 60 % de la partie de la rémunération qui ne dépasse pas le plafond.
       minutesPartielles += minutes;
-      basePartielle += Math.min(remunerationNormale, bloc.plafondJournalierCentimes);
+      basePartielle += Math.min(remunerationNormale, plafondJour);
     }
     // CCT 12bis, art. 3 : les 23 jours qui suivent les 7 premiers (maladie seulement).
     if (
@@ -254,7 +299,7 @@ export function calculerSalaireGarantiOuvrier(
       rang > joursPleins &&
       rang <= joursPleins + bloc.complementJours
     ) {
-      const sousPlafond = Math.min(remunerationNormale, bloc.plafondJournalierCentimes);
+      const sousPlafond = Math.min(remunerationNormale, plafondJour);
       basePlafonnee += sousPlafond;
       baseExcedent += remunerationNormale - sousPlafond;
     }
@@ -320,6 +365,9 @@ export interface EntreeSalaireGarantiEmploye {
   // Même règle que `calculerBrutEmploye` : nombre de jours sur lequel se répartit le mois, fourni
   // par l'appelant (règle de la commission paritaire, pas du moteur).
   joursReferenceMois: number;
+  // Jours d'activité par semaine du régime de travail (1 à 6) : sert à convertir le plafond de
+  // l'INAMI, valable pour 6 jours par semaine (D111). Obligatoire : le moteur ne le devine pas.
+  joursActiviteParSemaine: number;
   // Art. 70 : contrat de 3 mois ou plus (ou à durée indéterminée) ; art. 71 : moins de 3 mois.
   contrat: 'LONGUE_DUREE' | 'COURTE_DUREE';
   nature: NatureIncapacite;
@@ -374,6 +422,7 @@ export function calculerSalaireGarantiEmploye(
   );
   refuserDoublons(entree.jours.map((j) => j.date));
   const consommes = lireJoursDejaConsommes(entree.joursDejaConsommes);
+  const joursActivite = lireJoursActivite(entree.joursActiviteParSemaine);
   const avantage = exigerEntier(
     "L'avantage complémentaire imputable",
     entree.avantageComplementaireImputableCentimes ?? 0,
@@ -464,10 +513,18 @@ export function calculerSalaireGarantiEmploye(
     // (jours 8 à 14) et l'indemnité complémentaire de la CCT (jours 8 à 30), qui ne sont pas de la
     // rémunération soumise à l'ONSS. La retenue est la valeur des jours moins ce qui reste versé.
     const valeur = arrondirFraction(mensuel * avecComplement, 2 * jours);
-    const plafond = arrondirFraction(bloc.plafondJournalierCentimes * avecComplement, 2);
+    const plafond = plafondEffectifDemiJours(
+      bloc.plafondJournalierDixMilliemes,
+      joursActivite,
+      avecComplement,
+    );
     const sousPlafond = Math.min(valeur, plafond);
     const valeurLoi = arrondirFraction(mensuel * aPartiel, 2 * jours);
-    const plafondLoi = arrondirFraction(bloc.plafondJournalierCentimes * aPartiel, 2);
+    const plafondLoi = plafondEffectifDemiJours(
+      bloc.plafondJournalierDixMilliemes,
+      joursActivite,
+      aPartiel,
+    );
     const payeLoi = appliquerTaux(Math.min(valeurLoi, plafondLoi), bloc.tauxPartiel);
     const c = calculerComplement(
       sousPlafond,

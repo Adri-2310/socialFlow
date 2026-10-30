@@ -8,7 +8,9 @@ import {
   type EntreeSalaireGarantiOuvrier,
   type JourIncapaciteEmploye,
   type JourIncapaciteOuvrier,
+  plafondEffectifJournalier,
 } from '@/lib/payroll/salaire-garanti';
+import { arrondirFraction } from '@/lib/payroll/arrondi';
 import { SALAIRE_GARANTI_2026 as BLOC } from './fixtures-bareme';
 
 // Valeurs attendues calculées à la main (calcul en commentaire). Le plafond journalier de la
@@ -38,6 +40,7 @@ const entreeOuvrier = (
   extra: Partial<EntreeSalaireGarantiOuvrier> = {},
 ): EntreeSalaireGarantiOuvrier => ({
   tauxHoraireCentimes: 1_500,
+  joursActiviteParSemaine: 6, // plafond de l'INAMI tel quel (6 jours par semaine)
   nature: 'MALADIE',
   debutPeriodeGarantie: '2026-03-02',
   dateUnMoisAnciennete: null,
@@ -295,6 +298,7 @@ const entreeEmploye = (
 ): EntreeSalaireGarantiEmploye => ({
   remunerationMensuelle: 240_000,
   joursReferenceMois: 20,
+  joursActiviteParSemaine: 6, // plafond de l'INAMI tel quel (6 jours par semaine)
   contrat: 'LONGUE_DUREE',
   nature: 'MALADIE',
   debutPeriodeGarantie: '2026-03-02',
@@ -576,5 +580,134 @@ describe('calculerSalaireGarantiEmploye : rechute, ancienneté et exclusions', (
         ),
       ),
     ).toBe('EXCLUSION_INCOMPATIBLE');
+  });
+});
+
+// ---------------------------------------------------------------- régime de travail (étape 9a, D111)
+describe('plafondEffectifJournalier', () => {
+  it('ramène le plafond de l’INAMI au régime de travail : x 6 / jours par semaine', () => {
+    // plafond de test 100,00 € = 1 000 000 dix-millièmes
+    expect(plafondEffectifJournalier(1_000_000, 6)).toBe(10_000); // 100,00 €
+    expect(plafondEffectifJournalier(1_000_000, 5)).toBe(12_000); // 120,00 €
+    expect(plafondEffectifJournalier(1_000_000, 4)).toBe(15_000); // 150,00 €
+    expect(plafondEffectifJournalier(1_000_000, 3)).toBe(20_000); // 200,00 €
+  });
+
+  it('plafond réel de l’INAMI au 01/09/2026 : 189,3583 € à 6 jours = 189,36 € ; à 5 jours = 227,23 €', () => {
+    // 189,3583 € = 1 893 583 dix-millièmes ; x 6 / 5 = 227,22996 € -> 227,23 €
+    expect(plafondEffectifJournalier(1_893_583, 6)).toBe(18_936);
+    expect(plafondEffectifJournalier(1_893_583, 5)).toBe(22_723);
+  });
+
+  it('contrôle de la source : 183,1311 € x 26 = 4 761,41 € (plafond mensuel de l’UCM depuis le 01/02/2025)', () => {
+    // 1 831 311 dix-millièmes x 26 = 47 614 086 dix-millièmes = 4 761,4086 € -> 4 761,41 €
+    expect(arrondirFraction(1_831_311 * 26, 100)).toBe(476_141);
+  });
+
+  it('refuse un régime de 0 ou 7 jours, décimal ou qui n’est pas un nombre', () => {
+    for (const jours of [0, 7, 5.5, -1, '5' as unknown as number]) {
+      expect(code(() => plafondEffectifJournalier(1_000_000, jours))).toBe('ENTREE_INVALIDE');
+    }
+  });
+});
+
+describe('calculerSalaireGarantiOuvrier : régime de 5 jours par semaine', () => {
+  it('jours 8 à 12 : le jour à 114,00 € est sous le plafond converti de 120,00 € (aucune part au-dessus)', () => {
+    // loi : 60 % x 5 x 114,00 = 342,00 € ; CCT : 25,88 % x 570,00 = 147,516 -> 147,52 € ; total 489,52 €
+    const r = calculerSalaireGarantiOuvrier(
+      entreeOuvrier(semaine2, { joursActiviteParSemaine: 5 }),
+      BLOC,
+    );
+    expect(r.montant).toBe(48_952);
+    expect(r.lignes).toEqual([
+      {
+        code: 'SALAIRE_GARANTI_60',
+        libelle: 'Salaire garanti à 60 % (plafonné) : 38 h 00',
+        base: 57_000,
+        taux: 600_000,
+        montant: 34_200,
+      },
+      {
+        code: 'COMPLEMENT_CCT_PLAFONNE',
+        libelle: 'Indemnité complémentaire CCT 12bis (part sous le plafond)',
+        base: 57_000,
+        taux: 258_800,
+        montant: 14_752,
+      },
+    ]);
+  });
+
+  it('jours 15 à 19 : complément seul, 25,88 % de 570,00 € = 147,52 € (6 jours par semaine : 189,52 €)', () => {
+    const cinq = calculerSalaireGarantiOuvrier(
+      entreeOuvrier(semaine3, { joursActiviteParSemaine: 5 }),
+      BLOC,
+    );
+    expect(cinq.montant).toBe(14_752);
+    // même mois à 6 jours par semaine : 5 x 100,00 sous le plafond (12 940) + 5 x 14,00 au-dessus (6 012)
+    const six = calculerSalaireGarantiOuvrier(entreeOuvrier(semaine3), BLOC);
+    expect(six.montant).toBe(18_952);
+  });
+
+  it('un jour au-dessus du plafond converti : 20,00 €/h = 152,00 € ; plafond 120,00 € à 5 jours, 100,00 € à 6 jours', () => {
+    // jour 15 (16 mars) : à 5 jours 25,88 % x 120,00 = 31,056 -> 31,06 ; 85,88 % x 32,00 = 27,4816 -> 27,48 ; total 58,54 €
+    // à 6 jours  25,88 % x 100,00 = 25,88 ; 85,88 % x 52,00 = 44,6576 -> 44,66 ; total 70,54 €
+    const un = (joursActiviteParSemaine: number) =>
+      calculerSalaireGarantiOuvrier(
+        entreeOuvrier([jo('2026-03-16')], { tauxHoraireCentimes: 2_000, joursActiviteParSemaine }),
+        BLOC,
+      ).montant;
+    expect(un(5)).toBe(5_854);
+    expect(un(6)).toBe(7_054);
+  });
+
+  it('refuse un régime absent, nul, supérieur à 6 ou décimal', () => {
+    for (const joursActiviteParSemaine of [0, 7, 5.5, undefined as unknown as number]) {
+      expect(
+        code(() =>
+          calculerSalaireGarantiOuvrier(entreeOuvrier(semaine1, { joursActiviteParSemaine }), BLOC),
+        ),
+      ).toBe('ENTREE_INVALIDE');
+    }
+  });
+});
+
+describe('calculerSalaireGarantiEmploye : régime de 5 jours par semaine', () => {
+  const court5 = (
+    jours: JourIncapaciteEmploye[],
+    extra: Partial<EntreeSalaireGarantiEmploye> = {},
+  ) =>
+    calculerSalaireGarantiEmploye(
+      entreeEmploye(jours, { contrat: 'COURTE_DUREE', joursActiviteParSemaine: 5, ...extra }),
+      BLOC,
+    );
+
+  it('jour 15 : valeur 120,00 € sous le plafond converti de 120,00 € -> complément 26,93 % = 32,32 €', () => {
+    // plafond converti pour 2 demi-jours : 100,00 x 6 x 2 / (2 x 5) = 120,00 € ; 26,93 % x 120,00 = 32,316 -> 32,32 €
+    // (à 6 jours par semaine : plafond 100,00 €, complément 44,32 €)
+    const r = court5([je('2026-03-16')]);
+    expect(r.complement).toBe(3_232);
+    expect(r.horsOnss).toBe(3_232);
+    expect(r.retenue).toBe(8_768);
+  });
+
+  it('salaire de 3 000,00 € : le jour à 150,00 € dépasse le plafond converti de 120,00 €', () => {
+    // valeur 3 000,00 x 2 / 40 = 150,00 € ; part sous le plafond 120,00 -> 26,93 % = 32,316 -> 32,32 € ;
+    // part au-dessus 30,00 -> 86,93 % = 26,079 -> 26,08 € ; complément 58,40 € ; retenue 150,00 - 58,40 = 91,60 €
+    const r = court5([je('2026-03-16')], { remunerationMensuelle: 300_000 });
+    expect(r.complement).toBe(5_840);
+    expect(r.retenue).toBe(9_160);
+  });
+
+  it('refuse un régime absent, nul, supérieur à 6 ou décimal', () => {
+    for (const joursActiviteParSemaine of [0, 7, 5.5, undefined as unknown as number]) {
+      expect(
+        code(() =>
+          calculerSalaireGarantiEmploye(
+            entreeEmploye([je('2026-03-16')], { joursActiviteParSemaine }),
+            BLOC,
+          ),
+        ),
+      ).toBe('ENTREE_INVALIDE');
+    }
   });
 });

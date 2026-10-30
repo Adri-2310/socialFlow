@@ -167,7 +167,7 @@ export const JOURS_FERIES_2026: ParametresJoursFeries = {
 };
 
 // Salaire garanti : loi du 3 juillet 1978 relative aux contrats de travail (art. 52, 54, 70, 71, 72).
-// ATTENTION : `plafondJournalierCentimes` est une valeur de TEST (100,00 € par jour) choisie pour
+// ATTENTION : `plafondJournalierDixMilliemes` est une valeur de TEST (100,00 € par jour) choisie pour
 // que les calculs à la main restent lisibles, PAS le plafond réel. Le plafond réel de l'INAMI
 // (incapacité primaire, 189,3583 € à partir du 01/09/2026) est dans
 // doc/reference/inami-plafond-salarial-incapacite.html : il sera inséré avec le barème réel (étape 9).
@@ -185,5 +185,5 @@ export const SALAIRE_GARANTI_2026: ParametresSalaireGaranti = {
   complementOuvrierExcedent: 858_800, // 85,88 %
   complementEmployePlafonne: 269_300, // 26,93 %
   complementEmployeExcedent: 869_300, // 86,93 %
-  plafondJournalierCentimes: 10_000, // VALEUR DE TEST
+  plafondJournalierDixMilliemes: 1_000_000, // VALEUR DE TEST : 100,00 € (dix-millièmes d'euro)
 };

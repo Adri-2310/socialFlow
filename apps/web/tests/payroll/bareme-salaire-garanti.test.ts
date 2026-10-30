@@ -17,9 +17,9 @@ describe('bloc salaireGaranti', () => {
   it('refuse un taux ou un plafond décimal ou négatif, un champ manquant ou une clé inconnue', () => {
     const s = SALAIRE_GARANTI_2026;
     expect(salaireGarantiSchema.safeParse({ ...s, tauxPartiel: 600_000.5 }).success).toBe(false);
-    expect(salaireGarantiSchema.safeParse({ ...s, plafondJournalierCentimes: -1 }).success).toBe(
-      false,
-    );
+    expect(
+      salaireGarantiSchema.safeParse({ ...s, plafondJournalierDixMilliemes: -1 }).success,
+    ).toBe(false);
     expect(salaireGarantiSchema.safeParse({ ...s, employeLongueDureeJours: 30.5 }).success).toBe(
       false,
     );
@@ -29,7 +29,7 @@ describe('bloc salaireGaranti', () => {
     expect(salaireGarantiSchema.safeParse({ ...s, complementJours: 23.5 }).success).toBe(false);
     const { complementJours: _jours, ...sansComplement } = s;
     expect(salaireGarantiSchema.safeParse(sansComplement).success).toBe(false);
-    const { plafondJournalierCentimes: _plafond, ...sansPlafond } = s;
+    const { plafondJournalierDixMilliemes: _plafond, ...sansPlafond } = s;
     expect(salaireGarantiSchema.safeParse(sansPlafond).success).toBe(false);
     expect(salaireGarantiSchema.safeParse({ ...s, mutuelle: 1 }).success).toBe(false);
   });
