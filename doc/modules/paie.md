@@ -191,3 +191,29 @@ Le moteur v1 est une **version simplifiée pour le TFE**. Il couvre le besoin mi
 | (c) | Rechute de huit semaines aussi pour le complément des CCT 12bis et 13bis, dont l'art. 5 dit quatorze jours (D109, D117) | Entre le 15e jour et la 8e semaine, le moteur peut verser moins que la CCT de 1997 |
 | (d) | Cumuls calculés **depuis les fiches de SocialFlow seulement** | Un salarié déjà en poste part de zéro : plafond annuel du bonus, CSSS du 3e mois et plafonds d'heures supplémentaires ne tiennent pas compte de l'avant ; l'appelant le signale |
 | (e) | Coût employeur **estimé** | Réduction structurelle trimestrielle estimée par mois, sans fonds de fermeture ni « index centime » |
+
+## 11. Données dont le cycle des fiches (G2b) a besoin (D121)
+
+`calculerFiche` est pure : G2b lui fournit les entrées suivantes. Aucun code n'est écrit ici ; ces règles guident G2b.
+
+| Entrée | D'où elle vient | Règle |
+|---|---|---|
+| Jours de travail par semaine | Nouvelle colonne `ConditionTravail.joursParSemaine` (1 à 6) | Obligatoire dans le formulaire du dossier, nullable en base ; le calcul refuse si elle manque |
+| Heures d'un ouvrier sans prestation (mois complet) | Calendrier du mois et régime | Jours du régime moins fériés, congés, maladie et absences non rémunérées ; minutes = jours x heures par semaine / jours par semaine, arrondi une fois sur le total (`DECISION_INTERNE`) |
+| J, D, H, U du bonus à l'emploi | Champs de `Prestation` | Voir la correspondance ci-dessous (ONSS 2026/3, pp. 449 à 453) |
+| Cumuls (bonus de l'année, brut et CSSS du trimestre, heures supplémentaires, net précédent) | Somme des fiches de SocialFlow du même salarié | Un salarié déjà en poste part de zéro (D120 (d)) ; une fiche rectificative ne voit que les fiches antérieures à sa période (D13) |
+| `employeurDixTravailleursOuPlus` | Nouvelle colonne `Entreprise.dixTravailleursOuPlus` (défaut `false`) | Saisie par le cabinet ; n'influence que le coût employeur estimé |
+| `habitantRoyaume` | Constante | Toujours `true` (Belgique uniquement) |
+
+**Correspondance des prestations avec J (bonus à l'emploi, D121 (3)).**
+
+| Champ de `Prestation` | Employé | Ouvrier | Statut |
+|---|---|---|---|
+| Jours prestés | compte | compte | ONSS p. 449 à 453 |
+| `congeDemiJours` | **compte** (code 1) | **ne compte pas** (code 2, exemple 2 p. 453) | Sourcé |
+| Maladie non payée par l'employeur | **ne compte pas** (code 50, exemple 1 p. 453) | ne compte pas | Sourcé pour l'employé |
+| Maladie payée par l'employeur (salaire garanti) | compte | compte | Inférence (`DECISION_INTERNE`) |
+| `ferieDemiJours` | compte | compte | Inférence (`DECISION_INTERNE`) |
+| `absenceNonRemDemiJours` | ne compte pas | ne compte pas | Règle de SocialFlow |
+
+Pour un temps partiel, l'unité est MINUTES : H = minutes déclarées, U = minutes mensuelles d'un temps plein du même régime (calculées comme les heures du mois d'un ouvrier).
