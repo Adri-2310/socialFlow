@@ -435,6 +435,8 @@ model BaremeVersion {
   activeParId String?
   activePar   User?     @relation("BaremeActivePar", fields: [activeParId], references: [id], onDelete: SetNull)
   activeLe    DateTime?
+  // D122 : motif de la dérogation à l'absence de cas de référence ; null si l'activation n'en a pas eu besoin.
+  derogationMotif String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -470,7 +472,7 @@ model EmailTemplate {
 // ne s'applique qu'aux actions CABINET_*).
 model AuditLog {
   id           String   @id @default(cuid())
-  action       String // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED | CABINET_ARCHIVED | CABINET_RESTORED | USER_ARCHIVED | USER_RESTORED | PRICING_PLAN_CREATED | PRICING_PLAN_UPDATED | PRICING_PLAN_ARCHIVED | PRICING_PLAN_RESTORED
+  action       String // CABINET_CREATED | CABINET_SUSPENDED | CABINET_REACTIVATED | CABINET_ARCHIVED | CABINET_RESTORED | USER_ARCHIVED | USER_RESTORED | PRICING_PLAN_CREATED | PRICING_PLAN_UPDATED | PRICING_PLAN_ARCHIVED | PRICING_PLAN_RESTORED | BAREME_ACTIVATED
   actorId      String?
   actor        User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
   cabinetId    String?

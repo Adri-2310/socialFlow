@@ -102,7 +102,8 @@ BaremeVersion
                      // frais forfaitaires, réductions enfants, bonus emploi,
                      // cotisation spéciale, plafonds heures sup, pécule…
   source: Json       // URL et référence du texte officiel de chaque bloc
-  creePar, activePar, activeLe
+  creePar, activePar, activeLe,
+  derogationMotif    // D122 : motif si activé sans cas de référence, sinon null
 ```
 
 Flux de mise à jour :
@@ -110,6 +111,8 @@ Flux de mise à jour :
 2. Changement détecté : création d'une version `A_VERIFIER` (paramètres extraits et différences avec la version active) et alerte au SuperAdmin.
 3. Le SuperAdmin compare, **lance les cas de référence** sur la nouvelle version, puis l'active. Un barème n'est jamais activé si un cas de référence échoue.
 4. Les fiches déjà envoyées gardent leur version (D13).
+
+**Activation (D119, D122).** Elle se fait par `npm run bareme:activer -- <code> --par <email> [--derogation "<motif>"] [--dry-run]` (code : `src/lib/bareme/bareme-activation.ts`, hors du moteur pur). Le script vérifie que `--par` est un SuperAdmin existant, appelle `peutActiverBareme`, refuse en listant toutes les raisons, affiche la base visée et demande une confirmation au clavier (il refuse de tourner sans terminal interactif, sauf avec `--dry-run`, qui n'écrit rien). Le statut `ACTIF`, `activeParId`, `activeLe`, `derogationMotif` et l'audit `BAREME_ACTIVATED` s'écrivent dans une seule transaction Serializable ; l'audit ne contient que le code, la dérogation et son motif (aucune donnée de paie, D8). La dérogation ne lève que l'absence de cas de référence ; ses fiches portent `baremeNonVerifie`. Aucune page ni route de l'application ne lit `bareme_version` (test d'isolation).
 
 **Fiabilité des sources (D115).** Chaque bloc de `source` porte un champ `fiabilite` (`OFFICIELLE`, `DECISION_INTERNE` ou `A_CONFIRMER`) ; l'activation d'une version avec un bloc `A_CONFIRMER` ou sans fiabilité est refusée par `peutActiverBareme` (D119). Le barème réel de 2026 est dans `apps/web/prisma/bareme/` (septembre, octobre, novembre).
 

@@ -20,6 +20,7 @@
     "db:studio": "prisma studio",
     "db:seed:bareme": "node prisma/seed-bareme.mjs",
     "superadmin:create": "tsx scripts/create-superadmin.ts",
+    "bareme:activer": "tsx scripts/activer-bareme.ts",
     "db:reencrypt": "tsx scripts/reencrypt-salaries.ts"
   },
   "dependencies": {

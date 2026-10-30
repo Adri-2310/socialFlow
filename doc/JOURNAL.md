@@ -295,13 +295,14 @@
 
 **Objectif** : produire un moteur de paie sans écran dans `apps/web/src/lib/payroll/` : fonctions pures, argent en centimes entiers, paramètres légaux uniquement lus dans une `BaremeVersion`, rejouable sur des cas de référence au centime près. Aucun taux ni barème ne vient de la mémoire de l'assistant : tout vient de textes officiels déposés dans `doc/reference/`.
 
-**Décisions prises** : D99 à D119 (voir `DECISIONS.md`).
+**Décisions prises** : D99 à D122 (voir `DECISIONS.md`).
 - D99 à D105 : modèle `BaremeVersion` en blocs par sujet légal, brut (temps partiel, D100), ONSS et bonus, précompte (Annexe III), CSSS et net, coût employeur, anomalies.
 - D106 à D111 : heures supplémentaires, jours fériés, salaire garanti, compléments des CCT 12bis et 13bis, règles de 2026 modifiées en cours d'année, plafond de l'INAMI selon le régime.
 - D112 et D113 : le précompte suit la version du barème à la date de paiement, le reste suit la période ; `calculerFiche` assemble tout.
 - D114 : pas de période avant septembre 2026 ni avant l'inscription de l'entreprise (ma proposition).
 - D115 à D117 : barème réel en trois fichiers JSON avec la fiabilité de chaque source ; choix que j'assume (précompte des indemnités, cotisations patronales, salaire garanti).
 - D118 et D119 : huit cas de référence rejouables et garde-fou d'activation (« un barème n'est jamais activé si un cas échoue »).
+- D120 à D122 : périmètre simplifié du TFE (employés CP 200 et ouvriers CP 100, Belgique), données de G2b, et dérogation à l'absence de cas de référence (je ne suis pas une entreprise et je n'ai pas accès à tous les simulateurs) ; l'activation se fait par `npm run bareme:activer`, avec audit `BAREME_ACTIVATED` et le signalement « barème non vérifié » sur la fiche.
 
 **Réalisé** : branche `feature/moteur-paie`, un commit par étape présentée et validée avant d'être codée. Le barème de septembre à novembre 2026 est semé dans la base de développement (statut `A_VERIFIER`). Aucun écran : les tests sont la seule interface jusqu'à G2b.
 

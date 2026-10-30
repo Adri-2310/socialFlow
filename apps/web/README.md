@@ -71,6 +71,7 @@ npm run db:generate       # générer le client Prisma
 npm run db:migrate        # créer et appliquer une migration (dev)
 npm run db:studio         # explorer la base
 npm run superadmin:create -- <email> [--nom "Prénom Nom"] [--force]
+npm run bareme:activer -- <code> --par <email> [--derogation "<motif>"] [--dry-run]   # activer un barème (D22, D122)
 npm run db:reencrypt      # convertir NISS et IBAN au format v2 (--dry-run pour simuler)
 node scripts/resync-yearly-prices.mjs [--apply]   # recaler les prix annuels Stripe (simulation par défaut)
 ```
