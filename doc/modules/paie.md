@@ -24,9 +24,9 @@ type Centimes = number; // entier
 
 interface EntreeCalcul {
   periode: { annee: number; mois: number };          // 1-12
-  bareme: ParametresBareme;                          // version valable pour la période
   datePaiement: string;                              // AAAA-MM-JJ, obligatoire : le précompte dépend du jour de paiement (D112)
-  baremePrecompte: ParametresBareme;                 // version valable le jour de paiement, pour le bloc precompte (D112)
+  categorieEmployeur: string;                        // D98, ex. PRIVE_MARCHAND
+  versions: VersionBareme[];                         // toutes les versions avec leurs paramètres : calculerFiche choisit la période et le jour de paiement (D99, D112, D113)
   travailleur: {
     statut: 'EMPLOYE' | 'OUVRIER';
     commissionParitaire: '200' | '100';
