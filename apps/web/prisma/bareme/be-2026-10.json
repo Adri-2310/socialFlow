@@ -1,0 +1,336 @@
+{
+  "code": "BE-2026-10",
+  "valideDepuis": "2026-10-01",
+  "valideJusqua": "2026-10-31",
+  "statut": "A_VERIFIER",
+  "categorieEmployeur": "PRIVE_MARCHAND",
+  "parametres": {
+    "version": 1,
+    "categorieEmployeur": "PRIVE_MARCHAND",
+    "onss": {
+      "tauxPersonnel": 130700,
+      "coefficientOuvrier": 1080000
+    },
+    "bonusEmploi": {
+      "employe": {
+        "voletA": {
+          "montantMax": 12754,
+          "plafondPlein": 293793,
+          "coefficient": 273900,
+          "plafondNul": 340362
+        },
+        "voletB": {
+          "montantMax": 17199,
+          "plafondPlein": 230062,
+          "coefficient": 269900,
+          "plafondNul": 293793
+        }
+      },
+      "ouvrier": {
+        "voletA": {
+          "montantMax": 13774,
+          "plafondPlein": 293793,
+          "coefficient": 295800,
+          "plafondNul": 340362
+        },
+        "voletB": {
+          "montantMax": 18575,
+          "plafondPlein": 230062,
+          "coefficient": 291500,
+          "plafondNul": 293793
+        }
+      },
+      "plafondAnnuel": 359436
+    },
+    "precompte": {
+      "fraisProfessionnels": {
+        "taux": 300000,
+        "maximum": 607000
+      },
+      "bareme": [
+        {
+          "auDela": 0,
+          "impotFixe": 0,
+          "taux": 267500
+        },
+        {
+          "auDela": 1671000,
+          "impotFixe": 446993,
+          "taux": 428000
+        },
+        {
+          "auDela": 2950000,
+          "impotFixe": 994405,
+          "taux": 481500
+        },
+        {
+          "auDela": 5105000,
+          "impotFixe": 2032038,
+          "taux": 535000
+        }
+      ],
+      "impotQuotiteExemptee": 298798,
+      "quotientConjugal": {
+        "taux": 300000,
+        "maximum": 1379000
+      },
+      "reductions": {
+        "enfants": [
+          62400,
+          165600,
+          440400,
+          762000,
+          1110000,
+          1459200,
+          1812000,
+          2199600
+        ],
+        "parEnfantAuDela8": 386400,
+        "beneficiaireHandicape": 62400,
+        "dependant66": 199200,
+        "autreCharge": 62400,
+        "parentIsole": 62400,
+        "conjointRevenuLimite": 174000,
+        "conjointPensionLimitee": 347400,
+        "conjointHandicape": 62400
+      },
+      "bonusEmploiFiscal": {
+        "tauxVoletA": 331400,
+        "tauxVoletB": 630000
+      }
+    },
+    "csss": {
+      "coefficientOuvrier": 1080000,
+      "individuelle": [
+        {
+          "depuis": 583614,
+          "fixe": 0,
+          "excedentDe": 583614,
+          "taux": 42200
+        },
+        {
+          "depuis": 657055,
+          "fixe": 3099,
+          "excedentDe": 657054,
+          "taux": 11000
+        },
+        {
+          "depuis": 1121101,
+          "fixe": 8205,
+          "excedentDe": 1121100,
+          "taux": 33800
+        },
+        {
+          "depuis": 1230001,
+          "fixe": 11883,
+          "excedentDe": 1230000,
+          "taux": 11000
+        },
+        {
+          "depuis": 1811647,
+          "fixe": 18282,
+          "excedentDe": 0,
+          "taux": 0
+        }
+      ],
+      "communeConjointRevenus": [
+        {
+          "depuis": 328529,
+          "fixe": 1545,
+          "excedentDe": 0,
+          "taux": 0
+        },
+        {
+          "depuis": 583614,
+          "fixe": 0,
+          "excedentDe": 583614,
+          "taux": 59000,
+          "plancher": 1545
+        },
+        {
+          "depuis": 657055,
+          "fixe": 4332,
+          "excedentDe": 657054,
+          "taux": 11000,
+          "plafond": 15492
+        }
+      ],
+      "communeConjointSansRevenus": [
+        {
+          "depuis": 583614,
+          "fixe": 0,
+          "excedentDe": 583614,
+          "taux": 59000
+        },
+        {
+          "depuis": 657055,
+          "fixe": 4332,
+          "excedentDe": 657054,
+          "taux": 11000,
+          "plafond": 18282
+        }
+      ]
+    },
+    "cotisationsPatronales": {
+      "tauxBase": 198800,
+      "coefficientOuvrier": 1080000,
+      "moderation": 42700,
+      "vacancesOuvrier": {
+        "trimestrielle": 55700,
+        "avisDebit": 102700
+      },
+      "fondsAmiante": 0,
+      "accidentsTravailSpecial": 200,
+      "dixTravailleurs": 16000
+    },
+    "reductionStructurelle": {
+      "plafondBasSalaires": 1168774,
+      "coefficientBasSalaires": 140000,
+      "plafondTresBasSalaires": 973814,
+      "coefficientTresBasSalaires": 160000,
+      "plancherPrestations": 275000,
+      "debutProgression": 550000,
+      "finProgression": 800000,
+      "valeurMinimale": 1180000,
+      "pente": 280000
+    },
+    "heuresSupplementaires": {
+      "sursalaireSemaine": 500000,
+      "sursalaireDimancheFerie": 1000000,
+      "plafondVolontairesMinutes": 21600,
+      "plafondSansSursalaireMinutes": 14400,
+      "plafondReductionMinutes": 10800,
+      "tauxReduction": 577500
+    },
+    "joursFeries": {
+      "fixes": [
+        {
+          "mois": 1,
+          "jour": 1
+        },
+        {
+          "mois": 5,
+          "jour": 1
+        },
+        {
+          "mois": 7,
+          "jour": 21
+        },
+        {
+          "mois": 8,
+          "jour": 15
+        },
+        {
+          "mois": 11,
+          "jour": 1
+        },
+        {
+          "mois": 11,
+          "jour": 11
+        },
+        {
+          "mois": 12,
+          "jour": 25
+        }
+      ],
+      "apresPaques": [
+        1,
+        39,
+        50
+      ],
+      "maintienMaladieJours": 30,
+      "maintienAutreSuspensionJours": 14
+    },
+    "salaireGaranti": {
+      "ouvrierJoursPleins": 7,
+      "ouvrierJoursPartiels": 7,
+      "accidentTravailJoursPleins": 7,
+      "employeLongueDureeJours": 30,
+      "employeCourteDureeJoursPleins": 7,
+      "employeCourteDureeJoursPartiels": 7,
+      "tauxPartiel": 600000,
+      "complementJours": 23,
+      "complementOuvrierPlafonne": 258800,
+      "complementOuvrierExcedent": 858800,
+      "complementEmployePlafonne": 269300,
+      "complementEmployeExcedent": 869300,
+      "plafondJournalierDixMilliemes": 1893583
+    },
+    "anomalies": {
+      "ecartNetMoisPrecedent": 250000,
+      "proximitePlafondHeures": 900000
+    }
+  },
+  "source": {
+    "onss": {
+      "document": "Instructions administratives de l'ONSS aux employeurs",
+      "reference": "pp. 175-176 : cotisation personnelle de 13,07 %, base à 108 % pour les ouvriers",
+      "versionDocument": "édition 2026/3 (doc/reference/onss-instructions-2026-3.pdf)",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "OFFICIELLE"
+    },
+    "bonusEmploi": {
+      "document": "Instructions administratives de l'ONSS aux employeurs",
+      "reference": "pp. 448-453 : bonus à l’emploi, tableaux à partir du 01/09/2026 ; plafond annuel p. 453",
+      "versionDocument": "édition 2026/3 (doc/reference/onss-instructions-2026-3.pdf)",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "OFFICIELLE"
+    },
+    "precompte": {
+      "document": "Annexe III à l'AR/CIR 92, modifiée par l'arrêté royal du 24/07/2026",
+      "reference": "n° 27-28, 31 à 41 et 46 ; AR du 24/07/2026 art. 4 (bonus fiscal « très bas salaire » à 63 % depuis le 01/08/2026)",
+      "versionDocument": "AR du 11/12/2025 (doc/reference/precompte/annexe-iii-2026.pdf) ; Moniteur belge du 30/07/2026 (doc/reference/)",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "A_CONFIRMER"
+    },
+    "csss": {
+      "document": "Instructions administratives de l'ONSS aux employeurs : la cotisation spéciale pour la sécurité sociale",
+      "reference": "barèmes depuis le 01/04/2022 ; rémunération portée à 108 % pour les travailleurs manuels",
+      "versionDocument": "édition 2026/3 (doc/reference/onss-csss-2026-3.html)",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "OFFICIELLE"
+    },
+    "cotisationsPatronales": {
+      "document": "Instructions administratives de l'ONSS aux employeurs",
+      "reference": "pp. 175-177 : cotisations patronales ; fonds amiante à 0 au 4e trimestre",
+      "versionDocument": "édition 2026/3 (doc/reference/onss-instructions-2026-3.pdf) ; D104 : 1,60 % inféré, fonds de fermeture non lu",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "A_CONFIRMER"
+    },
+    "reductionStructurelle": {
+      "document": "Instructions administratives de l'ONSS aux employeurs",
+      "reference": "pp. 374-383 : réduction structurelle, valeurs à partir du 3e trimestre 2026",
+      "versionDocument": "édition 2026/3 (doc/reference/onss-instructions-2026-3.pdf)",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "OFFICIELLE"
+    },
+    "heuresSupplementaires": {
+      "document": "Loi du 16 mars 1971 (art. 25bis) ; loi du 15/07/2026 (art. 43 à 49) ; Annexe III n° 45 ; Instructions ONSS",
+      "reference": "art. 25bis (360 h dont 240 h sans sursalaire) ; art. 47-49 (180 h) ; n° 45 et 111.2 (57,75 %) ; ONSS pp. 115-116",
+      "versionDocument": "texte adopté DOC 56 1333/007 ; loi consolidée du 15/07/2026 ; AR du 24/07/2026 ; édition ONSS 2026/3 ; D106 : base ouvrière à 108 % et exclusions CSSS à confirmer",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "A_CONFIRMER"
+    },
+    "joursFeries": {
+      "document": "Arrêté royal du 18 avril 1974 déterminant les modalités générales d’exécution de la loi du 4 janvier 1974 relative aux jours fériés",
+      "reference": "art. 1 (les dix jours fériés) et art. 12 (maintien du droit)",
+      "versionDocument": "version consolidée Justel (doc/reference/ar-1974-04-18-jours-feries-consolide.html)",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "OFFICIELLE"
+    },
+    "salaireGaranti": {
+      "document": "Loi du 3 juillet 1978 ; CCT n° 12bis et n° 13bis ; INAMI, plafond salarial",
+      "reference": "art. 52, 54, 70 à 72 ; CCT art. 3 et 4 (25,88 %/85,88 % et 26,93 %/86,93 %) ; plafond 189,3583 € à partir du 01/09/2026",
+      "versionDocument": "loi consolidée au 15/06/2026 ; CCT coordonnées au 1.5.1997 ; page INAMI du 29/10/2026 ; D108 à D111 : points à confirmer",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "A_CONFIRMER"
+    },
+    "anomalies": {
+      "document": "Décision interne de SocialFlow",
+      "reference": "D105 : seuils des alertes de contrôle de la fiche",
+      "versionDocument": "doc/DECISIONS.md",
+      "consulteLe": "2026-10-30",
+      "fiabilite": "DECISION_INTERNE"
+    }
+  }
+}

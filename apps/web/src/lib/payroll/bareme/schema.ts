@@ -336,11 +336,19 @@ const dateIsoSchema = z.iso.date(); // AAAA-MM-JJ, jour existant (le 30 février
 const texteSchema = z.string().trim().min(1);
 
 // Source d'un bloc : où la valeur a été lue, pour qu'on puisse toujours la retrouver.
+// Fiabilité d'un bloc (D115) : OFFICIELLE = valeurs lues dans un texte officiel déposé ; DECISION_INTERNE =
+// choix de SocialFlow (seuils d'alerte) ; A_CONFIRMER = source secondaire, hypothèse ou point ouvert
+// des décisions. Le garde-fou d'activation (étape 9.5) refuse un barème dont un bloc est A_CONFIRMER
+// ou sans fiabilité. Facultative dans le schéma pour ne pas casser les barèmes de test.
+export const FIABILITES = ['OFFICIELLE', 'DECISION_INTERNE', 'A_CONFIRMER'] as const;
+export type FiabiliteSource = (typeof FIABILITES)[number];
+
 export const sourceBlocSchema = z.strictObject({
   document: texteSchema, // ex. « Annexe III à l'AR/CIR 92 »
   reference: texteSchema, // numéro, article ou page
   versionDocument: texteSchema, // ex. « 2026/3 », « AR du 11/12/2025 »
   consulteLe: dateIsoSchema, // date à laquelle le document a été lu
+  fiabilite: z.enum(FIABILITES).optional(),
 });
 // Une source par bloc de paramètres : { onss: {…}, precompte: {…} }.
 export const sourceBaremeSchema = z.record(texteSchema, sourceBlocSchema);

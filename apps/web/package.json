@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:seed:bareme": "node prisma/seed-bareme.mjs",
     "superadmin:create": "tsx scripts/create-superadmin.ts",
     "db:reencrypt": "tsx scripts/reencrypt-salaries.ts"
   },

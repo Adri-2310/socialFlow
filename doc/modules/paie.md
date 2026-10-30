@@ -111,6 +111,8 @@ Flux de mise à jour :
 3. Le SuperAdmin compare, **lance les cas de référence** sur la nouvelle version, puis l'active. Un barème n'est jamais activé si un cas de référence échoue.
 4. Les fiches déjà envoyées gardent leur version (D13).
 
+**Fiabilité des sources (D115).** Chaque bloc de `source` porte un champ `fiabilite` (`OFFICIELLE`, `DECISION_INTERNE` ou `A_CONFIRMER`) ; l'activation d'une version avec un bloc `A_CONFIRMER` ou sans fiabilité sera refusée. Le barème réel de 2026 est dans `apps/web/prisma/bareme/` (septembre, octobre, novembre).
+
 ⚠️ **Limite réelle** : ces sources publient surtout du PDF et du HTML, pas une API de données. L'extraction automatique peut échouer. Le job doit alors au minimum **détecter qu'une nouvelle publication existe** et prévenir le SuperAdmin, qui saisit les paramètres dans un formulaire. C'est le minimum garanti, l'extraction complète est un bonus.
 
 ## 6. Cas de référence (tests)
