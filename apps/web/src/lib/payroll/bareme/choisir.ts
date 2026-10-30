@@ -1,3 +1,4 @@
+import { lireDate } from '../calendrier';
 import { ErreurMoteur } from '../erreurs';
 import type { DateIso, VersionBareme } from '../types';
 
@@ -113,4 +114,64 @@ export function choisirBareme<T extends VersionBareme>(
     );
   }
   return touchees[0];
+}
+
+// D112 : version ACTIF de la catégorie qui couvre un JOUR donné (la date de paiement). Contrairement
+// à `choisirBareme`, il n'y a pas de cas « partiel » : un jour appartient à une seule version.
+// Sert au précompte professionnel, qui dépend de la date de paiement du revenu (« revenus payés ou
+// attribués à partir du 01/11/2026 », arrêté royal du 27/09/2026, art. 10).
+export function choisirBaremeParDate<T extends VersionBareme>(
+  versions: readonly T[],
+  datePaiement: DateIso,
+  categorieEmployeur: string,
+): T {
+  // Une date fausse ne doit jamais choisir un barème au hasard : refus avant toute comparaison
+  // (les chaînes AAAA-MM-JJ ne se comparent comme des dates que si elles sont bien formées).
+  lireDate('La date de paiement', datePaiement);
+  const touchees = versions.filter(
+    (v) =>
+      v.statut === 'ACTIF' &&
+      v.categorieEmployeur === categorieEmployeur &&
+      v.valideDepuis <= datePaiement &&
+      (v.valideJusqua === null || v.valideJusqua >= datePaiement),
+  );
+  if (touchees.length === 0) {
+    throw new ErreurMoteur(
+      'BAREME_INTROUVABLE',
+      `Aucun barème actif pour le ${datePaiement} (catégorie ${categorieEmployeur}).`,
+    );
+  }
+  if (touchees.length > 1) {
+    throw new ErreurMoteur(
+      'BAREME_AMBIGU',
+      `Plusieurs barèmes actifs couvrent le ${datePaiement} : ${touchees.map((v) => v.code).join(', ')}.`,
+    );
+  }
+  return touchees[0];
+}
+
+// D112 : les deux versions d'une fiche. `periode` (le mois de la fiche, D99) fournit tous les blocs
+// sauf le précompte ; `paiement` (le jour de paiement) fournit le bloc `precompte`.
+// Exemple : une fiche d'octobre 2026 payée le 05/11/2026 prend l'ONSS d'octobre et le précompte de
+// novembre. Les fiches rectificatives gardent la date de paiement d'origine (D13).
+export function choisirBaremesPourFiche<T extends VersionBareme>(
+  versions: readonly T[],
+  annee: number,
+  mois: number,
+  datePaiement: DateIso,
+  categorieEmployeur: string,
+): { periode: T; paiement: T } {
+  const periode = choisirBareme(versions, annee, mois, categorieEmployeur);
+  lireDate('La date de paiement', datePaiement);
+  // Un mois ne se paie pas avant de commencer : choix de sécurité du moteur (pas une règle légale),
+  // pour qu'une date de paiement faussée ne prenne pas silencieusement un ancien barème.
+  const premier: DateIso = `${annee}-${deuxChiffres(mois)}-01`;
+  if (datePaiement < premier) {
+    throw new ErreurMoteur(
+      'DATE_PAIEMENT_INCOHERENTE',
+      `La date de paiement ${datePaiement} précède le mois ${deuxChiffres(mois)}/${annee} de la fiche.`,
+    );
+  }
+  const paiement = choisirBaremeParDate(versions, datePaiement, categorieEmployeur);
+  return { periode, paiement };
 }

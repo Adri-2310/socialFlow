@@ -25,6 +25,8 @@ type Centimes = number; // entier
 interface EntreeCalcul {
   periode: { annee: number; mois: number };          // 1-12
   bareme: ParametresBareme;                          // version valable pour la période
+  datePaiement: string;                              // AAAA-MM-JJ, obligatoire : le précompte dépend du jour de paiement (D112)
+  baremePrecompte: ParametresBareme;                 // version valable le jour de paiement, pour le bloc precompte (D112)
   travailleur: {
     statut: 'EMPLOYE' | 'OUVRIER';
     commissionParitaire: '200' | '100';
@@ -84,7 +86,7 @@ Exemple publié pour vérifier l'ordre de grandeur du précompte 2026 : 2 800 �
 | **Heures supplémentaires** | Sursalaire légal ; régime fiscal avantageux limité à **130 heures par an** en 2026 (hors construction et horeca) |
 | **Pécule de vacances employés** (D45) | Simple pécule = maintien du salaire pendant les vacances. Double pécule : fiche spéciale annuelle, avec retenue ONSS sur une partie et précompte à taux exceptionnel. Pécule de sortie à la fin du contrat |
 | **Pécule de vacances ouvriers** (D45) | Pas versé sur la fiche (caisse de vacances) ; simple mention |
-| **Fiche rectificative** (D13) | Recalcul complet avec le barème de la **période d'origine**, pas celui du jour |
+| **Fiche rectificative** (D13) | Recalcul complet avec le barème de la **période d'origine** et la **date de paiement d'origine** (D112), pas ceux du jour |
 
 Hors périmètre : étudiants, flexi-jobs, avantages en nature complexes (voiture de société, ATN), saisies sur salaire, chèques-repas. Ils pourront venir plus tard ; le modèle de lignes de calcul doit permettre de les ajouter sans refonte.
 
