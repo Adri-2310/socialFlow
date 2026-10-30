@@ -117,7 +117,8 @@ Flux de mise à jour :
 
 ## 6. Cas de référence (tests)
 
-- Dossier `apps/web/tests/payroll/cas/` : un fichier JSON par cas (entrée complète + résultat attendu ligne par ligne + source du résultat).
+- Réalisation (D118) : les cas sont dans le module `apps/web/src/lib/payroll/cas-reference.ts` (entrée complète, valeurs attendues et source de chaque cas), rejouable contre une version de barème par `verifierCasReference`, et testé dans `apps/web/tests/payroll/cas-reference.test.ts`. Huit cas existent (sept employés et un ouvrier) ; la couverture minimale du tableau ci-dessous n'est pas atteinte.
+- Prévu à l'origine : dossier `apps/web/tests/payroll/cas/` : un fichier JSON par cas (entrée complète + résultat attendu ligne par ligne + source du résultat).
 - Couverture minimale avant mise en production :
 
 | Famille | Nombre minimum |
