@@ -4,19 +4,25 @@ import { ErreurMoteur } from '@/lib/payroll/erreurs';
 import {
   calculerFiche,
   type EntreeFiche,
+  type IncapaciteEmployeFiche,
+  type IncapaciteOuvrierFiche,
   type SalaireEmploye,
   type SalaireOuvrier,
   type VersionAvecParametres,
 } from '@/lib/payroll/fiche';
+import type { HeuresSupplementaires } from '@/lib/payroll/heures-supplementaires';
 import type { SituationFiscalePaie } from '@/lib/payroll/precompte';
 import {
   ANOMALIES_2026,
   BONUS_EMPLOI_2026_09,
   COTISATIONS_PATRONALES_2026_3,
   CSSS_2026_3,
+  HEURES_SUPPLEMENTAIRES_2026,
+  JOURS_FERIES_2026,
   ONSS_2026_09,
   PRECOMPTE_2026,
   REDUCTION_STRUCTURELLE_2026_3,
+  SALAIRE_GARANTI_2026,
 } from './fixtures-bareme';
 
 // Tests d'ASSEMBLAGE : chaque calcul est testé à part (onss.test.ts, precompte.test.ts...). Ici on
@@ -40,6 +46,9 @@ const parametres = (precompte = PRECOMPTE_63) => ({
   csss: CSSS_2026_3,
   cotisationsPatronales: COTISATIONS_PATRONALES_2026_3,
   reductionStructurelle: REDUCTION_STRUCTURELLE_2026_3,
+  heuresSupplementaires: HEURES_SUPPLEMENTAIRES_2026,
+  joursFeries: JOURS_FERIES_2026,
+  salaireGaranti: SALAIRE_GARANTI_2026,
   anomalies: ANOMALIES_2026,
 });
 
@@ -263,5 +272,253 @@ describe('calculerFiche : détail, anomalies et refus', () => {
     expect(
       code(() => calculerFiche(fiche({ salaire: { ...employe(2800), remunerationMensuelle: 0 } }))),
     ).toBe('ENTREE_INVALIDE');
+  });
+});
+
+// ---------------------------------------------------------------- cas particuliers (étape 9.2b, D113)
+// Pas de simulateur externe pour ces règles : on vérifie les lignes ajoutées, calculées à la main, et
+// les identités de composition (ce qui est soumis à l'ONSS, ce qui entre dans la référence du bonus).
+const ouvrier = (minutes: number): SalaireOuvrier => ({
+  statut: 'OUVRIER',
+  tauxHoraire: 2_500, // 25,00 €/h : un jour de 7 h 36 = 456 minutes vaut 190,00 €
+  heuresPresteesMinutes: minutes,
+  primeCents: null,
+  primeLibelle: null,
+});
+
+const aucune: HeuresSupplementaires = {
+  volontairesSansSursalaire: 0,
+  volontaires50: 0,
+  volontaires100: 0,
+  ordinaires50: 0,
+  ordinaires100: 0,
+};
+const heures = (
+  ceMois: Partial<HeuresSupplementaires>,
+  cumulAvantCeMois: Partial<HeuresSupplementaires> = {},
+) => ({
+  tauxHoraireCentimes: 2_000, // 20,00 €/h
+  ceMois: { ...aucune, ...ceMois },
+  cumulAvantCeMois: { ...aucune, ...cumulAvantCeMois },
+});
+
+describe('calculerFiche : jours fériés de l’ouvrier (D107)', () => {
+  it('un jour férié payé s’ajoute au brut et à la base ONSS : 25,00 €/h x 7 h 36 = 190,00 €', () => {
+    // 11 novembre 2026 (mercredi). Brut 2 500,00 + 190,00 = 2 690,00 € ; x 108 % = 2 905,20 € ; x 13,07 % = 379,7096 -> 379,71 €
+    const r = calculerFiche(
+      fiche({
+        periode: { annee: 2026, mois: 11 },
+        datePaiement: '2026-11-30',
+        salaire: ouvrier(6_000),
+        joursFeries: [
+          {
+            date: '2026-11-11',
+            nature: 'FERIE',
+            minutesPerdues: 456,
+            absenceInjustifieeAutour: false,
+            suspension: null,
+          },
+        ],
+      }),
+    );
+    expect(r.brut).toBe(269_000);
+    expect(r.baseOnss).toBe(269_000);
+    expect(r.onssPersonnelle).toBe(37_971);
+    expect(r.lignes.find((l) => l.code === 'JOUR_FERIE')).toMatchObject({ montant: 19_000 });
+  });
+
+  it('refuse des jours fériés pour un employé payé au mois', () => {
+    expect(
+      code(() =>
+        calculerFiche(
+          fiche({
+            joursFeries: [
+              {
+                date: '2026-11-11',
+                nature: 'FERIE',
+                minutesPerdues: 456,
+                absenceInjustifieeAutour: false,
+                suspension: null,
+              },
+            ],
+          }),
+        ),
+      ),
+    ).toBe('ENTREE_INCOMPATIBLE');
+  });
+});
+
+describe('calculerFiche : heures supplémentaires (D106)', () => {
+  const sans = calculerFiche(fiche());
+
+  it('5 h ordinaires à 50 % : 150,00 € de brut et de base ONSS, bonus inchangé, réduction n° 45 de 57,75 €', () => {
+    // 20,00 €/h x 5 h = 100,00 + 50 % = 150,00 ; brut 2 950,00 ; ONSS 13,07 % x 2 950,00 = 385,565 -> 385,57
+    const r = calculerFiche(fiche({ heuresSupplementaires: heures({ ordinaires50: 300 }) }));
+    expect(r.brut).toBe(295_000);
+    expect(r.baseOnss).toBe(295_000);
+    expect(r.onssPersonnelle).toBe(38_557);
+    expect(r.bonusEmploi).toBe(sans.bonusEmploi); // les heures supplémentaires sont hors de la référence
+    expect(r.detailPrecompte.reductionHeuresSupplementaires).toBe(5_775);
+    expect(r.netExonere).toBe(0);
+  });
+
+  it('2 h 30 volontaires à 100 % : dans le brut imposable, hors base ONSS', () => {
+    // base 50,00 + sursalaire 50,00 = 100,00 € ; réduction 57,75 % x 50,00 = 28,875 -> 28,88 €
+    const r = calculerFiche(fiche({ heuresSupplementaires: heures({ volontaires100: 150 }) }));
+    expect(r.brut).toBe(290_000);
+    expect(r.baseOnss).toBe(sans.baseOnss);
+    expect(r.onssPersonnelle).toBe(sans.onssPersonnelle);
+    expect(r.bonusEmploi).toBe(sans.bonusEmploi);
+    expect(r.cotisationSpeciale).toBe(sans.cotisationSpeciale);
+    expect(r.detailPrecompte.reductionHeuresSupplementaires).toBe(2_888);
+  });
+
+  it('10 h volontaires sans sursalaire : 200,00 € ajoutés au net et au coût employeur, rien d’autre ne change', () => {
+    const r = calculerFiche(
+      fiche({ heuresSupplementaires: heures({ volontairesSansSursalaire: 600 }) }),
+    );
+    expect(r.netExonere).toBe(20_000);
+    expect(r.brut).toBe(sans.brut);
+    expect(r.precompte).toBe(sans.precompte);
+    expect(r.cotisationSpeciale).toBe(sans.cotisationSpeciale);
+    expect(r.net).toBe(sans.net + 20_000);
+    expect(r.coutEmployeur).toBe(sans.coutEmployeur + 20_000);
+    expect(r.cotisationsPatronales).toBe(sans.cotisationsPatronales);
+  });
+
+  it('signale l’approche du plafond de 360 heures volontaires', () => {
+    // déjà 19 300 minutes + 150 minutes ce mois = 19 450 > 90 % x 21 600 = 19 440
+    const r = calculerFiche(
+      fiche({ heuresSupplementaires: heures({ volontaires100: 150 }, { volontaires50: 19_300 }) }),
+    );
+    expect(r.anomalies.map((a) => a.code)).toContain('HEURES_SUP_PLAFOND_PROCHE');
+  });
+
+  it('refuse un plafond dépassé : l’erreur du calcul sous-jacent remonte', () => {
+    expect(
+      code(() =>
+        calculerFiche(
+          fiche({
+            heuresSupplementaires: heures({ volontaires50: 100 }, { volontaires50: 21_550 }),
+          }),
+        ),
+      ),
+    ).toBe('PLAFOND_HEURES_DEPASSE');
+  });
+});
+
+describe('calculerFiche : salaire garanti (D108 à D111)', () => {
+  // Lundi 5 octobre 2026 = jour 1 de l'incapacité ; lundi 12 octobre = jour 8.
+  const jourO = (date: string) => ({ date, minutesPrevues: 456, dejaRemunere: false });
+  const incapaciteOuvrier = (dates: string[]): IncapaciteOuvrierFiche => ({
+    statut: 'OUVRIER',
+    nature: 'MALADIE',
+    debutPeriodeGarantie: '2026-10-05',
+    joursActiviteParSemaine: 6,
+    dateUnMoisAnciennete: null,
+    exclusion: null,
+    jours: dates.map(jourO),
+  });
+  const semaine1 = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'];
+  const semaine2 = ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16'];
+
+  it('ouvrier : 5 jours à 100 % remplacent 5 jours de travail, la fiche est identique à celle de 2 500,00 € (cas 8)', () => {
+    // 62 h prestées = 1 550,00 € ; 5 jours x 190,00 = 950,00 € de salaire garanti ; total 2 500,00 €
+    const r = calculerFiche(
+      fiche({ salaire: ouvrier(3_720), incapacite: incapaciteOuvrier(semaine1) }),
+    );
+    expect(r.brut).toBe(250_000);
+    expect(r.baseOnss).toBe(250_000);
+    // mêmes lignes que la simulation du cas 8 (doc/reference/cas-de-reference-simulations.md)
+    expect(r.onssPersonnelle).toBe(35_289);
+    expect(r.bonusEmploi).toBe(26_537);
+    expect(r.imposable).toBe(241_248);
+    expect(r.detailPrecompte.precompteAvantBonus).toBe(34_355);
+    expect(r.lignes.find((l) => l.code === 'SALAIRE_GARANTI_100')).toMatchObject({
+      montant: 95_000,
+    });
+  });
+
+  it('ouvrier, jours 8 à 12 : le 60 % et l’indemnité CCT sont dans le brut mais hors base ONSS', () => {
+    // garanti : loi 60 % x 5 x 100,00 (plafond de test) = 300,00 ; CCT 25,88 % x 500,00 + 85,88 % x 5 x 90,00 = 129,40 + 386,46 ;
+    // total 815,86 € ; brut 1 550,00 + 815,86 = 2 365,86 € ; base ONSS 1 550,00 € ; x 108 % x 13,07 % = 218,79 €
+    const r = calculerFiche(
+      fiche({ salaire: ouvrier(3_720), incapacite: incapaciteOuvrier(semaine2) }),
+    );
+    expect(r.brut).toBe(236_586);
+    expect(r.baseOnss).toBe(155_000);
+    expect(r.onssPersonnelle).toBe(21_879);
+  });
+
+  it('employé de 3 mois ou plus, après le 30e jour : le salaire est réduit des jours non garantis', () => {
+    // début le 1er septembre : le 1er octobre est le jour 31. 2 jours x 120,00 = 4 demi-jours : 2 800,00 x 4 / 40 = 280,00 €
+    const incapacite: IncapaciteEmployeFiche = {
+      statut: 'EMPLOYE',
+      nature: 'MALADIE',
+      contrat: 'LONGUE_DUREE',
+      debutPeriodeGarantie: '2026-09-01',
+      joursActiviteParSemaine: 5,
+      jours: [
+        { date: '2026-10-01', demiJoursPrevus: 2 },
+        { date: '2026-10-02', demiJoursPrevus: 2 },
+      ],
+    };
+    const r = calculerFiche(
+      fiche({ salaire: { ...employe(2800), joursReferenceMois: 20 }, incapacite }),
+    );
+    expect(r.brut).toBe(252_000);
+    expect(r.baseOnss).toBe(252_000);
+    expect(r.lignes.find((l) => l.code === 'SALAIRE_GARANTI_FIN')).toMatchObject({
+      montant: -28_000,
+    });
+  });
+
+  it('employé de moins de 3 mois, jours 8 à 11 : l’indemnité reste dans le brut mais sort de la base ONSS', () => {
+    // salaire 2 400,00 ; 8 demi-jours valent 480,00 ; versé en indemnité 417,26 ; retenue 62,74 ;
+    // brut 2 400,00 - 62,74 = 2 337,26 ; base ONSS 2 337,26 - 417,26 = 1 920,00 = 2 400,00 - 480,00
+    const incapacite: IncapaciteEmployeFiche = {
+      statut: 'EMPLOYE',
+      nature: 'MALADIE',
+      contrat: 'COURTE_DUREE',
+      debutPeriodeGarantie: '2026-10-05',
+      joursActiviteParSemaine: 6,
+      jours: ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15'].map((date) => ({
+        date,
+        demiJoursPrevus: 2,
+      })),
+    };
+    const r = calculerFiche(
+      fiche({ salaire: { ...employe(2400), joursReferenceMois: 20 }, incapacite }),
+    );
+    expect(r.brut).toBe(233_726);
+    expect(r.baseOnss).toBe(192_000);
+  });
+
+  it('refuse une incapacité qui ne correspond pas au statut, ou sans jours de référence pour un employé', () => {
+    expect(code(() => calculerFiche(fiche({ incapacite: incapaciteOuvrier(semaine1) })))).toBe(
+      'ENTREE_INCOMPATIBLE',
+    );
+    const incapacite: IncapaciteEmployeFiche = {
+      statut: 'EMPLOYE',
+      nature: 'MALADIE',
+      contrat: 'LONGUE_DUREE',
+      debutPeriodeGarantie: '2026-09-01',
+      joursActiviteParSemaine: 5,
+      jours: [{ date: '2026-10-01', demiJoursPrevus: 2 }],
+    };
+    expect(code(() => calculerFiche(fiche({ incapacite })))).toBe('JOURS_REFERENCE_MANQUANT');
+  });
+
+  it('refuse un brut négatif : trop de retenues pour le salaire du mois', () => {
+    const incapacite: IncapaciteEmployeFiche = {
+      statut: 'EMPLOYE',
+      nature: 'MALADIE',
+      contrat: 'LONGUE_DUREE',
+      debutPeriodeGarantie: '2026-09-01',
+      joursActiviteParSemaine: 5,
+      jours: [{ date: '2026-10-01', demiJoursPrevus: 2 }],
+    };
+    const salaire = { ...employe(2800), joursReferenceMois: 20, absenceNonRemDemiJours: 40 };
+    expect(code(() => calculerFiche(fiche({ salaire, incapacite })))).toBe('BRUT_NEGATIF');
   });
 });
