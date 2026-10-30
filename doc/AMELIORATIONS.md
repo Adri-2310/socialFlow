@@ -77,7 +77,7 @@
 
 ## 7. Moteur de paie
 
-Le moteur v1 (D99 à D119) est terminé ; ces points restent ouverts. Les limites de calcul sont détaillées dans `modules/paie.md` § 9.
+Le moteur v1 (D99 à D120) est une **version simplifiée pour le TFE** : son périmètre et ses simplifications sont dans `modules/paie.md` § 10 (D120), les écarts techniques détaillés au § 9. Ces points restent ouverts.
 
 | Sujet | Constat | À faire |
 |---|---|---|
@@ -89,3 +89,4 @@ Le moteur v1 (D99 à D119) est terminé ; ces points restent ouverts. Les limite
 | Formulaire de la question d'attribution | Correctif noté à la relecture du formulaire de la situation fiscale (D95) | À reprendre lors du chantier de l'interface du gestionnaire |
 | `next-env.d.ts` | Fichier généré suivi par git ; masqué localement par `skip-worktree` | Ajouter à `.gitignore` et `git rm --cached` (accord d'Adrien attendu) |
 | Mise en production | La migration `add_bareme_version` et le semis des barèmes ne sont appliqués que sur `dev` | À la fin : `prisma migrate deploy` sur `production`, puis `npm run db:seed:bareme` ; les versions restent `A_VERIFIER` jusqu'à leur activation |
+| Évolutions possibles du moteur (D120) | Pécule de vacances (double pécule, pécule de sortie), allocations exceptionnelles du n° 53 (primes de fin d'année et ponctuelles, indemnités de maladie au n° 78.1), reprise des cumuls d'un salarié déjà en poste, fonds de fermeture et « index centime », rechute des CCT à quatorze jours | Les ajouter si un besoin réel le demande : chacun nécessite une décision, un texte officiel déposé et des cas de référence externes |

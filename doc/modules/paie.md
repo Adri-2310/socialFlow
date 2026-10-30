@@ -73,7 +73,7 @@ Les valeurs chiffrées ci-dessous servent de **repères** : la source de vérit�
 | 6 | **Précompte professionnel** | Formule-clé de l'**Annexe III de l'AR/CIR 92** : revenu annualisé, frais professionnels forfaitaires, barème progressif, quotité exemptée, réductions pour personnes à charge, puis remensualisation. Réduction de précompte liée au bonus à l'emploi fiscal | Annexe III 2026 (AR du 11/12/2025, MB du 29/12/2025) |
 | 7 | **Cotisation spéciale de sécurité sociale** | Montant mensuel par tranche, selon le revenu et la situation du ménage | Instructions ONSS |
 | 8 | **Net** | Imposable − précompte − cotisation spéciale ± retenues ou avantages nets | — |
-| 9 | **Coût employeur** | Brut + cotisations patronales (taux de base selon la catégorie d'employeur et la modération salariale) − réduction structurelle ; s'y ajoutent les heures supplémentaires exonérées de retenue (D104, D106) | Instructions ONSS |
+| 9 | **Coût employeur** | Brut + cotisations patronales (taux de base selon la catégorie d'employeur et la modération salariale) − réduction structurelle ; s'y ajoutent les heures supplémentaires exonérées de retenue (D104, D106). **C'est une estimation** : voir § 9 et § 10 (D120) | Instructions ONSS |
 
 Exemple publié pour vérifier l'ordre de grandeur du précompte 2026 : 2 800 € brut, marié, conjoint sans revenus ou avec revenus non précisés, sans enfant → précompte de 363,90 € (Securex). Ces exemples **ne remplacent pas** les cas de référence (§ 6).
 
@@ -163,5 +163,31 @@ Choisies et assumées ; chacune est aussi dans `AMELIORATIONS.md` § 7. Le moteu
 | Reprise progressive du travail | Non traitée | D110 |
 | Couples dont un des conjoints a 66 ans (quotient de 12 790 €) | Non traités | D110 |
 | Instructions ONSS 2026/4 | Non déposées : les taux sont ceux de 2026/3 | D103, D115 |
+| Coût employeur | Présenté comme une **estimation** : sans fonds de fermeture ni « index centime » (lignes ci-dessus), sans la dispense de versement du précompte sur les heures supplémentaires, avec une réduction structurelle trimestrielle estimée par mois sans régularisation, et sans assurance accidents du travail, assurance groupe, titres-repas ni secrétariat social | D104, D117 |
 | Septembre 2026 et novembre 2026 | Barèmes saisis mais non activables : aucun cas de référence dans leur période | D118, D119 |
 | Précompte et paiement après le 01/11/2026 | Valeurs de l'AR du 27/09/2026 saisies, mais non vérifiées par une simulation externe | D110, D115 |
+
+## 10. Ce que le moteur ne calcule pas (périmètre du TFE, D120)
+
+Le moteur v1 est une **version simplifiée pour le TFE**. Il couvre le besoin minimum et le dit clairement ; le reste s'ajoutera plus tard si besoin. Belgique uniquement.
+
+**Couvert** : employés (CP 200) et ouvriers (CP 100), temps plein et partiel ; fiche mensuelle ordinaire (brut, ONSS, bonus à l'emploi, précompte, CSSS, net) ; jours fériés, salaire garanti, heures supplémentaires ; coût employeur **estimé**.
+
+**Hors périmètre** (refusé ou non proposé) :
+
+| Sujet | Pourquoi et ce qui se passe |
+|---|---|
+| Prime de fin d'année, prime ponctuelle, double pécule, pécule de sortie | Précompte du n° 53 de l'Annexe III, non calculé. Les valeurs des n° 53 à 55 sont dans le barème, sans calcul. Le pécule de vacances passe en évolutions possibles |
+| Non-résidents, dirigeants, étudiants, flexi-jobs, avantages en nature | Autres règles de précompte et de cotisations, non gérées |
+| Catégories d'employeur autres que le privé marchand | Refusées à l'activation du barème (D119) |
+| Fonds de fermeture d'entreprises, cotisation « index centime » | Absents du coût employeur estimé (D117) |
+
+**Simplifications assumées** (chacune avec son effet connu, D120) :
+
+| | Simplification | Effet connu |
+|---|---|---|
+| (a) | La prime (D92) est une **prime liée au travail du mois**, taxée comme le salaire | Une prime ponctuelle serait taxée à tort comme un salaire mensuel : ne pas la saisir |
+| (b) | Indemnités de maladie payées par l'employeur taxées au barème mensuel, pas au n° 53 (D116) | Le précompte des jours concernés peut différer du n° 78.1 ; écart non mesuré |
+| (c) | Rechute de huit semaines aussi pour le complément des CCT 12bis et 13bis, dont l'art. 5 dit quatorze jours (D109, D117) | Entre le 15e jour et la 8e semaine, le moteur peut verser moins que la CCT de 1997 |
+| (d) | Cumuls calculés **depuis les fiches de SocialFlow seulement** | Un salarié déjà en poste part de zéro : plafond annuel du bonus, CSSS du 3e mois et plafonds d'heures supplémentaires ne tiennent pas compte de l'avant ; l'appelant le signale |
+| (e) | Coût employeur **estimé** | Réduction structurelle trimestrielle estimée par mois, sans fonds de fermeture ni « index centime » |

@@ -40,6 +40,8 @@
 
 **Calendrier et pécule.** Le calendrier et les rappels (`modules/calendrier-echeances.md`) et le pécule de vacances faisaient partie de G2. Ils **peuvent glisser en finitions (F)** si G2a à G2c prennent du retard : ils sont déplacés, jamais coupés.
 
+**Moteur de paie v1 simplifié (D120).** Le moteur du TFE couvre le besoin minimum ; le **pécule de vacances** (double pécule, pécule de sortie) et les **allocations exceptionnelles du n° 53** (primes de fin d'année et ponctuelles, indemnités de maladie au n° 78.1) sont des **évolutions possibles**, reportées après le TFE. Raison : elles demandent des règles et des cas de référence externes que nous n'avons pas, pour un besoin qui n'est pas nécessaire à la démonstration.
+
 **Avance prise.** G1 s'est terminé le 23/10 pour une échéance au 15/11, et les périodes et prestations (D90 à D93) étaient prévues dans G2 et E. Le moteur de paie démarre donc dès la fin du second audit (27/10) au lieu du 16/11. L'avance sert d'abord de marge pour G2, le chantier le plus chargé ; les chantiers suivants gagnent une semaine.
 
 Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entrée détaillée dans `JOURNAL.md` sert de matière pour les chapitres « Analyse » et « Réalisation ».
