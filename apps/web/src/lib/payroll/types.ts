@@ -54,6 +54,8 @@ export interface VersionBareme {
   valideJusqua: DateIso | null; // dernier jour de validité, inclus ; null = sans fin
   statut: StatutBareme;
   categorieEmployeur: string; // D98 : une version ne vaut que pour une catégorie
+  // D122 : vrai si la version a été activée par dérogation, sans cas de référence. La fiche le signale.
+  nonVerifie?: boolean;
 }
 
 // Statut du salarié (D39, colonne `statut` du dossier) : il décide de la base de la cotisation

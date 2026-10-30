@@ -20,6 +20,16 @@ import type { VersionBaremeComplete } from './schema';
 export interface ResultatActivation {
   ok: boolean;
   raisons: string[];
+  // Présent (et vrai) seulement quand l'activation n'est acceptée que grâce à la dérogation de D122 :
+  // aucun cas de référence ne couvre la version. Absent sinon.
+  sansCasReference?: true;
+}
+
+// D122 : la dérogation lève UNIQUEMENT l'absence de cas de référence (aucun cas dans la période, ou
+// catégorie d'employeur sans cas). Un cas qui échoue, un bloc manquant, une fiabilité à confirmer ou un
+// chevauchement ne se dérogent jamais.
+export interface OptionsActivation {
+  derogationSansCasReference?: boolean;
 }
 
 // Les blocs sans lesquels `calculerFiche` ne peut pas calculer (ils sont tous exigés par `exigerBloc`).
@@ -46,8 +56,10 @@ export function peutActiverBareme(
   version: VersionBaremeComplete,
   autres: readonly VersionAvecParametres[],
   cas: readonly CasReference[] = CAS_REFERENCE_2026,
+  options: OptionsActivation = {},
 ): ResultatActivation {
   const raisons: string[] = [];
+  let sansCasReference = false;
 
   // 1. Seule une version à vérifier s'active : une version déjà active ou retirée ne change pas.
   if (version.statut !== 'A_VERIFIER') {
@@ -93,15 +105,23 @@ export function peutActiverBareme(
 
   // 5. Les cas de référence qui tombent dans la période de la version.
   if (version.categorieEmployeur !== CATEGORIE_DES_CAS) {
-    raisons.push(
-      `Aucun cas de référence pour la catégorie d'employeur ${version.categorieEmployeur}.`,
-    );
+    if (options.derogationSansCasReference) {
+      sansCasReference = true;
+    } else {
+      raisons.push(
+        `Aucun cas de référence pour la catégorie d'employeur ${version.categorieEmployeur}.`,
+      );
+    }
   } else {
     const concernes = casDeLaVersion(version, cas);
     if (concernes.length === 0) {
-      raisons.push(
-        'Aucun cas de référence ne tombe dans la période de cette version : elle ne peut pas être validée.',
-      );
+      if (options.derogationSansCasReference) {
+        sansCasReference = true;
+      } else {
+        raisons.push(
+          'Aucun cas de référence ne tombe dans la période de cette version : elle ne peut pas être validée.',
+        );
+      }
     } else if (manquants.length === 0 && !chevauchement) {
       // Rejoués (sauf si les versions se chevauchent : le choix du barème serait ambigu) avec les versions déjà actives et la candidate, comme ils le seraient en production.
       const { ecarts } = verifierCasReference([...actives, candidate], concernes);
@@ -116,5 +136,6 @@ export function peutActiverBareme(
     }
   }
 
-  return { ok: raisons.length === 0, raisons };
+  const ok = raisons.length === 0;
+  return ok && sansCasReference ? { ok, raisons, sansCasReference: true } : { ok, raisons };
 }

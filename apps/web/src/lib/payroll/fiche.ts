@@ -143,6 +143,9 @@ export interface ResultatFiche {
   // D120 (e) : le coût employeur est une ESTIMATION ; l'interface l'affiche comme telle, avec la liste
   // `LIMITES_COUT_EMPLOYEUR_ESTIME` de ce qu'il ne contient pas (modules/paie.md § 9 et § 10).
   coutEmployeurEstime: true;
+  // D122 : vrai si l'une des versions de barème utilisées a été activée sans cas de référence
+  // (dérogation). L'interface affiche alors « barème non vérifié ».
+  baremeNonVerifie: boolean;
   lignes: LigneCalcul[]; // détail ordonné de la fiche du salarié (montants signés)
   lignesEmployeur: LigneCalcul[]; // cotisations patronales et réduction structurelle
   anomalies: Anomalie[];
@@ -388,6 +391,7 @@ export function calculerFiche(entree: EntreeFiche): ResultatFiche {
     reductionStructurelle: reduction.reduction,
     coutEmployeur,
     coutEmployeurEstime: true,
+    baremeNonVerifie: choisies.periode.nonVerifie === true || choisies.paiement.nonVerifie === true,
     lignes: [
       ...lignesSalaire,
       ...onss.lignes,
