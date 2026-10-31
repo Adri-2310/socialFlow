@@ -16,7 +16,7 @@ Travail de fin d'études — bachelier en informatique de gestion — **Adrien M
 | Espace Cabinet RH : abonnement Stripe, gestionnaires, entreprises clientes, branding, modèles d'emails, portail de connexion, export, audit | ✅ |
 | Espace Gestionnaire RH : dossiers salariés (NISS et IBAN chiffrés), import CSV, périodes de paie, prestations | ✅ |
 | Interface entièrement sur shadcn/ui | 🟡 en cours |
-| Moteur de paie, cycle des fiches, déclarations (DIMONA, DmfA, C4) | ⏳ à venir |
+| Moteur de paie ✅ ; cycle des fiches et déclarations (DIMONA, DmfA, C4) ⏳ | 🟡 en partie |
 | Portails Entreprise cliente et Collaborateur complets | ⏳ à venir |
 
 Planning détaillé et statut de chaque chantier : **[doc/ROADMAP.md](./doc/ROADMAP.md)**.

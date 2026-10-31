@@ -1,9 +1,9 @@
 # Feuille de route — octobre 2026 → juin 2027
 
 > Remplace `PLANNING.md` (juillet 2026, obsolète). Hypothèse de charge : environ 30 h par semaine. Remise finale : **30/06/2027**.
-> À mettre à jour à la fin de chaque chantier (statut, date réelle). **Planning révisé le 20/10/2026** : les chantiers sont regroupés par rôle (Gestionnaire RH en deux temps, puis Entreprise cliente, Collaborateur, SuperAdmin), suivis de finitions. **Révisé à nouveau le 26/10/2026** : G1 et les périodes de paie sont terminés bien avant la date prévue, G2 est découpé en trois chantiers (moteur, cycle des fiches, déclarations) et les dates suivantes sont avancées d'une semaine.
+> À mettre à jour à la fin de chaque chantier (statut, date réelle). **Planning révisé le 20/10/2026** : les chantiers sont regroupés par rôle (Gestionnaire RH en deux temps, puis Entreprise cliente, Collaborateur, SuperAdmin), suivis de finitions. **Révisé à nouveau le 26/10/2026** : G1 et les périodes de paie sont terminés bien avant la date prévue, G2 est découpé en trois chantiers (moteur, cycle des fiches, déclarations) et les dates suivantes sont avancées d'une semaine. **Révisé le 31/10/2026** : le moteur est terminé et fusionné, la migration shadcn/ui est faite, un chantier de correctifs de sécurité est inséré avant G2b, G2b et G2c sont décalés et une marge est ménagée pour les fêtes.
 
-## 1. Déjà réalisé (au 26/10/2026)
+## 1. Déjà réalisé (au 31/10/2026)
 
 | Bloc | Contenu | Statut |
 |---|---|---|
@@ -17,7 +17,8 @@
 | Gestionnaire RH (1) | Dossiers salariés : chiffrement NISS/IBAN, dévoilement journalisé, historique daté des conditions de travail, sortie et archivage, import CSV, invitation au portail (D81 à D89) | ✅ (23/10, branche `feature/gestionnaire-rh`, fusionnée dans `dev`) |
 | Gestionnaire RH (2), première partie | Périodes de paie, prestations (les écarts du mois) et tableau de bord du gestionnaire (D90 à D93) | ✅ (24/10, fusionné dans `dev`, migrations appliquées en production) |
 | Second audit avant le moteur de paie | Conservation légale de la paie à la purge d'un cabinet (D94), situation fiscale complète du précompte (D95), heures hebdomadaires en minutes (D96), garde 2FA des pages alignée sur celle des routes, chiffrement du NISS et de l'IBAN lié au dossier (D97) | ✅ (26/10, branche `feature/correctifs-audit`, à fusionner dans `dev`) |
-| Moteur de paie v1 (G2a) | Barèmes réels de 2026 en fichiers JSON, calcul complet de la fiche (brut, jours fériés, salaire garanti, heures supplémentaires, ONSS, bonus, précompte, CSSS, coût employeur), cas de référence rejouables, garde-fou d'activation (D99 à D119) | ✅ (30/10, branche `feature/moteur-paie`, sans écran) |
+| Moteur de paie simplifié (G2a) | Barèmes réels de 2026 en fichiers JSON, calcul complet de la fiche (brut, jours fériés, salaire garanti, heures supplémentaires, ONSS, bonus, précompte, CSSS, coût employeur), cas de référence rejouables, garde-fou d'activation (D99 à D119). Périmètre du TFE (D120) : employés CP 200 et ouvriers CP 100, Belgique seulement. **8 cas de référence externes d'octobre** ; ceux de septembre et de novembre restent à vérifier, ou dérogation motivée (D122) | ✅ (30/10, branche `feature/moteur-paie`, fusionnée dans `dev` le 31/10, sans écran) |
+| Interface shadcn/ui | Migration de toute l'interface vers shadcn/ui et les composants partagés | ✅ (28/10, branche `feature/ui-shadcn`) |
 
 ## 2. Chantiers
 
@@ -28,9 +29,11 @@
 | **G1** | 19/10 → 23/10 | `feature/gestionnaire-rh` | **Gestionnaire RH (1)** : dossiers salariés (chiffrement NISS/IBAN, historique daté, sortie et archivage, import CSV), invitation du collaborateur. **La file des demandes passe au chantier E** (D89) | `roles/03` § 4, D81 à D89 | ✅ 23/10, fusionné dans `dev` |
 | **G1b** | 22/10 → 24/10 | `feature/gestionnaire-rh` | **Gestionnaire RH (1 bis)** : périodes de paie, prestations du mois, tableau de bord du gestionnaire. **Les prestations côté entreprise passent au chantier E** | `roles/03` § 3 et 5, D90 à D93 | ✅ 24/10, fusionné dans `dev` |
 | **A2** | 24/10 → 26/10 | `feature/correctifs-audit` | **Second audit avant le moteur de paie** : purge d'un cabinet sans perdre la paie à conserver 5 ans (D94), situation fiscale complète (D95), heures en minutes entières (D96), garde 2FA des pages, chiffrement lié au dossier (D97) | `DECISIONS.md` D94 à D97, `AMELIORATIONS.md` | ✅ à fusionner dans `dev` |
-| **G2a** | 27/10 → 22/11 | `feature/moteur-paie` | **Moteur de paie v1, sans écran** : `BaremeVersion` (barèmes 2026 saisis une première fois à la main depuis les PDF officiels, structure prête pour la veille automatique du chantier F), fonctions pures dans `lib/payroll/`, cas de référence au centime près (employés, ouvriers, temps partiel, maladie, heures supplémentaires). Catégorie d'employeur tranchée (D98, point ouvert n° 6) ; cas de référence : une fiche réelle anonymisée comme base côté salarié (D98), à compléter (point ouvert n° 5, `README.md`) | `modules/paie.md`, D95, D96 | À faire |
-| **G2b** | 23/11 → 13/12 | `feature/cycle-paie` | **Cycle des fiches** : machine à états `BROUILLON → A_VALIDER → VALIDEE → ENVOYEE (→ REMPLACEE)`, PDF, envoi par lien et code, rectificative, écrans du gestionnaire | `modules/paie.md`, `roles/03` § 6 | À faire |
-| **G2c** | 14/12 → 03/01 | `feature/declarations` | **Déclarations simulées** : DIMONA IN et OUT (fidèles à la documentation officielle, D50), DmfA, C4 ; badge « DIMONA à envoyer » et dernière fiche d'un salarié sorti (D89). Fêtes de fin d'année comprises : charge réduite | `modules/integrations.md`, `roles/03` | À faire |
+| **G2a** | 27/10 → 30/10 | `feature/moteur-paie` | **Moteur de paie simplifié, sans écran** (D120) : `BaremeVersion` (barèmes 2026 saisis à la main depuis les textes officiels, structure prête pour la veille automatique du chantier F), fonctions pures dans `lib/payroll/`, cas de référence au centime près (employés CP 200, ouvriers CP 100, temps partiel, maladie, heures supplémentaires). **8 cas de référence externes d'octobre** ; septembre et novembre à vérifier, ou dérogation D122. Pécule de vacances et n° 53 reportés (D120) | `modules/paie.md`, D95, D96, D98 à D122 | ✅ 30/10, fusionné dans `dev` le 31/10 |
+| **SEC** | 02/11 → 08/11 | `feature/correctifs-securite` | **Correctifs de sécurité** avant le cycle des fiches | `AMELIORATIONS.md` | À faire |
+| **G2b** | 09/11 → 29/11 | `feature/cycle-paie` | **Cycle des fiches** : machine à états `BROUILLON → A_VALIDER → VALIDEE → ENVOYEE (→ REMPLACEE)`, PDF, envoi par lien et code, rectificative, écrans du gestionnaire | `modules/paie.md`, `roles/03` § 6 | À faire |
+| **G2c** | 30/11 → 20/12 | `feature/declarations` | **Déclarations simulées** : DIMONA IN et OUT (fidèles à la documentation officielle, D50), DmfA, C4 ; badge « DIMONA à envoyer » et dernière fiche d'un salarié sorti (D89). Fêtes de fin d'année comprises : charge réduite | `modules/integrations.md`, `roles/03` | À faire |
+| **M** | 21/12 → 03/01 | — | **Marge** : fêtes de fin d'année, cas de référence externes restants (D122), début du rapport | `JOURNAL.md` | À faire |
 | **E** | 04/01 → 31/01 | `feature/portail-entreprise` | **Entreprise cliente** : prestations, validation et rejet des fiches, détail des fiches, demandes (et leur file de traitement côté gestionnaire, D89) ; messagerie, documents et notifications avec le gestionnaire (D42) | `roles/04`, `modules/collaboration.md`, `modules/stockage.md` | À faire |
 | **K** | 01/02 → 21/02 | `feature/portail-collaborateur` | **Collaborateur** : consultation de ses fiches (lien et code), téléchargement du PDF, demande de correction de ses données | `roles/05` | À faire |
 | **S** | 22/02 → 28/02 | `feature/superadmin-fin` | **SuperAdmin** : ce qui reste de la fiche (invitation d'un SuperAdmin, modification d'un cabinet, validation des barèmes…) | `roles/01` § 6 | À faire |
@@ -42,7 +45,7 @@
 
 **Moteur de paie v1 simplifié (D120).** Le moteur du TFE couvre le besoin minimum ; le **pécule de vacances** (double pécule, pécule de sortie) et les **allocations exceptionnelles du n° 53** (primes de fin d'année et ponctuelles, indemnités de maladie au n° 78.1) sont des **évolutions possibles**, reportées après le TFE. Raison : elles demandent des règles et des cas de référence externes que nous n'avons pas, pour un besoin qui n'est pas nécessaire à la démonstration.
 
-**Avance prise.** G1 s'est terminé le 23/10 pour une échéance au 15/11, et les périodes et prestations (D90 à D93) étaient prévues dans G2 et E. Le moteur de paie démarre donc dès la fin du second audit (27/10) au lieu du 16/11. L'avance sert d'abord de marge pour G2, le chantier le plus chargé ; les chantiers suivants gagnent une semaine.
+**Avance prise.** G1 s'est terminé le 23/10 pour une échéance au 15/11, et les périodes et prestations (D90 à D93) étaient prévues dans G2 et E. Le moteur de paie démarre donc dès la fin du second audit (27/10) au lieu du 16/11. L'avance du moteur (terminé le 30/10 au lieu du 22/11) sert de marge : fêtes de fin d'année, vérifications des cas de référence, début du rapport. Les chantiers E, K, S, F et le gel gardent leurs dates, et le jalon du 31/01 est conservé.
 
 Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entrée détaillée dans `JOURNAL.md` sert de matière pour les chapitres « Analyse » et « Réalisation ».
 
@@ -53,9 +56,9 @@ Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entr
 | 20/10/2026 | Correctifs d'audit terminés : autorisations centralisées, CI, code réorganisé |
 | 15/11/2026 | Dossiers salariés complets (Gestionnaire RH 1) : **atteint le 23/10** |
 | 26/10/2026 | Second audit corrigé : paie conservée à la purge d'un cabinet, situation fiscale complète, heures en minutes, chiffrement lié au dossier |
-| 22/11/2026 | **Moteur de paie v1** validé sur tous les cas de référence (G2a) : **code terminé le 30/10** ; les cas de référence seront refaits à partir du 01/11 |
-| 13/12/2026 | Cycle des fiches côté gestionnaire : machine à états, PDF, envoi par lien et code (G2b) |
-| 03/01/2027 | Déclarations simulées DIMONA, DmfA et C4 (G2c) |
+| 22/11/2026 | **Moteur de paie** validé sur les cas de référence (G2a) : **code terminé le 30/10**, fusionné dans `dev` le 31/10 ; cas de référence externes restants à compléter (D122) |
+| 29/11/2026 | Cycle des fiches côté gestionnaire : machine à états, PDF, envoi par lien et code (G2b) |
+| 20/12/2026 | Déclarations simulées DIMONA, DmfA et C4 (G2c) |
 | 31/01/2027 | **Premier cycle de paie de bout en bout** (démontrable) : le gestionnaire ouvre la période, l'entreprise encode et valide |
 | 21/02/2027 | Portail Collaborateur : le salarié consulte et télécharge ses fiches |
 | 28/02/2027 | **Base complète** : les cinq rôles utilisables |
@@ -70,7 +73,9 @@ Le rapport s'écrit **au fil de l'eau** : à la fin de chaque chantier, une entr
 | Périmètre trop large pour un développeur seul | Élevée | Ordre de coupe défini ci-dessous ; chaque chantier fusionnable seul |
 | Simulation DIMONA/DmfA jugée trop éloignée du réel | Faible | Simulation construite sur la documentation officielle, avec les vrais formats, statuts et anomalies (D50) |
 | Erreurs du moteur de paie | Moyenne | Cas de référence au centime, idéalement issus de vraies fiches |
-| Retard sur Gestionnaire RH (2) et Entreprise cliente (cœur) | Moyenne | Priorité absolue : rien d'autre ne commence avant le jalon du 31/01. Gestionnaire RH (2) est le chantier le plus chargé (moteur de paie, cycle des fiches, déclarations ; calendrier et pécule en option) : surveiller son avancement dès la fin de G2a (22/11) |
+| Cas de référence externes insuffisants | Moyenne | Dérogation motivée et documentée (D122) ; revalidation dès qu'un cas externe existe |
+| Charge réelle de décembre à janvier | Moyenne | La marge du 21/12 au 03/01 ; surveiller l'avancement de G2c |
+| Retard sur Gestionnaire RH (2) et Entreprise cliente (cœur) | Moyenne | Priorité absolue : rien d'autre ne commence avant le jalon du 31/01. Gestionnaire RH (2) est le chantier le plus chargé (moteur de paie, cycle des fiches, déclarations ; calendrier et pécule en option) : surveiller son avancement dès la fin de G2b (29/11) |
 | Données réelles en démo | Faible | Seed fictif uniquement, générateur de NISS fictifs |
 
 **Ordre de coupe** si le retard dépasse deux semaines (de la première à la dernière chose à sacrifier) :
