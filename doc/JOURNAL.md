@@ -329,4 +329,6 @@
 - Un texte du Moniteur belge contient des tableaux difficiles à lire : relire le PDF original avant de changer le statut d'une source.
 - Une page web sauvegardée peut contenir une clé d'API tierce : analyser les fichiers déposés avant de les commiter.
 
+**Mise en production (31/10/2026)** : point de restauration Neon, puis `prisma migrate deploy` (`add_bareme_version` et `add_bareme_derogation_motif`), semis des trois barèmes en `A_VERIFIER`, essai à blanc, puis activation de `BE-2026-10` seulement, sans dérogation (les 8 cas de référence passent). `BE-2026-09` et `BE-2026-11` restent à vérifier : ils demandent la dérogation de D122 ou des cas externes. Aucun écran ne lit encore les barèmes (G2b). ?
+
 **Reste à faire** : cas de référence externes à faire avec le calculateur du SPF Finances (série du 01/11/2026 avec la quotité de 11 550 €, série de septembre 2026, n° 6 de l'Annexe III : conjoint avec revenus, avec et sans enfant) ; la liste des limites est dans `modules/paie.md` § 9 et `AMELIORATIONS.md` § 7 ; pousser `feature/moteur-paie` et la fusionner dans `dev` ; mise en production à la toute fin (`modules/paie.md` § 12) ; cronjob de veille des sources.
