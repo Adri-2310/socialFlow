@@ -24,7 +24,9 @@ type Centimes = number; // entier
 
 interface EntreeCalcul {
   periode: { annee: number; mois: number };          // 1-12
-  bareme: ParametresBareme;                          // version valable pour la période
+  datePaiement: string;                              // AAAA-MM-JJ, obligatoire : le précompte dépend du jour de paiement (D112)
+  categorieEmployeur: string;                        // D98, ex. PRIVE_MARCHAND
+  versions: VersionBareme[];                         // toutes les versions avec leurs paramètres : calculerFiche choisit la période et le jour de paiement (D99, D112, D113)
   travailleur: {
     statut: 'EMPLOYE' | 'OUVRIER';
     commissionParitaire: '200' | '100';
@@ -55,21 +57,23 @@ interface ResultatCalcul {
 export function calculerFiche(entree: EntreeCalcul): ResultatCalcul;
 ```
 
+> **Première période de paie (D114).** On ne peut pas ouvrir de période avant septembre 2026, premier mois couvert par une version de barème réelle, ni avant le mois d'inscription de l'entreprise : le calcul n'a donc jamais à traiter un mois sans barème.
+
 ## 3. Étapes de calcul (fiche mensuelle ordinaire)
 
 Les valeurs chiffrées ci-dessous servent de **repères** : la source de vérité est la `BaremeVersion` active, remplie depuis les textes officiels.
 
 | # | Étape | Règle | Source officielle |
 |---|---|---|---|
-| 1 | **Brut** | Employé : rémunération mensuelle × fraction d'occupation, moins les absences non rémunérées, plus le salaire garanti en cas de maladie, les heures supplémentaires et les primes. Ouvrier : heures × taux horaire, plus les mêmes éléments | Contrat + prestations |
+| 1 | **Brut** | Employé : rémunération mensuelle (celle du contrat, déjà proportionnelle à l'occupation : D100), moins les absences non rémunérées au prorata des jours, plus le salaire garanti, les jours fériés, les heures supplémentaires et les primes. Ouvrier : minutes prestées × taux horaire, plus les mêmes éléments (D100, D106 à D108) | Contrat + prestations |
 | 2 | **Base ONSS** | Employé : 100 % du brut. Ouvrier : **108 %** du brut (le pécule est payé par la caisse de vacances) | Instructions ONSS |
 | 3 | **ONSS personnelle** | **13,07 %** de la base ONSS | Instructions ONSS |
-| 4 | **Bonus à l'emploi** | Réduction des cotisations personnelles selon le salaire de référence (deux volets : bas et très bas salaires), proratisée au temps partiel ; jamais supérieure à l'ONSS personnelle | Instructions administratives ONSS, « Bonus à l'emploi » (trimestre en cours) |
+| 4 | **Bonus à l'emploi** | Réduction des cotisations personnelles selon le salaire de référence (deux volets : bas et très bas salaires), proratisée au temps partiel ; jamais supérieure à l'ONSS personnelle. Le salaire de référence est la base ONSS, heures supplémentaires ordinaires comprises ; les heures supplémentaires de l'horeca et les flexi-jobs en sont exclus (instructions ONSS, pp. 374 et 449) | Instructions administratives ONSS, « Bonus à l'emploi » (trimestre en cours) |
 | 5 | **Imposable** | Brut − ONSS personnelle + bonus à l'emploi | — |
 | 6 | **Précompte professionnel** | Formule-clé de l'**Annexe III de l'AR/CIR 92** : revenu annualisé, frais professionnels forfaitaires, barème progressif, quotité exemptée, réductions pour personnes à charge, puis remensualisation. Réduction de précompte liée au bonus à l'emploi fiscal | Annexe III 2026 (AR du 11/12/2025, MB du 29/12/2025) |
 | 7 | **Cotisation spéciale de sécurité sociale** | Montant mensuel par tranche, selon le revenu et la situation du ménage | Instructions ONSS |
 | 8 | **Net** | Imposable − précompte − cotisation spéciale ± retenues ou avantages nets | — |
-| 9 | **Coût employeur** | Brut + cotisations patronales (taux de base selon la catégorie d'employeur et la modération salariale) ± réductions structurelles | Instructions ONSS |
+| 9 | **Coût employeur** | Brut + cotisations patronales (taux de base selon la catégorie d'employeur et la modération salariale) − réduction structurelle ; s'y ajoutent les heures supplémentaires exonérées de retenue (D104, D106). **C'est une estimation** : voir § 9 et § 10 (D120) | Instructions ONSS |
 
 Exemple publié pour vérifier l'ordre de grandeur du précompte 2026 : 2 800 € brut, marié, conjoint sans revenus ou avec revenus non précisés, sans enfant → précompte de 363,90 € (Securex). Ces exemples **ne remplacent pas** les cas de référence (§ 6).
 
@@ -79,12 +83,12 @@ Exemple publié pour vérifier l'ordre de grandeur du précompte 2026 : 2 800 �
 |---|---|
 | **Temps partiel** (D39) | Fraction d'occupation = heures du travailleur / heures de la personne de référence ; proratisation du salaire et du bonus à l'emploi |
 | **Entrée ou sortie en cours de mois** | Prorata selon les jours (employé) ou les heures réelles (ouvrier) ; fiche à l'unité (D38) |
-| **Maladie** | Salaire garanti à charge de l'employeur pendant la période légale, différente pour les employés et les ouvriers ; au-delà, la mutuelle prend le relais (hors fiche) |
-| **Jours fériés** | Rémunérés comme des jours prestés |
-| **Heures supplémentaires** | Sursalaire légal ; régime fiscal avantageux limité à **130 heures par an** en 2026 (hors construction et horeca) |
+| **Maladie** (D108, D109, D111) | Salaire garanti à charge de l'employeur, non soumis à l'ONSS. Ouvrier : 7 jours à 100 % puis 7 jours à 60 % de la part du salaire sous le plafond (art. 52) ; accident du travail : 7 jours (art. 54). Employé : 30 jours (art. 70) ; contrat de moins de 3 mois : art. 71 et 72. Indemnité complémentaire des CCT 12bis (ouvriers) et 13bis (employés de moins de 3 mois) pour les jours 8 à 30. Le plafond de l'INAMI est converti selon le régime de travail (D111). Une rechute reprend les jours déjà consommés. Au-delà, la mutuelle prend le relais (hors fiche) |
+| **Jours fériés** (D107) | Employé : rémunérés comme des jours prestés. Ouvrier : jour férié payé selon la loi du 4 janvier 1974, calculé par le moteur à partir du calendrier des jours fériés |
+| **Heures supplémentaires** (D106, D110) | Trois sortes (avec ou sans sursalaire, volontaires). Plafonds de 2026 : 360 heures volontaires, 240 heures sans sursalaire. Réduction de précompte n° 45 sur les 180 premières heures, à 57,75 % (loi du 15/07/2026, art. 47 à 49 ; AR du 24/07/2026). L'AR du 9/07/2026 exclut ces 240 heures de la rémunération pour l'ONSS. Les heures de relance de janvier à mars 2026 sont déduites des plafonds. Les paramètres viennent du bloc `heuresSupplementaires` du barème |
 | **Pécule de vacances employés** (D45) | Simple pécule = maintien du salaire pendant les vacances. Double pécule : fiche spéciale annuelle, avec retenue ONSS sur une partie et précompte à taux exceptionnel. Pécule de sortie à la fin du contrat |
 | **Pécule de vacances ouvriers** (D45) | Pas versé sur la fiche (caisse de vacances) ; simple mention |
-| **Fiche rectificative** (D13) | Recalcul complet avec le barème de la **période d'origine**, pas celui du jour |
+| **Fiche rectificative** (D13) | Recalcul complet avec le barème de la **période d'origine** et la **date de paiement d'origine** (D112), pas ceux du jour |
 
 Hors périmètre : étudiants, flexi-jobs, avantages en nature complexes (voiture de société, ATN), saisies sur salaire, chèques-repas. Ils pourront venir plus tard ; le modèle de lignes de calcul doit permettre de les ajouter sans refonte.
 
@@ -98,7 +102,8 @@ BaremeVersion
                      // frais forfaitaires, réductions enfants, bonus emploi,
                      // cotisation spéciale, plafonds heures sup, pécule…
   source: Json       // URL et référence du texte officiel de chaque bloc
-  creePar, activePar, activeLe
+  creePar, activePar, activeLe,
+  derogationMotif    // D122 : motif si activé sans cas de référence, sinon null
 ```
 
 Flux de mise à jour :
@@ -107,11 +112,16 @@ Flux de mise à jour :
 3. Le SuperAdmin compare, **lance les cas de référence** sur la nouvelle version, puis l'active. Un barème n'est jamais activé si un cas de référence échoue.
 4. Les fiches déjà envoyées gardent leur version (D13).
 
+**Activation (D119, D122).** Elle se fait par `npm run bareme:activer -- <code> --par <email> [--derogation "<motif>"] [--dry-run]` (code : `src/lib/bareme/bareme-activation.ts`, hors du moteur pur). Le script vérifie que `--par` est un SuperAdmin existant, appelle `peutActiverBareme`, refuse en listant toutes les raisons, affiche la base visée et demande une confirmation au clavier (il refuse de tourner sans terminal interactif, sauf avec `--dry-run`, qui n'écrit rien). Le statut `ACTIF`, `activeParId`, `activeLe`, `derogationMotif` et l'audit `BAREME_ACTIVATED` s'écrivent dans une seule transaction Serializable ; l'audit ne contient que le code, la dérogation et son motif (aucune donnée de paie, D8). La dérogation ne lève que l'absence de cas de référence ; ses fiches portent `baremeNonVerifie`. Aucune page ni route de l'application ne lit `bareme_version` (test d'isolation).
+
+**Fiabilité des sources (D115).** Chaque bloc de `source` porte un champ `fiabilite` (`OFFICIELLE`, `DECISION_INTERNE` ou `A_CONFIRMER`) ; l'activation d'une version avec un bloc `A_CONFIRMER` ou sans fiabilité est refusée par `peutActiverBareme` (D119). Le barème réel de 2026 est dans `apps/web/prisma/bareme/` (septembre, octobre, novembre).
+
 ⚠️ **Limite réelle** : ces sources publient surtout du PDF et du HTML, pas une API de données. L'extraction automatique peut échouer. Le job doit alors au minimum **détecter qu'une nouvelle publication existe** et prévenir le SuperAdmin, qui saisit les paramètres dans un formulaire. C'est le minimum garanti, l'extraction complète est un bonus.
 
 ## 6. Cas de référence (tests)
 
-- Dossier `apps/web/tests/payroll/cas/` : un fichier JSON par cas (entrée complète + résultat attendu ligne par ligne + source du résultat).
+- Réalisation (D118) : les cas sont dans le module `apps/web/src/lib/payroll/cas-reference.ts` (entrée complète, valeurs attendues et source de chaque cas), rejouable contre une version de barème par `verifierCasReference`, et testé dans `apps/web/tests/payroll/cas-reference.test.ts`. Huit cas existent (sept employés et un ouvrier) ; la couverture minimale du tableau ci-dessous n'est pas atteinte.
+- Prévu à l'origine : dossier `apps/web/tests/payroll/cas/` : un fichier JSON par cas (entrée complète + résultat attendu ligne par ligne + source du résultat).
 - Couverture minimale avant mise en production :
 
 | Famille | Nombre minimum |
@@ -136,5 +146,94 @@ Flux de mise à jour :
 
 ## 8. Questions ouvertes
 
-1. As-tu accès à des **fiches de paie réelles anonymisées** (stage, contact en secrétariat social, ton client) pour construire les cas de référence ? C'est ce qui rendra le moteur crédible devant le jury.
-2. **Catégorie d'employeur** pour les cotisations patronales : on part sur le cas général du secteur privé marchand ?
+1. **Cas de référence** : la série du 30/10/2026 vient d'un simulateur externe (source secondaire). À refaire pour le 01/11/2026 (quotité de 11 550 €) et dès que le calculateur du SPF Finances refonctionne ; ajouter des cas de temps partiel, de salaire garanti et d'heures supplémentaires dès qu'une source externe existe (D118).
+2. **Catégorie d'employeur** : tranchée par D98 (secteur privé marchand). Les autres catégories sont refusées à l'activation (D119).
+
+## 9. Limites connues du moteur v1
+
+Choisies et assumées ; chacune est aussi dans `AMELIORATIONS.md` § 7. Le moteur ne les calcule pas, ou les calcule avec un choix documenté.
+
+| Sujet | Limite | Décision |
+|---|---|---|
+| Fonds de fermeture d'entreprises (FFE) | Non calculé ; les taux sont dans `reference/onss-ffe-taux-2026.md` | D117 |
+| Cotisation spéciale de modération (« index centime », salaires au-dessus d'environ 4 000 €) | Non calculée | D117 |
+| Taux de 1,60 % « porté à 1,69 % » et modération de 4,27 % | Choix assumé entre les deux lectures du texte | D117 |
+| Précompte des indemnités (n° 78 et 53 de l'Annexe III) | Non implémenté ; choix confirmé par Adrien | D116 |
+| Délai de la CCT (14 jours) et de la loi du 19/12/2025 (8 semaines) | Le moteur suit la CCT ; texte de la loi à déposer | D109, D110 |
+| Plafond de l'INAMI pour un régime de 5 jours | Conversion déduite (plafond × 6 / jours par semaine), non confirmée par un texte | D111 |
+| Jours fériés après la fin du contrat (AR 1974, art. 14) | Non traités | D107 |
+| Accident du travail, jours 8 à 30 | Non traités | D109 |
+| Reprise progressive du travail | Non traitée | D110 |
+| Couples dont un des conjoints a 66 ans (quotient de 12 790 €) | Non traités | D110 |
+| Instructions ONSS 2026/4 | Non déposées : les taux sont ceux de 2026/3 | D103, D115 |
+| Coût employeur | Présenté comme une **estimation** : sans fonds de fermeture ni « index centime » (lignes ci-dessus), sans la dispense de versement du précompte sur les heures supplémentaires, avec une réduction structurelle trimestrielle estimée par mois sans régularisation, et sans assurance accidents du travail, assurance groupe, titres-repas ni secrétariat social | D104, D117 |
+| Septembre 2026 et novembre 2026 | Barèmes saisis mais non activables : aucun cas de référence dans leur période | D118, D119 |
+| Précompte et paiement après le 01/11/2026 | Valeurs de l'AR du 27/09/2026 saisies, mais non vérifiées par une simulation externe | D110, D115 |
+
+## 10. Ce que le moteur ne calcule pas (périmètre du TFE, D120)
+
+Le moteur v1 est une **version simplifiée pour le TFE**. Il couvre le besoin minimum et le dit clairement ; le reste s'ajoutera plus tard si besoin. Belgique uniquement.
+
+**Couvert** : employés (CP 200) et ouvriers (CP 100), temps plein et partiel ; fiche mensuelle ordinaire (brut, ONSS, bonus à l'emploi, précompte, CSSS, net) ; jours fériés, salaire garanti, heures supplémentaires ; coût employeur **estimé**.
+
+**Hors périmètre** (refusé ou non proposé) :
+
+| Sujet | Pourquoi et ce qui se passe |
+|---|---|
+| Prime de fin d'année, prime ponctuelle, double pécule, pécule de sortie | Précompte du n° 53 de l'Annexe III, non calculé. Les valeurs des n° 53 à 55 sont dans le barème, sans calcul. Le pécule de vacances passe en évolutions possibles |
+| Non-résidents, dirigeants, étudiants, flexi-jobs, avantages en nature | Autres règles de précompte et de cotisations, non gérées |
+| Catégories d'employeur autres que le privé marchand | Refusées à l'activation du barème (D119) |
+| Fonds de fermeture d'entreprises, cotisation « index centime » | Absents du coût employeur estimé (D117) |
+
+**Simplifications assumées** (chacune avec son effet connu, D120) :
+
+| | Simplification | Effet connu |
+|---|---|---|
+| (a) | La prime (D92) est une **prime liée au travail du mois**, taxée comme le salaire | Une prime ponctuelle serait taxée à tort comme un salaire mensuel : ne pas la saisir |
+| (b) | Indemnités de maladie payées par l'employeur taxées au barème mensuel, pas au n° 53 (D116) | Le précompte des jours concernés peut différer du n° 78.1 ; écart non mesuré |
+| (c) | Rechute de huit semaines aussi pour le complément des CCT 12bis et 13bis, dont l'art. 5 dit quatorze jours (D109, D117) | Entre le 15e jour et la 8e semaine, le moteur peut verser moins que la CCT de 1997 |
+| (d) | Cumuls calculés **depuis les fiches de SocialFlow seulement** | Un salarié déjà en poste part de zéro : plafond annuel du bonus, CSSS du 3e mois et plafonds d'heures supplémentaires ne tiennent pas compte de l'avant ; l'appelant le signale |
+| (e) | Coût employeur **estimé** | Réduction structurelle trimestrielle estimée par mois, sans fonds de fermeture ni « index centime » |
+
+## 11. Données dont le cycle des fiches (G2b) a besoin (D121)
+
+`calculerFiche` est pure : G2b lui fournit les entrées suivantes. Aucun code n'est écrit ici ; ces règles guident G2b.
+
+| Entrée | D'où elle vient | Règle |
+|---|---|---|
+| Jours de travail par semaine | Nouvelle colonne `ConditionTravail.joursParSemaine` (1 à 6) | Obligatoire dans le formulaire du dossier, nullable en base ; le calcul refuse si elle manque |
+| Heures d'un ouvrier sans prestation (mois complet) | Calendrier du mois et régime | Jours du régime moins fériés, congés, maladie et absences non rémunérées ; minutes = jours x heures par semaine / jours par semaine, arrondi une fois sur le total (`DECISION_INTERNE`) |
+| J, D, H, U du bonus à l'emploi | Champs de `Prestation` | Voir la correspondance ci-dessous (ONSS 2026/3, pp. 449 à 453) |
+| Cumuls (bonus de l'année, brut et CSSS du trimestre, heures supplémentaires, net précédent) | Somme des fiches de SocialFlow du même salarié | Un salarié déjà en poste part de zéro (D120 (d)) ; une fiche rectificative ne voit que les fiches antérieures à sa période (D13) |
+| `employeurDixTravailleursOuPlus` | Nouvelle colonne `Entreprise.dixTravailleursOuPlus` (défaut `false`) | Saisie par le cabinet ; n'influence que le coût employeur estimé |
+| `habitantRoyaume` | Constante | Toujours `true` (Belgique uniquement) |
+
+**Correspondance des prestations avec J (bonus à l'emploi, D121 (3)).**
+
+| Champ de `Prestation` | Employé | Ouvrier | Statut |
+|---|---|---|---|
+| Jours prestés | compte | compte | ONSS p. 449 à 453 |
+| `congeDemiJours` | **compte** (code 1) | **ne compte pas** (code 2, exemple 2 p. 453) | Sourcé |
+| Maladie non payée par l'employeur | **ne compte pas** (code 50, exemple 1 p. 453) | ne compte pas | Sourcé pour l'employé |
+| Maladie payée par l'employeur (salaire garanti) | compte | compte | Inférence (`DECISION_INTERNE`) |
+| `ferieDemiJours` | compte | compte | Inférence (`DECISION_INTERNE`) |
+| `absenceNonRemDemiJours` | ne compte pas | ne compte pas | Règle de SocialFlow |
+
+Pour un temps partiel, l'unité est MINUTES : H = minutes déclarées, U = minutes mensuelles d'un temps plein du même régime (calculées comme les heures du mois d'un ouvrier).
+
+## 12. Mise en production du moteur (à faire à la toute fin, rien n'est lancé avant)
+
+Ordre à suivre, avec l'accord d'Adrien à chaque étape :
+
+1. **Point de restauration Neon** de la base `production` avant toute écriture.
+2. **Migrations** : `npx prisma migrate deploy` applique `add_bareme_version` puis `add_bareme_derogation_motif` (ajouts seulement, aucune donnée supprimée). Les migrations du cycle des fiches (G2b) viendront plus tard.
+3. **Semis des barèmes** : `npm run db:seed:bareme` avec la `DATABASE_URL` de production ; les trois versions arrivent en `A_VERIFIER`, jamais actives, et le semis est idempotent.
+4. **Activation** : `npm run bareme:activer -- <code> --par <email SuperAdmin> [--derogation "<motif>"]`, d'abord avec `--dry-run`. Le script affiche la base visée et demande une confirmation. Sans cas de référence externe, il faut la dérogation de D122 et son motif.
+5. **Vérification** : la version voulue est `ACTIF`, `derogationMotif` est rempli si la dérogation a servi, et l'audit `BAREME_ACTIVATED` existe.
+
+**Cas de référence externes encore à produire** (les `it.todo` de `tests/payroll/cas-reference.test.ts`), avec le calculateur du SPF Finances, sans contacter l'administration :
+- série du 01/11/2026 : les mêmes cas avec la quotité de 11 550 € ;
+- série de septembre 2026 : valider `BE-2026-09` par une source externe datée de septembre ;
+- n° 6 de l'Annexe III : conjoint avec revenus, avec et sans enfant.
+
+Chaque cas validé réduit le recours à la dérogation de D122.

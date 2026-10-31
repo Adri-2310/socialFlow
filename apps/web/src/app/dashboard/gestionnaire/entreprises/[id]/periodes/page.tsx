@@ -67,7 +67,7 @@ export default async function PeriodesEntreprisePage({
         </div>
         <PeriodeOuvrir
           entrepriseId={data.entreprise.id}
-          mois={moisProposes(maintenant, data.periodes)}
+          mois={moisProposes(maintenant, data.periodes, 24, data.premierMois)}
           moisCourant={courant}
           jourLimite={data.entreprise.jourLimitePrestations}
           readOnly={readOnly}

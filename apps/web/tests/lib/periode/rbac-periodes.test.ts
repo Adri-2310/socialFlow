@@ -71,12 +71,20 @@ async function creerAvecRole(label: string, role: string, cabinetId: string) {
 }
 
 let vat = 96_000_000;
+// D114 : une entreprise de test est inscrite depuis janvier 2026 (avant le début de la paie), pour
+// que seule la borne du début de la paie limite le rattrapage.
 const creerEntreprise = (
   cabinetId: string,
-  extra: { deletedAt?: Date; jourLimitePrestations?: number } = {},
+  extra: { deletedAt?: Date; jourLimitePrestations?: number; createdAt?: Date } = {},
 ) =>
   prisma.entreprise.create({
-    data: { cabinetId, name: 'Entreprise de test', vatNumber: `BE0${++vat}`, ...extra },
+    data: {
+      cabinetId,
+      name: 'Entreprise de test',
+      vatNumber: `BE0${++vat}`,
+      createdAt: new Date('2026-01-01T10:00:00Z'),
+      ...extra,
+    },
   });
 
 // Mois relatifs à aujourd'hui : les tests restent justes quand la date réelle avance.
@@ -198,13 +206,73 @@ describe('POST /api/entreprises/[id]/periodes : ouverture', () => {
     expect((await res.json()).dateLimite).toBe(`${annee}-${String(mois).padStart(2, '0')}-20`);
   });
 
-  it('accepte un mois passé, y compris l année précédente (rattrapage)', async () => {
+  it('accepte le mois passé (rattrapage) à partir du début de la paie', async () => {
     const { gestionnaire, entreprise } = await mise('per-rattrapage');
 
-    for (const delta of [-1, -14]) {
-      const res = await ouvrirPeriode(entreprise.id, moisRelatif(delta), gestionnaire.cj);
-      expect(res.status, `mois ${delta}`).toBe(201);
-    }
+    const res = await ouvrirPeriode(entreprise.id, moisRelatif(-1), gestionnaire.cj);
+    expect(res.status).toBe(201);
+  });
+
+  // D114 : borne basse. Mois fixes, donc stables quand la date réelle avance.
+  it('refuse un mois avant le début de la paie (septembre 2026) et n écrit rien', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await mise('per-avant-paie');
+
+    const res = await ouvrirPeriode(entreprise.id, { annee: 2026, mois: 8 }, gestionnaire.cj);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'PERIODE_BEFORE_PAIE_START',
+      fields: { mois: 'PERIODE_BEFORE_PAIE_START' },
+    });
+    expect(await prisma.periodePaie.count({ where: { entrepriseId: entreprise.id } })).toBe(0);
+    expect(await audits(cabinetId, 'PERIODE_OPENED')).toHaveLength(0);
+
+    const encoreAvant = await ouvrirPeriode(
+      entreprise.id,
+      { annee: 2025, mois: 12 },
+      gestionnaire.cj,
+    );
+    expect((await encoreAvant.json()).error).toBe('PERIODE_BEFORE_PAIE_START');
+  });
+
+  it('refuse un mois avant l inscription de l entreprise, accepte le mois d inscription', async () => {
+    const { cabinetId, gestionnaire, entreprise } = await mise('per-avant-inscription');
+    await prisma.entreprise.update({
+      where: { id: entreprise.id },
+      data: { createdAt: new Date('2026-10-15T10:00:00Z') },
+    });
+
+    const avant = await ouvrirPeriode(entreprise.id, { annee: 2026, mois: 9 }, gestionnaire.cj);
+    expect(avant.status).toBe(409);
+    expect(await avant.json()).toEqual({
+      error: 'PERIODE_BEFORE_ENTREPRISE_START',
+      fields: { mois: 'PERIODE_BEFORE_ENTREPRISE_START' },
+    });
+    expect(await prisma.periodePaie.count({ where: { entrepriseId: entreprise.id } })).toBe(0);
+    expect(await audits(cabinetId, 'PERIODE_OPENED')).toHaveLength(0);
+
+    const memeMois = await ouvrirPeriode(entreprise.id, { annee: 2026, mois: 10 }, gestionnaire.cj);
+    expect(memeMois.status).toBe(201);
+  });
+
+  it('compte le mois d inscription à l heure de Bruxelles', async () => {
+    const { gestionnaire, entreprise } = await mise('per-minuit-bruxelles');
+    // 23 h 30 UTC le 31 octobre = 00 h 30 le 1er novembre à Bruxelles : octobre est trop ancien
+    await prisma.entreprise.update({
+      where: { id: entreprise.id },
+      data: { createdAt: new Date('2026-10-31T23:30:00Z') },
+    });
+
+    const octobre = await ouvrirPeriode(entreprise.id, { annee: 2026, mois: 10 }, gestionnaire.cj);
+    expect((await octobre.json()).error).toBe('PERIODE_BEFORE_ENTREPRISE_START');
+    const novembre = await ouvrirPeriode(entreprise.id, { annee: 2026, mois: 11 }, gestionnaire.cj);
+    expect(novembre.status).toBe(201);
+  });
+
+  it('liste le premier mois ouvrable de l entreprise', async () => {
+    const { gestionnaire, entreprise } = await mise('per-premier-mois');
+
+    const res = await listerPeriodes(entreprise.id, gestionnaire.cj);
+    expect((await res.json()).premierMois).toEqual({ annee: 2026, mois: 9 });
   });
 
   it('refuse un mois au-delà du mois suivant et n écrit rien', async () => {
@@ -231,7 +299,7 @@ describe('POST /api/entreprises/[id]/periodes : ouverture', () => {
     expect(await doublon.json()).toEqual({ error: 'PERIODE_ALREADY_EXISTS' });
 
     // Deux demandes simultanées pour un autre mois : une seule passe.
-    const autre = moisRelatif(-3);
+    const autre = moisRelatif(1);
     const [a, b] = await Promise.all([
       ouvrirPeriode(entreprise.id, autre, gestionnaire.cj),
       ouvrirPeriode(entreprise.id, autre, gestionnaire.cj),
@@ -294,7 +362,7 @@ describe('isolation : ouverture et lecture des périodes', () => {
     await prisma.gestionnaireEntreprise.create({
       data: { entrepriseId: autre.id, userId: gestionnaire.user.id },
     });
-    for (const delta of [-2, 0, -1]) {
+    for (const delta of [1, 0, -1]) {
       await ouvrirPeriode(entreprise.id, moisRelatif(delta), gestionnaire.cj);
     }
     await ouvrirPeriode(autre.id, moisRelatif(0), gestionnaire.cj);
@@ -304,7 +372,7 @@ describe('isolation : ouverture et lecture des périodes', () => {
     const corps = await res.json();
     expect(corps.entreprise).toMatchObject({ id: entreprise.id, jourLimitePrestations: 20 });
     expect(corps.periodes.map((p: { annee: number; mois: number }) => [p.annee, p.mois])).toEqual(
-      [0, -1, -2].map((d) => {
+      [1, 0, -1].map((d) => {
         const { annee, mois } = moisRelatif(d);
         return [annee, mois];
       }),

@@ -1,4 +1,5 @@
 import { entrepriseWhere, type Scope } from '@/lib/authz/authz';
+import { premierMoisOuvrable } from './periode-dates';
 import { prisma } from '@/lib/prisma';
 import { STATUTS_PERIODE } from '@/lib/schemas/periode';
 
@@ -20,11 +21,13 @@ export async function getPeriodesEntreprise(
 ): Promise<{
   entreprise: { id: string; name: string; jourLimitePrestations: number };
   periodes: PeriodeRow[];
+  // D114 : premier mois qu'on peut ouvrir pour cette entreprise (début de la paie ou inscription).
+  premierMois: { annee: number; mois: number };
 } | null> {
   const entreprise = await prisma.entreprise.findFirst({
     // AND et non une fusion d'objets : entrepriseWhere(scope) pose déjà un filtre sur `id`.
     where: { AND: [entrepriseWhere(scope), { id: entrepriseId, deletedAt: null }] },
-    select: { id: true, name: true, jourLimitePrestations: true },
+    select: { id: true, name: true, jourLimitePrestations: true, createdAt: true },
   });
   if (!entreprise) return null;
 
@@ -41,8 +44,10 @@ export async function getPeriodesEntreprise(
     },
   });
 
+  const { createdAt, ...fiche } = entreprise;
   return {
-    entreprise,
+    entreprise: fiche,
+    premierMois: premierMoisOuvrable(createdAt),
     periodes: periodes.map((p) => ({
       id: p.id,
       annee: p.annee,

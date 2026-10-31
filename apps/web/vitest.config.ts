@@ -40,6 +40,10 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/app/**/*.tsx'],
+      // Moteur de paie : toute ligne et toute branche sont testées (le reste du code n'a pas de seuil).
+      thresholds: {
+        'src/lib/payroll/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+      },
     },
   },
   resolve: {

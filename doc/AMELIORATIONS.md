@@ -74,3 +74,19 @@
 | Lighthouse | Mesuré le 28/10/2026 sur `/`, `/tarifs` et `/faq` en mode développement : accessibilité 100, bonnes pratiques 100, SEO 100. La performance (90 à 92) n'est pas représentative : un serveur `next dev` compile à la volée | Refaire la mesure sur `next build` + `next start` avant la mise en ligne |
 | Vérification visuelle non faite | Le tiroir mobile du tableau de bord, le menu mobile du site public et les écrans SuperAdmin (facturation, suspension, listes, plans) n'ont été vérifiés que par les tests ; la fenêtre du navigateur de l'assistant ne se redimensionne pas | Les passer à la main avec `VERIFICATION-INTERFACE.md` |
 | Barre de défilement | La barre native reste blanche en mode sombre (tableau des problèmes de l'import CSV) | `color-scheme` ou le composant de défilement de shadcn |
+
+## 7. Moteur de paie
+
+Le moteur v1 (D99 à D120) est une **version simplifiée pour le TFE** : son périmètre et ses simplifications sont dans `modules/paie.md` § 10 (D120), les écarts techniques détaillés au § 9. Ces points restent ouverts.
+
+| Sujet | Constat | À faire |
+|---|---|---|
+| Veille des sources | La mise à jour des barèmes reste manuelle (`modules/paie.md` § 5) | Écrire le job hebdomadaire de veille (chantier F, D51) ; Adrien se réserve de le faire et de vérifier toutes les informations |
+| Cas de référence | Une seule série (8 cas, octobre 2026, simulateur externe) ; BE-2026-09 et BE-2026-11 ne sont pas activables | Refaire la série pour le 01/11/2026 et avec le calculateur du SPF Finances ; ajouter les cas du n° 6 (conjoint avec revenus) |
+| Couverture des cas de référence | Temps partiel, entrée ou sortie en cours de mois, salaire garanti, heures supplémentaires et double pécule n'ont aucun cas externe : leurs calculs sont testés à la main | Ajouter des cas dès qu'une source externe existe (fiche réelle anonymisée, secrétariat social) |
+| Fonds de fermeture et « index centime » | Non calculés (D117) | Les implémenter si le jury ou un cas réel le demande |
+| Colonnes obsolètes | `conjointAvecRevenus` et `personnesCharge` ne servent plus (D95) | Les supprimer par une migration, avec l'accord d'Adrien |
+| Formulaire de la question d'attribution | Correctif noté à la relecture du formulaire de la situation fiscale (D95) | À reprendre lors du chantier de l'interface du gestionnaire |
+| `next-env.d.ts` | Fichier généré suivi par git ; masqué localement par `skip-worktree` | Ajouter à `.gitignore` et `git rm --cached` (accord d'Adrien attendu) |
+| Mise en production | La migration `add_bareme_version` et le semis des barèmes ne sont appliqués que sur `dev` | À la fin : `prisma migrate deploy` sur `production`, puis `npm run db:seed:bareme` ; les versions restent `A_VERIFIER` jusqu'à leur activation |
+| Évolutions possibles du moteur (D120) | Pécule de vacances (double pécule, pécule de sortie), allocations exceptionnelles du n° 53 (primes de fin d'année et ponctuelles, indemnités de maladie au n° 78.1), reprise des cumuls d'un salarié déjà en poste, fonds de fermeture et « index centime », rechute des CCT à quatorze jours | Les ajouter si un besoin réel le demande : chacun nécessite une décision, un texte officiel déposé et des cas de référence externes |
